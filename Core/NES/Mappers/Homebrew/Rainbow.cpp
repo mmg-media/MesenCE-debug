@@ -474,7 +474,7 @@ uint8_t Rainbow::ReadChr(uint32_t addr)
 		case 0: return _chrRomSize ? _chrRom[addr & (_chrRomSize - 1)] : 0;
 		case 1: return _chrRamSize ? _chrRam[addr & (_chrRamSize - 1)] : 0;
 		case 2: return _mapperRam[addr & 0x1FFF];
-		case 3: return InternalReadVram(addr);
+		case 3: return InternalReadVram(addr & 0x7FF);
 	}
 }
 
