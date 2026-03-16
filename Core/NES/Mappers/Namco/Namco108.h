@@ -27,16 +27,11 @@ protected:
 		MMC3::WriteRegister(addr, value);
 	}
 
-	void ResetMmc3() override
+	void ResetNamco108()
 	{
-		_state.Reg8000 = GetPowerOnByte() & 7;
-		_state.RegA000 = 0; // doesn't exist; ideally for the debugger this would reflect the header
-		_state.RegA001 = 0x80; // no reason extra hardware can't add cart RAM
-
-		_chrMode = 0; // doesn't exist
-		_prgMode = 0; // doesn't exist
-
-		_currentRegister = _state.Reg8000;
+		MMC3::WriteRegister(0x8000, GetPowerOnByte() & 7);
+		MMC3::WriteRegister(0xA000, 0);
+		MMC3::WriteRegister(0xA001, 0x80);
 
 		_registers[0] = GetPowerOnByte(0);
 		_registers[1] = GetPowerOnByte(2);
@@ -45,15 +40,20 @@ protected:
 		_registers[4] = GetPowerOnByte(6);
 		_registers[5] = GetPowerOnByte(7);
 		_registers[6] = GetPowerOnByte(0);
-		_registers[7] = GetPowerOnByte(1); // For compatibil
+		_registers[7] = GetPowerOnByte(1); // For compatibility
 
 		_irqCounter = 0; // doesn't exist but should be initialized
 		_irqReloadValue = 0;
 		_irqReload = 0;
 		_irqEnabled = 0;
+	}
 
-		_wramEnabled = 1;//(_state.RegA001 & 0x80) == 0x80; 
-		_wramWriteProtected = 0;//(_state.RegA001 & 0x40) == 0x40;
+	void InitMapper() override
+	{
+		ResetNamco108();
+		SetCpuMemoryMapping(0x6000, 0x7FFF, 0, HasBattery() ? PrgMemoryType::SaveRam : PrgMemoryType::WorkRam);
+		UpdateState();
+		// N108 uses hardwired mirroring, so let the header deal with that
 	}
 
 	// more thorough IRQ removal
