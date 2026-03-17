@@ -378,7 +378,8 @@ template<class T> uint8_t NesPpu<T>::ReadRam(uint16_t addr)
 				openBusMask = 0xFF;
 			} else {
 				returnValue = _memoryReadBuffer;
-				_memoryReadBuffer = ReadVram(_ppuBusAddress & 0x3FFF, MemoryOperationType::Read);
+				// The PPU Read Buffer is not updated until the CPU read ends, and 2 more ppu cycles have passed.
+				_ppuMemoryDataStateMachine = 6;
 
 				if((_ppuBusAddress & 0x3FFF) >= 0x3F00 && !_console->GetNesConfig().DisablePaletteRead) {
 					//Note: When grayscale is turned on, the read values also have the grayscale mask applied to them
@@ -395,7 +396,6 @@ template<class T> uint8_t NesPpu<T>::ReadRam(uint16_t addr)
 
 				_ignoreVramRead = 6;
 				_needStateUpdate = true;
-				_needVideoRamIncrement = true;
 			}
 			break;
 
@@ -444,7 +444,7 @@ template<class T> void NesPpu<T>::WriteRam(uint16_t addr, uint8_t value)
 			} else {
 				//"Writes to OAMDATA during rendering (on the pre-render line and the visible lines 0-239, provided either sprite or background rendering is enabled) do not modify values in OAM, 
 				//but do perform a glitchy increment of OAMADDR, bumping only the high 6 bits"
-				_spriteRamAddr = (_spriteRamAddr + 4) & 0xFF;
+				_spriteRamAddr = (_spriteRamAddr + 4) & 0xFC;
 				_emu->BreakIfDebugging(CpuType::Nes, BreakSource::NesInvalidOamWrite);
 			}
 			break;
@@ -897,14 +897,6 @@ template<class T> void NesPpu<T>::ProcessScanlineImpl()
 			}
 		}
 	} else if(_cycle >= 257 && _cycle <= 320) {
-		if(_cycle == 257) {
-			_spriteIndex = 0;
-			memset(_hasSprite, 0, sizeof(_hasSprite));
-			if(_prevRenderingEnabled) {
-				//copy horizontal scrolling value from t
-				_videoRamAddr = (_videoRamAddr & ~0x041F) | (_tmpVideoRamAddr & 0x041F);
-			}
-		}
 		if(IsRenderingEnabled()) {
 			//"OAMADDR is set to 0 during each of ticks 257-320 (the sprite tile loading interval) of the pre-render and visible scanlines." (When rendering)
 			_spriteRamAddr = 0;
@@ -913,8 +905,8 @@ template<class T> void NesPpu<T>::ProcessScanlineImpl()
 				//Garbage NT sprite fetch (257, 265, 273, etc.) - Required for proper MC-ACC IRQs (MMC3 clone)
 				case 0: ReadVram(GetNameTableAddr()); break;
 
-				//Garbage AT sprite fetch
-				case 2: ReadVram(GetAttributeAddr()); break;
+				//Garbage NT sprite fetch
+				case 2: ReadVram(GetNameTableAddr()); break;
 
 				//Cycle 260, 268, etc.  This is an approximation (each tile is actually loaded in 8 steps (e.g from 257 to 264))
 				case 4: LoadSpriteTileInfo(); break;
@@ -929,6 +921,14 @@ template<class T> void NesPpu<T>::ProcessScanlineImpl()
 			// and the extra sprites will potentially read from the wrong banks
 			if(_cycle == 320) {
 				LoadExtraSprites();
+			}
+		}
+		if(_cycle == 257) {
+			_spriteIndex = 0;
+			memset(_hasSprite, 0, sizeof(_hasSprite));
+			if(_prevRenderingEnabled) {
+				//copy horizontal scrolling value from t
+				_videoRamAddr = (_videoRamAddr & ~0x041F) | (_tmpVideoRamAddr & 0x041F);
 			}
 		}
 	} else if(_cycle >= 321 && _cycle <= 336) {
@@ -1023,10 +1023,9 @@ template<class T> void NesPpu<T>::ProcessSpriteEvaluation()
 
 				if(_oamCopyDone && !_settings->GetNesConfig().EnablePpuSpriteEvalBug) {
 					_spriteAddrH = (_spriteAddrH + 1) & 0x3F;
-					if(_secondaryOamAddr >= 0x20) {
-						//"As seen above, a side effect of the OAM write disable signal is to turn writes to the secondary OAM into reads from it."
-						_oamCopybuffer = _secondarySpriteRam[_secondaryOamAddr & 0x1F];
-					}
+					//"As seen above, a side effect of the OAM write disable signal is to turn writes to the secondary OAM into reads from it."
+					_oamCopybuffer = _secondarySpriteRam[_secondaryOamAddr & 0x1F];
+					
 				} else {
 					if(!_spriteInRange && _scanline >= _oamCopybuffer && _scanline < _oamCopybuffer + (_control.LargeSprites ? 16 : 8)) {
 						_spriteInRange = !_oamCopyDone;
@@ -1499,6 +1498,14 @@ template<class T> void NesPpu<T>::UpdateState()
 		_ignoreVramRead--;
 		if(_ignoreVramRead > 0) {
 			_needStateUpdate = true;
+		}
+	}
+
+	if(_ppuMemoryDataStateMachine > 0) {
+		_ppuMemoryDataStateMachine--;
+		if(_ppuMemoryDataStateMachine == 0) {
+			_memoryReadBuffer = ReadVram(_ppuBusAddress & 0x3FFF, MemoryOperationType::Read);
+			_needVideoRamIncrement = true;
 		}
 	}
 
