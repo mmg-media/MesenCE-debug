@@ -675,6 +675,7 @@ template<class T> void NesPpu<T>::LoadTileInfo()
 				_currentTilePalette = _tile.PaletteOffset;
 
 				_lowBitShift |= _tile.LowByte;
+				_highBitShift &= 0xFF00;
 				_highBitShift |= _tile.HighByte;
 
 				uint8_t tileIndex = ReadVram(GetNameTableAddr());
@@ -812,6 +813,7 @@ template<class T> void NesPpu<T>::ShiftTileRegisters()
 {
 	_lowBitShift <<= 1;
 	_highBitShift <<= 1;
+	_highBitShift |= 1;
 }
 
 template<class T> uint8_t NesPpu<T>::GetPixelColor()
@@ -880,8 +882,9 @@ template<class T> void NesPpu<T>::ProcessScanlineImpl()
 
 		if(_scanline >= 0) {
 			((T*)this)->DrawPixel();
-			ShiftTileRegisters();
-
+			if(IsRenderingEnabled()) {
+				ShiftTileRegisters();
+			}
 			//"Secondary OAM clear and sprite evaluation do not occur on the pre-render line"
 			ProcessSpriteEvaluation();
 		} else if(_cycle < 9) {
