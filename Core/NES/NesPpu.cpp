@@ -1494,15 +1494,21 @@ template<class T> void NesPpu<T>::UpdateState()
 		}
 	}
 
+	if(_needVideoRamIncrement) {
+		//Delay vram address increment by 1 ppu cycle after a read/write to 2007
+		//This allows the full_palette tests to properly display single-pixel glitches 
+		//that display the "wrong" color on the screen until the increment occurs (matches hardware)
+		_needVideoRamIncrement = false;
+		UpdateVideoRamAddr();
+	}
+
 	if(_ppuMemoryDataReadStateMachine > 0) {
 		_ppuMemoryDataReadStateMachine--;
 		if(_ppuMemoryDataReadStateMachine == 0) {
 			_memoryReadBuffer = ReadVram(_ppuBusAddress & 0x3FFF, MemoryOperationType::Read);
 			_needVideoRamIncrement = true;
 		}
-		else {
 			_needStateUpdate = true;
-		}
 	}
 
 	if(_ppuMemoryDataWriteStateMachine > 0) {
@@ -1522,17 +1528,7 @@ template<class T> void NesPpu<T>::UpdateState()
 			}
 			_needVideoRamIncrement = true;
 		}
-		else {
 			_needStateUpdate = true;
-		}
-	}
-
-	if(_needVideoRamIncrement) {
-		//Delay vram address increment by 1 ppu cycle after a read/write to 2007
-		//This allows the full_palette tests to properly display single-pixel glitches 
-		//that display the "wrong" color on the screen until the increment occurs (matches hardware)
-		_needVideoRamIncrement = false;
-		UpdateVideoRamAddr();
 	}
 }
 
