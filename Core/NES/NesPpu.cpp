@@ -379,7 +379,7 @@ template<class T> uint8_t NesPpu<T>::ReadRam(uint16_t addr)
 			} else {
 				returnValue = _memoryReadBuffer;
 				// The PPU Read Buffer is not updated until the CPU read ends, and 2 more ppu cycles have passed.
-				_ppuMemoryDataStateMachine = 6;
+				_ppuMemoryDataReadStateMachine = 5;
 
 				if((_ppuBusAddress & 0x3FFF) >= 0x3F00 && !_console->GetNesConfig().DisablePaletteRead) {
 					//Note: When grayscale is turned on, the read values also have the grayscale mask applied to them
@@ -485,20 +485,10 @@ template<class T> void NesPpu<T>::WriteRam(uint16_t addr, uint8_t value)
 			break;
 
 		case PpuRegisters::VideoMemoryData:
-			if((_ppuBusAddress & 0x3FFF) >= 0x3F00) {
-				WritePaletteRam(_ppuBusAddress, value);
-				_emu->ProcessPpuWrite<CpuType::Nes>(_ppuBusAddress, value, MemoryType::NesPpuMemory);
-			} else {
-				if(_scanline >= 240 || !IsRenderingEnabled()) {
-					_mapper->WriteVram(_ppuBusAddress & 0x3FFF, value);
-				} else {
-					//During rendering, the value written is ignored, and instead the address' LSB is used (not confirmed, based on Visual NES)
-					_mapper->WriteVram(_ppuBusAddress & 0x3FFF, _ppuBusAddress & 0xFF);
-					_emu->BreakIfDebugging(CpuType::Nes, BreakSource::NesInvalidVramAccess);
-				}
-			}
+			// The write to VRAM does not occur until the CPU write ends, and 2 more ppu cycles have passed.
+			_ppuMemoryDataWriteStateMachine = 5;
+			_ppuMemoryDataWriteLatch = value;
 			_needStateUpdate = true;
-			_needVideoRamIncrement = true;
 			break;
 
 		case PpuRegisters::SpriteDMA:
@@ -1504,11 +1494,36 @@ template<class T> void NesPpu<T>::UpdateState()
 		}
 	}
 
-	if(_ppuMemoryDataStateMachine > 0) {
-		_ppuMemoryDataStateMachine--;
-		if(_ppuMemoryDataStateMachine == 0) {
+	if(_ppuMemoryDataReadStateMachine > 0) {
+		_ppuMemoryDataReadStateMachine--;
+		if(_ppuMemoryDataReadStateMachine == 0) {
 			_memoryReadBuffer = ReadVram(_ppuBusAddress & 0x3FFF, MemoryOperationType::Read);
 			_needVideoRamIncrement = true;
+		}
+		else {
+			_needStateUpdate = true;
+		}
+	}
+
+	if(_ppuMemoryDataWriteStateMachine > 0) {
+		_ppuMemoryDataWriteStateMachine--;
+		if(_ppuMemoryDataWriteStateMachine == 0) {
+			if((_ppuBusAddress & 0x3FFF) >= 0x3F00) {
+				WritePaletteRam(_ppuBusAddress, _ppuMemoryDataWriteLatch);
+				_emu->ProcessPpuWrite<CpuType::Nes>(_ppuBusAddress, _ppuMemoryDataWriteLatch, MemoryType::NesPpuMemory);
+			} else {
+				if(_scanline >= 240 || !IsRenderingEnabled()) {
+					_mapper->WriteVram(_ppuBusAddress & 0x3FFF, _ppuMemoryDataWriteLatch);
+				} else {
+					//During rendering, the value written is ignored, and instead the address' LSB is used (not confirmed, based on Visual NES)
+					_mapper->WriteVram(_ppuBusAddress & 0x3FFF, _ppuBusAddress & 0xFF);
+					_emu->BreakIfDebugging(CpuType::Nes, BreakSource::NesInvalidVramAccess);
+				}
+			}
+			_needVideoRamIncrement = true;
+		}
+		else {
+			_needStateUpdate = true;
 		}
 	}
 
