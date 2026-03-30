@@ -413,7 +413,11 @@ AddressInfo WsConsole::GetAbsoluteAddress(uint32_t relAddress)
 
 AddressInfo WsConsole::GetAbsoluteAddress(AddressInfo& relAddress)
 {
-	return GetAbsoluteAddress(relAddress.Address);
+	if(relAddress.Type == MemoryType::WsPort) {
+		return { relAddress.Address & 0xFFFF, MemoryType::WsPort };
+	} else {
+		return GetAbsoluteAddress(relAddress.Address);
+	}
 }
 
 AddressInfo WsConsole::GetRelativeAddress(AddressInfo& absAddress, CpuType cpuType)
