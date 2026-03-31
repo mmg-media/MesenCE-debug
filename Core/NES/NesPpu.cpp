@@ -1587,6 +1587,10 @@ template<class T> void NesPpu<T>::Serialize(Serializer& s)
 
 		SV(_allowFullPpuAccess);
 
+		SV(_ppuMemoryDataReadStateMachine);
+		SV(_ppuMemoryDataWriteStateMachine);
+		SV(_ppuMemoryDataWriteLatch);
+
 		for(int i = 0; i < _spriteCount; i++) {
 			SVI(_spriteTiles[i].SpriteX); SVI(_spriteTiles[i].LowByte); SVI(_spriteTiles[i].HighByte); SVI(_spriteTiles[i].PaletteOffset); SVI(_spriteTiles[i].HorizontalMirror); SVI(_spriteTiles[i].BackgroundPriority);
 		}
