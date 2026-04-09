@@ -523,7 +523,6 @@ private:
 	}
 
 	void RTS() {
-		DummyRead();
 		MemoryRead(0x100 + SP(), MemoryOperationType::DummyRead);
 		uint16_t addr = PopWord();
 		SetPC(addr);
