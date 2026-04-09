@@ -664,9 +664,10 @@ template<class T> void NesPpu<T>::LoadTileInfo()
 				_previousTilePalette = _currentTilePalette;
 				_currentTilePalette = _tile.PaletteOffset;
 
-				_lowBitShift |= _tile.LowByte;
-				_highBitShift &= 0xFF00;
+				_highBitShift &= 0xFF00; // This shift register pulls in 1's, so we need to mask away the lower 8 bits before bringing in the data from the tile fetch.
 				_highBitShift |= _tile.HighByte;
+				_lowBitShift &= 0xFF00; // Similar to the high bit plane, it's possible there are 1's in the lower 8 bits if you toggle rendering at the right time.
+				_lowBitShift |= _tile.LowByte;
 
 				uint8_t tileIndex = ReadVram(GetNameTableAddr());
 				_tile.TileAddr = (tileIndex << 4) | (_videoRamAddr >> 12) | _control.BackgroundPatternAddr;
