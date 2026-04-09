@@ -2853,6 +2853,7 @@ E
 			<Value ID="None">None</Value>
 		</Enum>
 		<Enum ID="GameboyModel">
+			<Value ID="AutoFavorBest">Auto (prefer best)</Value>
 			<Value ID="AutoFavorGbc">Auto (prefer Game Boy Color)</Value>
 			<Value ID="AutoFavorSgb">Auto (prefer Super Game Boy)</Value>
 			<Value ID="AutoFavorGb">Auto (prefer Game Boy)</Value>
