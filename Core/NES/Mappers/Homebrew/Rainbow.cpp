@@ -212,7 +212,7 @@ void Rainbow::SelectLowBank(uint16_t start, uint16_t size, uint8_t reg)
 
 void Rainbow::SelectChrBank(uint16_t start, uint16_t size, uint8_t reg)
 {
-	if (_chrSource == 3) {
+	if(_chrSource == 3) {
 		SetPpuMemoryMapping(0x0000, 0x07FF, ChrMemoryType::NametableRam, 0, MemoryAccessType::ReadWrite);
 		SetPpuMemoryMapping(0x0800, 0x0FFF, ChrMemoryType::NametableRam, 0, MemoryAccessType::ReadWrite);
 		SetPpuMemoryMapping(0x1000, 0x17FF, ChrMemoryType::NametableRam, 0, MemoryAccessType::ReadWrite);
