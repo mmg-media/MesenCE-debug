@@ -431,14 +431,14 @@ uint8_t Rainbow::MapperReadVram(uint16_t addr, MemoryOperationType memoryOperati
 			uint8_t windowScanline = (scanline + _windowScrollY) % 240;
 			if(_overrideTileFetch) {
 				uint32_t fetchAddr = (addr & 0xFF8) | (windowScanline & 0x07) | ((_extData & 0x3F) << 12) | (_bgExtModeOffset << 18);
-				return ReadChr(fetchAddr);
+				return ReadChr(fetchAddr, addr);
 			} else {
 				uint32_t fetchAddr = (addr & 0x1FF8) | (windowScanline & 0x07);
 				return InternalReadVram(fetchAddr);
 			}
 		} else if(_overrideTileFetch && isBgFetch) {
 			uint32_t fetchAddr = (addr & 0xFFF) | ((_extData & 0x3F) << 12) | (_bgExtModeOffset << 18);
-			return ReadChr(fetchAddr);
+			return ReadChr(fetchAddr, addr);
 		} else if(_spriteExtMode && !isBgFetch) {
 			uint8_t spriteIndex = _oamMappings[_ntFetchCounter - 33];
 			uint32_t fetchAddr;
@@ -447,7 +447,7 @@ uint8_t Rainbow::MapperReadVram(uint16_t addr, MemoryOperationType memoryOperati
 			} else {
 				fetchAddr = (_spriteExtBank << 20) | (_spriteExtData[spriteIndex] << 12) | (addr & 0xFFF);
 			}
-			return ReadChr(fetchAddr);
+			return ReadChr(fetchAddr, addr);
 		}
 	}
 
@@ -467,14 +467,14 @@ void Rainbow::MapperWriteVram(uint16_t addr, uint8_t value)
 	InternalWriteVram(addr, value);
 }
 
-uint8_t Rainbow::ReadChr(uint32_t addr)
+uint8_t Rainbow::ReadChr(uint32_t fetchAddr, uint16_t ppuAddr)
 {
 	switch(_chrSource) {
 		default:
-		case 0: return _chrRomSize ? _chrRom[addr & (_chrRomSize - 1)] : 0;
-		case 1: return _chrRamSize ? _chrRam[addr & (_chrRamSize - 1)] : 0;
-		case 2: return _mapperRam[addr & 0x1FFF];
-		case 3: return InternalReadVram(addr & 0x7FF);
+		case 0: return _chrRomSize ? _chrRom[fetchAddr & (_chrRomSize - 1)] : 0;
+		case 1: return _chrRamSize ? _chrRam[fetchAddr & (_chrRamSize - 1)] : 0;
+		case 2: return _mapperRam[fetchAddr & 0x1FFF];
+		case 3: return InternalReadVram(ppuAddr & 0x7FF);
 	}
 }
 
