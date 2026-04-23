@@ -82,6 +82,8 @@ void NsfMapper::InitMapper(RomData& romData)
 	_nsfBios[0x14] = _nsfHeader.PlayAddress & 0xFF;
 	_nsfBios[0x15] = (_nsfHeader.PlayAddress >> 8) & 0xFF;
 
+	//First 256 bytes are the "bios" mapped in CPU memory (the next 128 bytes are for the Namco 163 audio ram)
+	memset(_mapperRam, 0, 0x100);
 	memcpy(_mapperRam, _nsfBios, sizeof(_nsfBios));
 }
 
@@ -95,8 +97,11 @@ void NsfMapper::Reset(bool softReset)
 	_vrc6Audio.reset(new Vrc6Audio(_console));
 	_vrc7Audio.reset(new Vrc7Audio(_console));
 	_fdsAudio.reset(new FdsAudio(_console));
-	_namcoAudio.reset(new Namco163Audio(_console));
 	_sunsoftAudio.reset(new Sunsoft5bAudio(_console));
+	
+	//Put the audio ram for this in "NesMapperRam" memory type,
+	//starting at offset 0x100 (first 0x100 is the "bios")
+	_namcoAudio.reset(new Namco163Audio(_console, _mapperRam + 0x100, 0x100));
 }
 
 void NsfMapper::OnAfterResetPowerOn()
