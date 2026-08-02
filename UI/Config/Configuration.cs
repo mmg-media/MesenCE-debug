@@ -36,6 +36,7 @@ namespace Mesen.Config
 		[ObservableProperty] public partial GbaConfig Gba { get; set; } = new();
 		[ObservableProperty] public partial WsConfig Ws { get; set; } = new();
 		[ObservableProperty] public partial PreferencesConfig Preferences { get; set; } = new();
+		[ObservableProperty] public partial LiveApiConfig LiveApi { get; set; } = new();
 		[ObservableProperty] public partial AudioPlayerConfig AudioPlayer { get; set; } = new();
 		[ObservableProperty] public partial DebugConfig Debug { get; set; } = new();
 		[ObservableProperty] public partial RecentItems RecentFiles { get; set; } = new();

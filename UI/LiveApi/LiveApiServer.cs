@@ -24,17 +24,21 @@ namespace Mesen.LiveApi
 		public static int Port { get; private set; } = DefaultPort;
 		public static bool Running { get { return _running; } }
 
-		public static void Start()
+		public static void Start(int? port = null)
 		{
 			if(_running) {
 				return;
 			}
 
-			string? envPort = Environment.GetEnvironmentVariable("MESEN_LIVE_API_PORT");
-			if(int.TryParse(envPort, out int port) && port > 0 && port < 65536) {
-				Port = port;
+			if(port.HasValue && port.Value > 0 && port.Value < 65536) {
+				Port = port.Value;
 			} else {
-				Port = DefaultPort;
+				string? envPort = Environment.GetEnvironmentVariable("MESEN_LIVE_API_PORT");
+				if(int.TryParse(envPort, out int envValue) && envValue > 0 && envValue < 65536) {
+					Port = envValue;
+				} else {
+					Port = DefaultPort;
+				}
 			}
 
 			try {

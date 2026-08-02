@@ -8,12 +8,14 @@ using Mesen.Debugger.Utilities;
 using Mesen.Debugger.ViewModels;
 using Mesen.Debugger.Windows;
 using Mesen.Interop;
+using Mesen.LiveApi;
 using Mesen.Localization;
 using Mesen.Utilities;
 using Mesen.Windows;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -799,7 +801,58 @@ namespace Mesen.ViewModels
 						ApplicationHelper.GetOrCreateUniqueWindow(wnd, () => new SaveSpcFileWindow());
 					}
 				},
+
+				new ContextMenuSeparator(),
+
+				new MainMenuAction() {
+					ActionType = ActionType.Custom,
+					CustomText = "Live API",
+					SubActions = new List<object>() {
+						new MainMenuAction() {
+							ActionType = ActionType.Custom,
+							CustomText = "Aktivieren / Deaktivieren",
+							IsSelected = () => ConfigManager.Config.LiveApi.Enabled,
+							OnClick = () => ToggleLiveApi()
+						},
+						new MainMenuAction() {
+							ActionType = ActionType.Custom,
+							CustomText = "Port konfigurieren…",
+							OnClick = async () => {
+								int? newPort = await LiveApiPortWindow.ShowPrompt(wnd, ConfigManager.Config.LiveApi.Port);
+								if(newPort.HasValue) {
+									LiveApiConfig cfg = ConfigManager.Config.LiveApi;
+									cfg.Port = newPort.Value;
+									ConfigManager.Config.Save();
+									if(LiveApiServer.Running) {
+										LiveApiServer.Stop();
+										LiveApiServer.Start(newPort.Value);
+									}
+								}
+							}
+						},
+						new MainMenuAction() {
+							ActionType = ActionType.Custom,
+							CustomText = "UI im Browser öffnen",
+							IsEnabled = () => LiveApiServer.Running,
+							OnClick = () => {
+								Process.Start(new ProcessStartInfo($"http://127.0.0.1:{LiveApiServer.Port}/ui") { UseShellExecute = true });
+							}
+						}
+					}
+				}
 			};
+		}
+
+		private void ToggleLiveApi()
+		{
+			LiveApiConfig cfg = ConfigManager.Config.LiveApi;
+			cfg.Enabled = !cfg.Enabled;
+			if(cfg.Enabled) {
+				LiveApiServer.Start(cfg.Port);
+			} else {
+				LiveApiServer.Stop();
+			}
+			ConfigManager.Config.Save();
 		}
 
 		private MainMenuAction GetVideoRecorderMenu(MainWindow wnd)

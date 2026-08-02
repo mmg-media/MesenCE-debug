@@ -74,7 +74,9 @@ namespace Mesen
 						ConfigManager.ResetSettings(false);
 						desktop.MainWindow = new MainWindow();
 					}
-					Mesen.LiveApi.LiveApiServer.Start();
+					if(ConfigManager.Config.LiveApi.Enabled) {
+						Mesen.LiveApi.LiveApiServer.Start(ConfigManager.Config.LiveApi.Port);
+					}
 					desktop.MainWindow.Closed += (s, e) => {
 						Mesen.LiveApi.LiveApiServer.Stop();
 					};
