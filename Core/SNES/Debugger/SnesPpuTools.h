@@ -23,10 +23,12 @@ class SnesPpuTools final : public PpuTools
 private:
 	static constexpr int MainScreenViewLayer = 4;
 	static constexpr int SubScreenViewLayer = 5;
+	static constexpr int FinalScreenViewLayer = 6;
 
 	SnesPpuToolsState _state = {};
 	uint16_t _mainScreenBuffer[256 * 239] = {};
 	uint16_t _subScreenBuffer[256 * 239] = {};
+	uint16_t _finalScreenBuffer[256 * 239] = {};
 
 	void GetSpriteInfo(DebugSpriteInfo& sprite, uint32_t* spritePreview, uint16_t spriteIndex, GetSpritePreviewOptions& options, SnesPpuState& state, uint8_t* vram, uint8_t* oamRam, uint32_t* palette);
 
@@ -44,6 +46,7 @@ public:
 
 	void SetPpuScanlineState(uint16_t scanline, uint8_t mode, int32_t mode7startX, int32_t mode7startY, int32_t mode7endX, int32_t mode7endY);
 	void SetPpuRowBuffers(uint16_t scanline, uint16_t xStart, uint16_t xEnd, uint16_t mainScreenRowBuffer[256], uint16_t subScreenRowBuffer[256]);
+	void SetFinalScreenRowBuffers(uint16_t scanline, uint16_t xStart, uint16_t xEnd, uint16_t rowBuffer[256]);
 
 	DebugTilemapInfo GetTilemap(GetTilemapOptions options, BaseState& state, BaseState& ppuToolsState, uint8_t* vram, uint32_t* palette, uint32_t* outBuffer) override;
 	FrameInfo GetTilemapSize(GetTilemapOptions options, BaseState& state) override;

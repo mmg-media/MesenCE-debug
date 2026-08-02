@@ -221,6 +221,7 @@ private:
 
 	__noinline void DebugProcessMode7Overlay();
 	__noinline void DebugProcessMainSubScreenViews();
+	__noinline void DebugProcessFinalScreenView();
 
 	__noinline void FillInterlacedFrame();
 

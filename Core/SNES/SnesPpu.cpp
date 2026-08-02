@@ -1368,6 +1368,10 @@ void SnesPpu::ApplyColorMath()
 			ApplyColorMathToPixel(_mainScreenBuffer[x], _subScreenBuffer[x], x, isInsideWindow);
 		}
 	}
+
+	if(!_skipRender && _emu->IsDebugging()) {
+		DebugProcessFinalScreenView();
+	}
 }
 
 void SnesPpu::ApplyColorMathToPixel(uint16_t& pixelA, uint16_t pixelB, int x, bool isInsideWindow)
@@ -1676,6 +1680,18 @@ void SnesPpu::DebugProcessMainSubScreenViews()
 	if(_scanline == _vblankStartScanline - 1) {
 		for(int i = _scanline; i < 239; i++) {
 			ppuTools->SetPpuRowBuffers(i, _drawStartX, _drawEndX, nullptr, nullptr);
+		}
+	}
+}
+
+void SnesPpu::DebugProcessFinalScreenView()
+{
+	//Store the final (post color math) main screen buffer for the Live view (layer 6)
+	SnesPpuTools* ppuTools = ((SnesPpuTools*)_emu->InternalGetDebugger()->GetPpuTools(CpuType::Snes));
+	ppuTools->SetFinalScreenRowBuffers(_scanline - 1, _drawStartX, _drawEndX, _mainScreenBuffer);
+	if(_scanline == _vblankStartScanline - 1) {
+		for(int i = _scanline; i < 239; i++) {
+			ppuTools->SetFinalScreenRowBuffers(i, _drawStartX, _drawEndX, nullptr);
 		}
 	}
 }

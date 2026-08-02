@@ -328,6 +328,55 @@ namespace Mesen.LiveApi
 			});
 		}
 
+		/// <summary>
+		/// Echter gerenderter Frame (Main+Sub via Color Math + Helligkeit), direkt aus dem PPU.
+		/// Nutzt den nativen "FinalScreenViewLayer" (Layer 6), der NACH der Farbverrechnung gefüllt wird.
+		/// </summary>
+		public static byte[]? GetLivePng(string cpuType)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+
+			return RunExclusive(() => {
+				try {
+					SnesGfxData data = PrepareData(cpu.Value);
+					byte brightness = data.PpuState.ScreenBrightness;
+
+					const int w = 256, h = 239;
+					int pixelCount = w * h;
+					IntPtr buffer = Marshal.AllocHGlobal(pixelCount * 4);
+					try {
+						DebugApi.GetTilemap(cpu.Value, new GetTilemapOptions() {
+							Layer = 6,
+							Background = TilemapBackground.Transparent
+						}, data.PpuState, data.PpuToolsState, data.Vram, data.Palette, buffer);
+
+						byte[] bytes = new byte[pixelCount * 4];
+						Marshal.Copy(buffer, bytes, 0, bytes.Length);
+						UInt32[] pixels = new UInt32[pixelCount];
+						Buffer.BlockCopy(bytes, 0, pixels, 0, bytes.Length);
+
+						if(brightness != 15) {
+							for(int i = 0; i < pixels.Length; i++) {
+								int r = (int)((pixels[i] >> 16) & 0xFF) * brightness / 15;
+								int g = (int)((pixels[i] >> 8) & 0xFF) * brightness / 15;
+								int b = (int)(pixels[i] & 0xFF) * brightness / 15;
+								pixels[i] = 0xFF000000u | ((UInt32)r << 16) | ((UInt32)g << 8) | (UInt32)b;
+							}
+						}
+
+						return EncodePng(w, h, pixels);
+					} finally {
+						Marshal.FreeHGlobal(buffer);
+					}
+				} catch {
+					return null;
+				}
+			});
+		}
+
 		private static void RenderLayerCrop(SnesGfxData data, int layerIndex, int viewportWidth, int viewportHeight, UInt32[] output, CpuType cpu)
 		{
 			GetTilemapOptions options = new GetTilemapOptions() {

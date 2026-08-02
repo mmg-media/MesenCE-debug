@@ -44,6 +44,9 @@ th{color:var(--dim); font-weight:normal;}
 .tabs{display:flex; gap:4px; margin-bottom:8px; flex-wrap:wrap;}
 .tabs button{flex:1; white-space:nowrap;}
 .tabs button.active{border-color:var(--accent); color:var(--accent);}
+.gfx-tabs{display:flex; gap:4px; flex-wrap:wrap;}
+.gfx-tabs button{flex:1; white-space:nowrap;}
+.gfx-tabs button.active{border-color:var(--accent); color:var(--accent);}
 .tabpanel{display:none;} .tabpanel.active{display:block;}
 .log{background:#0b0e13; border:1px solid var(--border); padding:6px; height:300px; overflow:auto; font-size:12px;}
 .log .line{white-space:pre-wrap;}
@@ -185,15 +188,17 @@ input[type=text],input[type=number],select{min-width:0;}
 		</div>
 
 		<div class="panel tabpanel" id="tab-gfx">
-			<div class="row">
+			<div class="row" style="margin-bottom:6px;">
 				<label>Ansicht</label>
-				<select id="gfxView">
-					<option value="live">Live Main+Sub (Effekte)</option>
-					<option value="screen">Screen (Raw-Layer)</option>
-					<option value="map">Map (volle Tilemap)</option>
-					<option value="sprites">Sprites (Overlay)</option>
-					<option value="tiles">Tileset</option>
-				</select>
+				<div class="gfx-tabs" id="gfxViewTabs" style="flex:1; margin-bottom:0;">
+					<button class="active" data-view="live">Live Main+Sub</button>
+					<button data-view="screen">Screen (Raw)</button>
+					<button data-view="map">Map</button>
+					<button data-view="sprites">Sprites</button>
+					<button data-view="tiles">Tileset</button>
+				</div>
+			</div>
+			<div class="row">
 				<label>Hintergrund</label>
 				<select id="gfxBg">
 					<option value="Black">Black</option>
@@ -245,8 +250,11 @@ input[type=text],input[type=number],select{min-width:0;}
 				</select>
 				<label>Spalten</label><input type="text" id="gfxTilesCols" value="16" class="w50">
 				<label>Zeilen</label><input type="text" id="gfxTilesRows" value="16" class="w50">
-				<label>Palette</label><input type="text" id="gfxTilesPal" value="0" class="w50">
+				<input type="hidden" id="gfxTilesPal" value="0">
 				<label>Start</label><input type="text" id="gfxTilesStart" value="0" class="w50">
+			</div>
+			<div id="gfxPaletteRow" class="row" style="display:none; align-items:flex-start; flex-direction:column; gap:2px; margin-bottom:6px;">
+				<span class="empty" style="font-size:11px;">Paletten (Klick = auswählen):</span>
 			</div>
 			<div style="margin-bottom:8px;">
 				<div class="row" style="margin-bottom:4px;">
@@ -868,11 +876,20 @@ function gfxScreenLayers(){
 	return layers.join(",")||"all";
 }
 
+let gfxView="live";
+
+function setGfxView(view){
+	gfxView=view;
+	document.querySelectorAll("#gfxViewTabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+	gfxSyncOptions();
+	refreshGfx();
+}
+
 function gfxUrl(){
-	const view=$("gfxView").value, bg=$("gfxBg").value;
+	const view=gfxView, bg=$("gfxBg").value;
 	if(view==="live"){
 		//Echter gerenderter Frame (Main+Sub via Color Math, mit Effekten/Transparenz)
-		return "/api/gfx/tilemap?cpu=Snes&layer=main&bg="+encodeURIComponent(bg);
+		return "/api/gfx/live?cpu=Snes";
 	}
 	if(view==="screen"){
 		return "/api/gfx/screen?cpu=Snes&layers="+encodeURIComponent(gfxScreenLayers())+"&sprites="+($("gfxSprites").checked?1:0)+"&bg="+encodeURIComponent(bg);
@@ -914,6 +931,7 @@ async function refreshGfx(){
 		$("gfxImage").src=gfxObjUrl;
 		$("gfxImage").style.display="block";
 		$("gfxInfo").textContent=url;
+		if(gfxView==="tiles") refreshPalette();
 	}catch(e){}
 }
 
@@ -923,7 +941,7 @@ function downloadGfx(){
 		if(!res.ok) throw new Error("HTTP "+res.status);
 		return res.blob();
 	}).then(blob=>{
-		const view=$("gfxView").value;
+		const view=gfxView;
 		let name="terranigma";
 		if(view==="live") name="terranigma_live";
 		else if(view==="screen") name="terranigma_screen";
@@ -937,7 +955,7 @@ function downloadGfx(){
 }
 
 function gfxPythonSnippet(){
-	const view=$("gfxView").value;
+	const view=gfxView;
 	if(view==="live"){
 		return `# Terranigma Live-Screen (Main+Sub, mit Effekten) als PNG je Position
 from PIL import Image
@@ -946,7 +964,7 @@ import urllib.request, io
 BASE = "http://127.0.0.1:8901"
 
 def fetch(params):
-    url = BASE + "/api/gfx/tilemap?" + params
+    url = BASE + "/api/gfx/live?" + params
     with urllib.request.urlopen(url) as r:
         return Image.open(io.BytesIO(r.read())).convert("RGBA")
 
@@ -955,7 +973,7 @@ sheet = Image.new("RGBA", (256*COLS, 224*ROWS), (0,0,0,0))
 
 for r in range(ROWS):
     for c in range(COLS):
-        img = fetch("cpu=Snes&layer=main&bg=Black")
+        img = fetch("cpu=Snes")
         sheet.paste(img, (c*256, r*224))
 
 sheet.save("terranigma_live.png")`;
@@ -991,17 +1009,20 @@ sheet.save("terranigma_stadt.png")`;
 }
 
 function gfxSyncOptions(){
-	const view=$("gfxView").value;
+	const view=gfxView;
 	$("gfxScreenOpts").style.display = view==="screen" ? "" : "none";
 	$("gfxMapOpts").style.display = view==="map" ? "" : "none";
 	$("gfxTilesOpts").style.display = view==="tiles" ? "" : "none";
+	$("gfxPaletteRow").style.display = view==="tiles" ? "" : "none";
 	$("gfxPython").textContent=gfxPythonSnippet();
 }
 
 function bindGfx(){
 	$("btnGfxRefresh").onclick=refreshGfx;
 	$("btnGfxDownload").onclick=downloadGfx;
-	$("gfxView").addEventListener("change",()=>{ gfxSyncOptions(); refreshGfx(); });
+	document.querySelectorAll("#gfxViewTabs button").forEach(b=>{
+		b.addEventListener("click",()=>setGfxView(b.dataset.view));
+	});
 	$("gfxBg").addEventListener("change",()=>{ gfxSyncOptions(); refreshGfx(); });
 	["gfxScreenOpts","gfxMapOpts","gfxTilesOpts"].forEach(id=>{
 		document.getElementById(id).addEventListener("change",()=>{ gfxSyncOptions(); refreshGfx(); });
@@ -1016,6 +1037,51 @@ function bindGfx(){
 		});
 	});
 	gfxSyncOptions();
+	loadPaletteSwatches();
+}
+
+let lastPaletteSig="";
+
+async function refreshPalette(){
+	try{
+		const st=await fetch("api/gfx/state?cpu=Snes&_="+Date.now()).then(r=>r.json());
+		if(!st || !st.palette || !st.palette.colors || st.palette.colors.length===0) return;
+		const sig=st.palette.colors.join(",");
+		if(sig===lastPaletteSig) return; // Palette unverändert
+		lastPaletteSig=sig;
+		renderPaletteSwatches(st.palette.colors, st.palette.colorsPerPalette||16);
+	}catch(e){}
+}
+
+function renderPaletteSwatches(colors, cpp){
+	const rows=Math.min(Math.floor(colors.length/cpp), 8);
+	const box=$("gfxPaletteRow");
+	box.innerHTML='<span class="empty" style="font-size:11px;">Paletten (Klick = auswählen):</span>';
+	for(let p=0;p<rows;p++){
+		const row=document.createElement("div");
+		row.style.cssText="display:flex;align-items:center;gap:2px;";
+		const lbl=document.createElement("span");
+		lbl.textContent="P"+p;
+		lbl.style.cssText="color:var(--dim);width:22px;font-size:10px;";
+		row.appendChild(lbl);
+		for(let c=0;c<cpp;c++){
+			const sw=document.createElement("button");
+			sw.style.cssText="width:14px;height:14px;background:"+colors[p*cpp+c]+";border:1px solid var(--border);cursor:pointer;padding:0;";
+			sw.title="Palette "+p+" · Farbe "+c;
+			sw.onclick=()=>setGfxPalette(p);
+			row.appendChild(sw);
+		}
+		box.appendChild(row);
+	}
+}
+
+function loadPaletteSwatches(){
+	refreshPalette();
+}
+
+function setGfxPalette(p){
+	$("gfxTilesPal").value=p;
+	refreshGfx();
 }
 
 /* ---- Controls ---- */

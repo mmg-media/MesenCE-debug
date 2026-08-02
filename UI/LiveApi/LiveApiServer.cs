@@ -217,6 +217,9 @@ namespace Mesen.LiveApi
 					case "/api/gfx/screen":
 						await WritePng(context, GfxService.GetScreenPng(Query(context, "cpu", "Snes"), Query(context, "layers", "all"), Query(context, "sprites", "1") == "1", Query(context, "bg", "Black")));
 						return;
+					case "/api/gfx/live":
+						await WritePng(context, GfxService.GetLivePng(Query(context, "cpu", "Snes")));
+						return;
 					case "/api/gfx/sprites":
 						await WritePng(context, GfxService.GetSpritesPng(Query(context, "cpu", "Snes")));
 						return;
@@ -560,6 +563,7 @@ namespace Mesen.LiveApi
 			context.Response.AddHeader("Access-Control-Allow-Origin", "*");
 			context.Response.AddHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
 			context.Response.AddHeader("Access-Control-Allow-Headers", "Content-Type");
+			context.Response.AddHeader("Cache-Control", "no-store");
 			if(context.Request.HttpMethod == "OPTIONS") {
 				context.Response.StatusCode = 204;
 				context.Response.ContentLength64 = 0;
