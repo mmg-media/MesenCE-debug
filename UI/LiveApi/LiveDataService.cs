@@ -25,8 +25,8 @@ namespace Mesen.LiveApi
 		private static NotificationListener? _listener;
 		private static Thread? _worker;
 		private static CancellationTokenSource _cts = new CancellationTokenSource();
-		private static readonly object _subscriberLock = new object();
-		private static readonly List<LiveApiSubscriber> _subscribers = new List<LiveApiSubscriber>();
+		private static readonly object SubscriberLock = new object();
+		private static readonly List<LiveApiSubscriber> Subscribers = new List<LiveApiSubscriber>();
 		private static long _frameCount;
 		private static bool _started;
 
@@ -135,8 +135,8 @@ namespace Mesen.LiveApi
 
 		private static void BroadcastFrame()
 		{
-			lock(_subscriberLock) {
-				foreach(LiveApiSubscriber subscriber in _subscribers) {
+			lock(SubscriberLock) {
+				foreach(LiveApiSubscriber subscriber in Subscribers) {
 					LiveApiEventMessage? msg = null;
 					if(subscriber.Ranges.Count > 0) {
 						List<LiveApiChange> changes = ComputeChanges(subscriber);
@@ -225,8 +225,8 @@ namespace Mesen.LiveApi
 
 		private static void ClearSnapshots()
 		{
-			lock(_subscriberLock) {
-				foreach(LiveApiSubscriber subscriber in _subscribers) {
+			lock(SubscriberLock) {
+				foreach(LiveApiSubscriber subscriber in Subscribers) {
 					subscriber.Snapshots.Clear();
 				}
 			}
@@ -234,8 +234,8 @@ namespace Mesen.LiveApi
 
 		private static void Broadcast(LiveApiEventMessage msg)
 		{
-			lock(_subscriberLock) {
-				foreach(LiveApiSubscriber subscriber in _subscribers) {
+			lock(SubscriberLock) {
+				foreach(LiveApiSubscriber subscriber in Subscribers) {
 					if(subscriber.Events.Contains(msg.Event)) {
 						subscriber.Send?.Invoke(msg);
 					}
@@ -245,15 +245,15 @@ namespace Mesen.LiveApi
 
 		public static void RegisterSubscriber(LiveApiSubscriber subscriber)
 		{
-			lock(_subscriberLock) {
-				_subscribers.Add(subscriber);
+			lock(SubscriberLock) {
+				Subscribers.Add(subscriber);
 			}
 		}
 
 		public static void UnregisterSubscriber(LiveApiSubscriber subscriber)
 		{
-			lock(_subscriberLock) {
-				_subscribers.Remove(subscriber);
+			lock(SubscriberLock) {
+				Subscribers.Remove(subscriber);
 			}
 		}
 

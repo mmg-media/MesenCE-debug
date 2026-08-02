@@ -11,11 +11,12 @@ namespace Mesen.LiveApi
 	/// </summary>
 	public static class PluginService
 	{
-		private static readonly object _lock = new object();
+		private static readonly object Lock = new object();
 
 		private static string PluginsDir
 		{
-			get {
+			get
+			{
 				string dir = Path.Combine(AppContext.BaseDirectory, "LiveApiPlugins");
 				try {
 					Directory.CreateDirectory(dir);
@@ -27,7 +28,8 @@ namespace Mesen.LiveApi
 
 		private static string ExportsDir
 		{
-			get {
+			get
+			{
 				string dir = Path.Combine(AppContext.BaseDirectory, "LiveApiExports");
 				try {
 					Directory.CreateDirectory(dir);
@@ -146,7 +148,7 @@ namespace Mesen.LiveApi
 					return false;
 				}
 				string path = Path.Combine(ExportsDir, safe);
-				lock(_lock) {
+				lock(Lock) {
 					switch(mode) {
 						case "png":
 						case "base64":

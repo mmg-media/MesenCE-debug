@@ -10,7 +10,7 @@ namespace Mesen.LiveApi
 	public static class SpcService
 	{
 		private static SemaphoreSlim _gate = new SemaphoreSlim(1, 1);
-		private static readonly object _recordLock = new object();
+		private static readonly object RecordLock = new object();
 		private static string _recordPath = "";
 		private static DateTime _recordStart = default;
 		private static bool _recordWasPaused;
@@ -156,7 +156,7 @@ namespace Mesen.LiveApi
 		/// </summary>
 		public static JsonObject? StartRecording()
 		{
-			lock(_recordLock) {
+			lock(RecordLock) {
 				try {
 					if(!EmuApi.IsRunning()) {
 						return new JsonObject() { ["ok"] = false, ["error"] = "Emulator läuft nicht" };
@@ -188,7 +188,7 @@ namespace Mesen.LiveApi
 
 		public static JsonNode? GetRecordingStatus()
 		{
-			lock(_recordLock) {
+			lock(RecordLock) {
 				bool rec = RecordApi.WaveIsRecording();
 				double elapsed = 0;
 				if(rec && _recordStart != default) {
@@ -203,7 +203,7 @@ namespace Mesen.LiveApi
 
 		public static JsonObject? StopRecording()
 		{
-			lock(_recordLock) {
+			lock(RecordLock) {
 				try {
 					if(RecordApi.WaveIsRecording()) {
 						RecordApi.WaveStop();
@@ -222,7 +222,7 @@ namespace Mesen.LiveApi
 
 		public static byte[]? GetRecordingFile()
 		{
-			lock(_recordLock) {
+			lock(RecordLock) {
 				try {
 					if(RecordApi.WaveIsRecording()) {
 						return null; //noch aktiv, noch nicht lesbar
