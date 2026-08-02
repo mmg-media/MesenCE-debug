@@ -657,6 +657,7 @@
     <EmbeddedResource Include="Dependencies.zip" />
     <EmbeddedResource Include="Localization\resources.en.xml" WithCulture="false" Type="Non-Resx" />
     <EmbeddedResource Include="Utilities\DipSwitchDefinitions.xml" />
+    <EmbeddedResource Include="LiveApi\LiveApiUi.html" />
   </ItemGroup>
   <ItemGroup>
     <AvaloniaXaml Update="Controls\FirmwareSelect.axaml">

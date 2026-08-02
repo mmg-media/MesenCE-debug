@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MesenCE Live UI</title>
+<style>
+:root{
+	--bg:#10131a; --panel:#161b26; --panel2:#1b2230; --border:#2a3342;
+	--text:#d7dde7; --dim:#8b95a7; --accent:#4f9cff; --ok:#3ecf6e; --warn:#f0a64e; --err:#f0506e; --flash:#f0d050;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{background:var(--bg); color:var(--text); font:13px/1.4 "Cascadia Mono", Consolas, monospace; padding:10px;}
+button,input,select{font:inherit; background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:3px; padding:3px 8px;}
+button{cursor:pointer;} button:hover{border-color:var(--accent);} button:active{background:#222b3d;}
+button.primary{border-color:var(--accent);}
+input:focus,select:focus{outline:1px solid var(--accent);}
+h2{font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); margin-bottom:6px;}
+.dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px;}
+.dot.on{background:var(--ok);} .dot.off{background:var(--err);}
+.topbar{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:10px;}
+.topbar .title{font-size:15px; font-weight:bold;}
+.topbar .controls{display:flex; gap:6px; flex-wrap:wrap; margin-left:auto;}
+.grid{display:grid; grid-template-columns:300px minmax(360px,1fr) minmax(420px,1.2fr); gap:10px; align-items:start;}
+@media(max-width:1100px){ .grid{grid-template-columns:1fr;} }
+.panel{background:var(--panel); border:1px solid var(--border); border-radius:5px; padding:10px; margin-bottom:10px;}
+.row{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:6px;}
+.row label{color:var(--dim); min-width:70px;}
+.gridrow{display:grid; grid-template-columns:auto 1fr auto; gap:6px; align-items:center; margin-bottom:4px;}
+table{border-collapse:collapse; width:100%;}
+th,td{text-align:left; padding:2px 6px; border-bottom:1px solid var(--border); white-space:nowrap;}
+th{color:var(--dim); font-weight:normal;}
+.reg{border-collapse:separate;}
+.reg td{padding:1px 4px;}
+.mem{display:block; overflow:auto; max-height:320px; font-size:12px;}
+.mem .addr{color:var(--dim);}
+.mem .hl{background:#3a3220; color:var(--flash);}
+.mem .byte{cursor:pointer; padding:0 1px;}
+.mem .byte:hover{background:var(--accent); color:#000;}
+.mem .ascii{color:var(--dim);}
+.flag{display:inline-block; padding:1px 5px; margin-right:3px; border:1px solid var(--border); border-radius:3px;}
+.flag.on{background:var(--ok); color:#06281a; border-color:var(--ok);}
+.flag.off{color:var(--dim);}
+.tabs{display:flex; gap:4px; margin-bottom:8px; flex-wrap:wrap;}
+.tabs button{flex:1; white-space:nowrap;}
+.tabs button.active{border-color:var(--accent); color:var(--accent);}
+.tabpanel{display:none;} .tabpanel.active{display:block;}
+.log{background:#0b0e13; border:1px solid var(--border); padding:6px; height:300px; overflow:auto; font-size:12px;}
+.log .line{white-space:pre-wrap;}
+.log .line .pc{color:var(--accent);} .log .line .op{color:var(--ok);} .log .line .cmt{color:var(--dim);}
+.dma{color:var(--warn);}
+#statusText{font-weight:bold;}
+.empty{color:var(--dim); font-style:italic;}
+input[type=text],input[type=number],select{min-width:0;}
+.w50{width:70px;} .w90{width:100px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+	<span class="title">MesenCE Live UI</span>
+	<span id="connDot" class="dot off"></span><span id="connText">offline</span>
+	<span id="statusText">-</span>
+	<div class="controls">
+		<button class="primary" id="btnPause">Pause</button>
+		<button id="btnResume">Resume</button>
+		<button id="btnStep">Step</button>
+		<button id="btnStepOver">StepOver</button>
+		<button id="btnStepOut">StepOut</button>
+		<button id="btnFrame">+1 Frame</button>
+		<button id="btnReset">Reset</button>
+		<button id="btnPower">Power Cycle</button>
+		<button id="btnReload">Reload</button>
+	</div>
+</div>
+
+<div class="grid">
+	<div class="col">
+		<div class="panel" id="cpuPanel">
+			<h2>CPU (Snes)</h2>
+			<table class="reg" id="cpuRegs"></table>
+			<div class="row" style="margin-top:6px;">
+				<span class="flag" data-f="N">N</span><span class="flag" data-f="V">V</span><span class="flag" data-f="M">M</span><span class="flag" data-f="X">X</span><span class="flag" data-f="D">D</span><span class="flag" data-f="I">I</span><span class="flag" data-f="Z">Z</span><span class="flag" data-f="C">C</span>
+				<span id="cpuMode" style="color:var(--dim);"></span>
+			</div>
+		</div>
+		<div class="panel" id="ppuPanel">
+			<h2>PPU</h2>
+			<div class="gridrow"><label>Scanline</label><span id="ppuScanline">-</span><label>Cycle</label><span id="ppuCycle">-</span></div>
+			<div class="gridrow"><label>Frame</label><span id="ppuFrame">-</span><label>ForcedBlank</label><span id="ppuForcedBlank">-</span></div>
+			<div class="gridrow"><label>BG Mode</label><span id="ppuBgMode">-</span><label>Bright</label><span id="ppuBrightness">-</span></div>
+			<div class="gridrow"><label>Layers M/S</label><span id="ppuMainLayers">-</span><span id="ppuSubLayers">-</span></div>
+			<div class="gridrow"><label>VRAM Addr</label><span id="ppuVramAddr">-</span><label>OAM Addr</label><span id="ppuOamAddr">-</span></div>
+			<div class="gridrow"><label>CG RAM Addr</label><span id="ppuCgramAddr">-</span><label>Mode7</label><span id="ppuMode7">-</span></div>
+		</div>
+		<div class="panel" id="romPanel">
+			<h2>ROM / Status</h2>
+			<div class="gridrow"><label>Frame</label><span id="statusFrame">-</span><label>Paused</label><span id="statusPaused">-</span></div>
+			<div class="gridrow"><label>Name</label><span id="statusRomName">-</span></div>
+			<div class="gridrow"><label>SHA1</label><span id="statusRomHash" style="font-size:11px;">-</span></div>
+			<div class="row" style="margin-top:4px;"><label>Load ROM</label><input type="text" id="loadPath" style="flex:1;" placeholder="C:\pfad\zum\rom.sfc"><button id="btnLoad">Load</button></div>
+		</div>
+	</div>
+
+	<div class="col">
+		<div class="panel" id="memPanel">
+			<h2>Memory</h2>
+			<div class="row">
+				<label>Type</label>
+				<select id="memType"></select>
+				<label>Start</label><input type="text" id="memStart" value="0" class="w50">
+				<label>Len</label><input type="text" id="memLen" value="0x100" class="w50">
+				<label>CPU</label><select id="memCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option><option>NecDsp</option><option>Cx4</option><option>St018</option></select>
+				<button id="btnMemRead">Read</button>
+				<label style="min-width:0;"><input type="checkbox" id="memLive"> live</label>
+			</div>
+			<div class="mem" id="memView"><span class="empty">Noch kein Bereich geladen.</span></div>
+			<div class="row" style="margin-top:4px;color:var(--dim);font-size:11px;">Klick auf Byte = editieren. Live: geänderte Bytes gelb.</div>
+		</div>
+		<div class="panel" id="exprPanel">
+			<h2>Expression</h2>
+			<div class="row"><input type="text" id="exprInput" style="flex:1;" placeholder="z.B. A:B oder 7E2000"><button id="btnEval">Evaluate</button></div>
+			<div class="gridrow"><label>Ergebnis</label><span id="exprResult">-</span><label>Typ</label><span id="exprType">-</span></div>
+		</div>
+		<div class="panel" id="bpPanel">
+			<h2>Breakpoints</h2>
+			<div class="row">
+				<label>CPU</label><select id="bpCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option><option>NecDsp</option><option>Cx4</option><option>St018</option></select>
+				<label>Mem</label><select id="bpMemType"></select>
+			</div>
+			<div class="row">
+				<label><input type="checkbox" id="bpX" checked> X</label>
+				<label><input type="checkbox" id="bpR"> R</label>
+				<label><input type="checkbox" id="bpW"> W</label>
+				<label>Addr</label><input type="text" id="bpAddr" class="w50" placeholder="0x8000">
+				<button id="btnBpAdd">Add</button>
+				<button id="btnBpClear">Clear all</button>
+			</div>
+			<table id="bpList"></table>
+		</div>
+	</div>
+
+	<div class="col">
+		<div class="tabs">
+			<button class="active" data-tab="trace">Trace</button>
+			<button data-tab="disasm">Disassembly</button>
+			<button data-tab="events">Events</button>
+			<button data-tab="callstack">Callstack</button>
+			<button data-tab="gfx">Gfx / Karte</button>
+			<button data-tab="spc">Sound / SPC</button>
+			<button data-tab="plugins">Scripts</button>
+		</div>
+
+		<div class="panel tabpanel active" id="tab-trace">
+			<div class="row">
+				<label>CPU</label><select id="traceCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
+				<label>Zeilenzahl</label><input type="text" id="traceCount" value="200" class="w50">
+				<label><input type="checkbox" id="traceAuto" checked> auto-scroll</label>
+			</div>
+			<div class="log" id="traceView"></div>
+		</div>
+
+		<div class="panel tabpanel" id="tab-disasm">
+			<div class="row">
+				<label>CPU</label><select id="disasmCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
+				<label>Addr</label><input type="text" id="disasmAddr" value="0x8000" class="w90">
+				<label>Zahl</label><input type="text" id="disasmCount" value="24" class="w50">
+				<button id="btnDisasmPrev">&lt;</button><button id="btnDisasmRead">Read</button><button id="btnDisasmNext">&gt;</button>
+			</div>
+			<div class="log" id="disasmView"></div>
+			<div class="row" style="color:var(--dim);font-size:11px;">Klick auf Zeile = Execute-Breakpoint setzen.</div>
+		</div>
+
+		<div class="panel tabpanel" id="tab-events">
+			<div class="row">
+				<label>CPU</label><select id="eventsCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
+				<label><input type="checkbox" id="eventsAuto" checked> auto-refresh</label>
+			</div>
+			<div class="log" id="eventsView"></div>
+		</div>
+
+		<div class="panel tabpanel" id="tab-callstack">
+			<div class="row"><label>CPU</label><select id="csCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select><button id="btnCsRefresh">Refresh</button></div>
+			<div class="log" id="csView"></div>
+		</div>
+
+		<div class="panel tabpanel" id="tab-gfx">
+			<div class="row">
+				<label>Ansicht</label>
+				<select id="gfxView">
+					<option value="live">Live Main+Sub (Effekte)</option>
+					<option value="screen">Screen (Raw-Layer)</option>
+					<option value="map">Map (volle Tilemap)</option>
+					<option value="sprites">Sprites (Overlay)</option>
+					<option value="tiles">Tileset</option>
+				</select>
+				<label>Hintergrund</label>
+				<select id="gfxBg">
+					<option value="Black">Black</option>
+					<option value="Transparent">Transparent</option>
+					<option value="White">White</option>
+					<option value="Magenta">Magenta</option>
+				</select>
+				<label style="min-width:0;"><input type="checkbox" id="gfxLive" checked> live</label>
+				<button id="btnGfxRefresh">Refresh</button>
+				<button id="btnGfxDownload" class="primary">PNG</button>
+			</div>
+			<div class="row" id="gfxScreenOpts">
+				<label>Layer</label>
+				<label style="min-width:0;"><input type="checkbox" data-layer="0" checked> BG1</label>
+				<label style="min-width:0;"><input type="checkbox" data-layer="1" checked> BG2</label>
+				<label style="min-width:0;"><input type="checkbox" data-layer="2" checked> BG3</label>
+				<label style="min-width:0;"><input type="checkbox" data-layer="3" checked> BG4</label>
+				<label style="min-width:0;"><input type="checkbox" id="gfxSprites" checked> Sprites</label>
+			</div>
+			<div class="row" style="color:var(--dim);font-size:11px;margin-bottom:6px;">
+				<b>Live Main+Sub</b>: echter gerenderter Frame inkl. Color Math, Wolken/Overlays, Transparenz, Backdrop-Farbe.
+				<b>Screen (Raw-Layer)</b>: manuelle Ebene-Ebenen-Komposition (Main zuerst, Sub darüber, ohne Effekte).
+			</div>
+			<div class="row" id="gfxMapOpts" style="display:none;">
+				<label>Layer</label>
+				<select id="gfxMapLayer">
+					<option value="0">BG1</option>
+					<option value="1">BG2</option>
+					<option value="2">BG3</option>
+					<option value="3">BG4</option>
+					<option value="main">Screen Main</option>
+					<option value="sub">Screen Sub</option>
+				</select>
+			</div>
+			<div class="row" id="gfxTilesOpts" style="display:none;">
+				<label>Format</label>
+				<select id="gfxTilesFormat">
+					<option value="Bpp4">4bpp</option>
+					<option value="Bpp2">2bpp</option>
+					<option value="Bpp8">8bpp</option>
+					<option value="DirectColor">DirectColor</option>
+					<option value="Mode7">Mode7</option>
+				</select>
+				<label>Quelle</label>
+				<select id="gfxTilesMem">
+					<option value="SnesVideoRam">VRAM</option>
+					<option value="SnesCgRam">CGRAM</option>
+					<option value="SnesWorkRam">WRAM</option>
+				</select>
+				<label>Spalten</label><input type="text" id="gfxTilesCols" value="16" class="w50">
+				<label>Zeilen</label><input type="text" id="gfxTilesRows" value="16" class="w50">
+				<label>Palette</label><input type="text" id="gfxTilesPal" value="0" class="w50">
+				<label>Start</label><input type="text" id="gfxTilesStart" value="0" class="w50">
+			</div>
+			<div style="margin-bottom:8px;">
+				<div class="row" style="margin-bottom:4px;">
+					<label>Zoom</label>
+					<button data-zoom="1" class="primary">1x</button>
+					<button data-zoom="2">2x</button>
+					<button data-zoom="3">3x</button>
+					<button data-zoom="4">4x</button>
+					<span id="gfxZoomInfo" class="empty"></span>
+				</div>
+				<div id="gfxZoomWrap" style="overflow:auto; max-height:640px; border:1px solid var(--border); border-radius:3px;">
+					<img id="gfxImage" alt="Grafik" style="display:none; image-rendering:pixelated; background:repeating-conic-gradient(#1d2430 0% 25%, #151a24 0% 50%) 0 0/16px 16px;">
+				</div>
+				<div id="gfxInfo" class="empty">Kein Bild geladen.</div>
+			</div>
+			<div class="panel" style="background:var(--panel2); margin-bottom:0;">
+				<h2>Python-Export (Stitching)</h2>
+				<pre id="gfxPython" style="font-size:11px; white-space:pre-wrap; color:var(--dim);"></pre>
+			</div>
+		</div>
+
+		<div class="panel tabpanel" id="tab-spc">
+			<div class="row">
+				<label>Song</label><input type="text" id="spcSong" style="flex:1;" placeholder="optional, z. B. Titel">
+				<label>Game</label><input type="text" id="spcGame" style="flex:1;" placeholder="optional">
+				<label>Artist</label><input type="text" id="spcArtist" style="flex:1;" placeholder="optional">
+			</div>
+			<div class="row">
+				<button id="btnSpcDownload" class="primary">SPC (.spc) laden</button>
+				<label>als WAV aufnehmen</label>
+				<input type="text" id="spcWavSeconds" value="30" class="w50">
+				<label style="min-width:0;">Sekunden</label>
+				<button id="btnSpcWav">WAV aufnehmen</button>
+				<label style="min-width:0;"><input type="checkbox" id="spcLive" checked> live</label>
+			</div>
+			<div class="log" id="spcView" style="height:220px;"><span class="empty">Kein APU-Zustand geladen.</span></div>
+			<div class="row" style="margin-top:6px;color:var(--dim);font-size:11px;">
+				Der SPC-Snapshot enthält APU-RAM (64 KB), DSP-Register (128) und CPU-Register des
+				gerade geladenen Musikstücks/Sound-Sets. In einem SPC-Player (z.&nbsp;B. foobar2000+plugin,
+				Winamp, Audiosurf) abspielen und nach WAV/MP3 konvertieren. Für jedes Stück: im Spiel das
+				Stück anspielen, pausieren, hier "SPC laden" → fertig.
+			</div>
+		</div>
+
+		<div class="panel tabpanel" id="tab-plugins">
+			<div class="row">
+				<label>Plugin</label>
+				<select id="plSelect" style="flex:1;"></select>
+				<button id="btnPlRefresh">Refresh</button>
+				<button id="btnPlNew">New</button>
+				<button id="btnPlSave">Save</button>
+				<button id="btnPlDelete">Delete</button>
+				<button id="btnPlDownload">Download</button>
+				<button id="btnPlRun" class="primary">Run</button>
+				<button id="btnPlStop">Stop</button>
+			</div>
+			<div class="row">
+				<label>Name</label><input type="text" id="plName" style="flex:1;" placeholder="dateiname (ohne .js)">
+			</div>
+			<textarea id="plEditor" spellcheck="false" placeholder="// @name Mein Plugin&#10;// @description ...&#10;Plugin.register({ name: &quot;Mein Plugin&quot;, init(api){ ... } });" style="width:100%; height:220px; background:#0b0e13; color:var(--text); border:1px solid var(--border); font:12px/1.4 Consolas,monospace; padding:6px; resize:vertical;"></textarea>
+			<div class="row" style="margin-top:6px;"><span id="plStatus" class="empty">Kein Plugin aktiv.</span></div>
+			<div id="plPanel" class="panel" style="background:var(--panel2); display:none; margin-bottom:6px;"></div>
+			<div class="log" id="plLog" style="height:150px;"><span class="empty">Plugin-Log (leer)</span></div>
+			<div class="row" style="margin-top:6px;color:var(--dim);font-size:11px;">
+				Plugins sind JS-Dateien im Ordner <b>LiveApiPlugins</b> neben Mesen.exe. Sie haben vollen
+				Zugriff auf die API: <b>rpc()</b> (alle JSON-RPC-Methoden), <b>fetch()</b> (alle Endpoints),
+				<b>download()</b>, <b>exportFile()</b> (schreibt Logs/Screenshots auf den Server),
+				<b>log()</b>, <b>onEvent()</b> (WS-Events) und <b>panel</b> (eigene UI).
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+"use strict";
+const MEM_TYPES = ["SnesMemory","SnesPrgRom","SnesWorkRam","SnesSaveRam","SnesVideoRam","SnesSpriteRam","SnesCgRam","SnesRegister","SpcMemory","SpcRam","SpcRom","SpcDspRegisters","Sa1Memory","Sa1InternalRam","GsuMemory","GsuWorkRam","NecDspMemory","Cx4Memory","Cx4DataRam","St018Memory","St018PrgRom","St018WorkRam"];
+
+let ws=null, nextId=1, pending={};
+let connected=false;
+let currentMem={type:"SnesWorkRam",start:0,data:"",map:{}};
+let liveOn=false, liveType="SnesWorkRam", liveStart=0, liveLen=0;
+let traceTimer=null, statusTimer=null, timers=[];
+
+const $=id=>document.getElementById(id);
+
+function fmtHex(n,w){ n=Number(n)>>>0; return n.toString(16).toUpperCase().padStart(w||2,"0"); }
+function byteAt(hex,i){ return parseInt(hex.substr(i*2,2),16); }
+
+function setConn(on){
+	connected=on;
+	$("connDot").className="dot "+(on?"on":"off");
+	$("connText").textContent=on?"verbunden":"offline";
+	if(on){ startTimers(); refreshAll(); } else { stopTimers(); }
+}
+
+function connect(){
+	try{ ws=new WebSocket("ws://"+location.host+"/ws"); }
+	catch(e){ setTimeout(connect,1500); return; }
+	ws.onopen=()=>setConn(true);
+	ws.onclose=()=>{ setConn(false); setTimeout(connect,1500); };
+	ws.onmessage=ev=>{
+		let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+		if(m.type==="event"){ handleEvent(m); return; }
+		if(m.id!=null && pending[m.id]){ const p=pending[m.id]; delete pending[m.id]; m.error?p.reject(m.error):p.resolve(m.result); }
+	};
+}
+
+function rpc(method,params){
+	return new Promise((resolve,reject)=>{
+		if(!ws || ws.readyState!==1){ reject("nicht verbunden"); return; }
+		const id=nextId++; pending[id]={resolve,reject};
+		ws.send(JSON.stringify({jsonrpc:"2.0",id:id,method:method,params:params||{}}));
+		setTimeout(()=>{ if(pending[id]){ delete pending[id]; reject("timeout"); } },5000);
+	});
+}
+
+function handleEvent(m){
+	plEventHandlers.forEach(fn=>{ try{ fn(m); }catch(e){} });
+	if(m.frame!=null){ $("statusFrame").textContent=m.frame; }
+	if(m.event==="frame" && m.changes && liveOn){ applyChanges(m.changes); }
+	if(m.event==="paused" || m.event==="break" || m.event==="resumed"){
+		refreshCpuPpu();
+		if(m.event==="paused" || m.event==="break"){ refreshStatus(); }
+	}
+	if(m.event==="romLoaded"){ refreshAll(); }
+	if(m.event==="stopped"){ refreshStatus(); }
+}
+
+function applyChanges(changes){
+	if(!currentMem.data) return;
+	const type=currentMem.type, start=currentMem.start;
+	for(const c of changes){
+		if(c.type!==type) continue;
+		const base=Number(c.start)-start, data=c.data||"";
+		for(let i=0;i<data.length;i+=2){
+			const off=base+i/2;
+			if(off<0 || off>=currentMem.data.length/2) continue;
+			const idx=off*2;
+			currentMem.data=currentMem.data.substr(0,idx)+data.substr(i,2)+currentMem.data.substr(idx+2);
+			currentMem.map[off]=true;
+		}
+	}
+	if(changes.length){ paintMem(); setTimeout(()=>{ for(const c of changes){ const base=Number(c.start)-start; for(let i=0;i<(c.data||"").length/2;i++){ delete currentMem.map[base+i/2]; } } paintMem(); },600); }
+}
+
+function startTimers(){
+	stopTimers();
+	statusTimer=setInterval(refreshStatus,1000);
+	traceTimer=setInterval(()=>{ if(activeTab==="trace") refreshTrace(); },400);
+	timers.push(setInterval(()=>{ if(activeTab==="disasm") refreshDisasm(); },800));
+	timers.push(setInterval(()=>{ if(activeTab==="events" && $("eventsAuto").checked) refreshEvents(); },1200));
+	timers.push(setInterval(()=>{ if(activeTab==="callstack") refreshCallstack(); },2000));
+	timers.push(setInterval(()=>{ if(activeTab==="gfx" && $("gfxLive").checked) refreshGfx(); },600));
+	timers.push(setInterval(()=>{ if(activeTab==="spc" && $("spcLive").checked) refreshSpc(); },400));
+	timers.push(setInterval(refreshCpuPpu,300));
+}
+
+function stopTimers(){
+	if(statusTimer) clearInterval(statusTimer);
+	if(traceTimer) clearInterval(traceTimer);
+	timers.forEach(t=>clearInterval(t));
+	timers=[];
+	statusTimer=null; traceTimer=null;
+}
+
+async function refreshAll(){
+	refreshStatus(); refreshCpuPpu();
+	refreshMem(); refreshBreakpoints();
+	if(activeTab==="trace") refreshTrace();
+	if(activeTab==="disasm") refreshDisasm();
+	if(activeTab==="events") refreshEvents();
+	if(activeTab==="callstack") refreshCallstack();
+	if(activeTab==="gfx") refreshGfx();
+	if(activeTab==="spc") refreshSpc();
+}
+
+async function refreshStatus(){
+	try{
+		const s=await rpc("status");
+		if(!s) return;
+		$("statusFrame").textContent=s.frame;
+		$("statusPaused").textContent=s.paused?"ja":"nein";
+		$("statusRomName").textContent=s.romName||"(kein ROM)";
+		$("statusRomHash").textContent=s.romHash||"-";
+		$("statusText").textContent=s.paused?"Paused":(s.romLoaded?"Running":"Kein ROM");
+		$("statusText").style.color=s.paused?"var(--warn)":(s.romLoaded?"var(--ok)":"var(--err)");
+	}catch(e){}
+}
+
+async function refreshCpuPpu(){
+	try{
+		const cpu=await rpc("cpu",{cpu:"Snes"});
+		if(cpu){ renderCpu(cpu); }
+		const ppu=await rpc("ppu",{cpu:"Snes"});
+		if(ppu){ renderPpu(ppu); }
+	}catch(e){}
+}
+
+function renderCpu(c){
+	const rows=[
+		["PC",fmtHex(c.pc,6)],["K",fmtHex(c.k,2)],["DBR",fmtHex(c.dbr,2)],
+		["A",fmtHex(c.a,4)],["X",fmtHex(c.x,4)],["Y",fmtHex(c.y,4)],
+		["S",fmtHex(c.sp,4)],["D",fmtHex(c.d,4)],["PS",fmtHex(c.ps,2)]
+	];
+	let h="<tr>"+rows.map(r=>`<td>${r[0]}</td><td>${r[1]}</td>`).join("")+"</tr>";
+	$("cpuRegs").innerHTML=h;
+	const bits={N:0x80,V:0x40,M:0x20,X:0x10,D:0x08,I:0x04,Z:0x02,C:0x01};
+	document.querySelectorAll("#cpuPanel .flag").forEach(f=>{
+		const on=(c.ps&bits[f.dataset.f])!==0;
+		f.className="flag "+(on?"on":"off");
+	});
+	$("cpuMode").textContent=c.emulationMode?"E-Mode":"Native";
+}
+
+function renderPpu(p){
+	$("ppuScanline").textContent=p.scanline;
+	$("ppuCycle").textContent=p.cycle+" / "+p.hClock;
+	$("ppuFrame").textContent=p.frameCount;
+	$("ppuForcedBlank").textContent=p.forcedBlank?"ja":"nein";
+	$("ppuBgMode").textContent=p.bgMode;
+	$("ppuBrightness").textContent=p.screenBrightness;
+	$("ppuMainLayers").textContent="M:"+layerStr(p.mainScreenLayers)+"  S:"+layerStr(p.subScreenLayers);
+	$("ppuVramAddr").textContent="$"+fmtHex(p.vramAddress,4);
+	$("ppuOamAddr").textContent="$"+fmtHex(p.oamRamAddress,4);
+	$("ppuCgramAddr").textContent="$"+fmtHex(p.cgramAddress,2);
+	$("ppuMode7").textContent=p.mode7?"$"+fmtHex(p.mode7.hScroll,4)+"/"+fmtHex(p.mode7.vScroll,4):"-";
+}
+function layerStr(bits){ const names=["1","2","3","4","O"]; let s=""; for(let i=0;i<5;i++){ s+=names[i]+":"+((bits&(1<<i))?"1":"0")+" "; } return s.trim(); }
+
+/* ---- Memory ---- */
+function populateSelects(){
+	$("memType").innerHTML=MEM_TYPES.map(t=>`<option>${t}</option>`).join("");
+	$("bpMemType").innerHTML=MEM_TYPES.map(t=>`<option>${t}</option>`).join("");
+}
+function memParams(){ return {type:$("memType").value,start:parseInt($("memStart").value,16)||0,length:parseInt($("memLen").value,16)||0x100}; }
+
+async function refreshMem(){
+	await setLiveOff();
+	const p=memParams();
+	try{
+		const r=await rpc("memory.read",p);
+		if(!r){ $("memView").innerHTML='<span class="empty">keine Daten</span>'; return; }
+		currentMem={type:r.type,start:r.start,data:r.data,map:{}};
+		paintMem();
+	}catch(e){}
+}
+
+function paintMem(){
+	const {data,start,map}=currentMem;
+	let h="";
+	const bytes=data.length/2;
+	const cols=16;
+	const rows=Math.ceil(bytes/cols);
+	for(let r=0;r<rows;r++){
+		const addr=start+r*cols;
+		let hex="", ascii="";
+		for(let c=0;c<cols;c++){
+			const off=r*cols+c;
+			if(off<bytes){
+				const v=byteAt(data,off);
+				const cls=map[off]?" byte hl":" byte";
+				hex+=`<span class="${cls}" data-addr="${addr+c}">${fmtHex(v)}</span> `;
+				ascii+=(v>=32&&v<127)?String.fromCharCode(v):".";
+			}else{ hex+="&nbsp;&nbsp;&nbsp; "; ascii+=" "; }
+		}
+		h+=`<div><span class="addr">${fmtHex(addr,6)}</span>  ${hex} <span class="ascii">${ascii}</span></div>`;
+	}
+	$("memView").innerHTML=h||'<span class="empty">leer</span>';
+	$("memView").querySelectorAll(".byte").forEach(el=>{
+		el.addEventListener("click",()=>editByte(el));
+	});
+}
+
+async function editByte(el){
+	const addr=parseInt(el.dataset.addr,16);
+	const cur=byteAt(currentMem.data,addr-currentMem.start);
+	const val=prompt("Byte @ $"+fmtHex(addr,6)+" (hex):",fmtHex(cur));
+	if(val==null) return;
+	const v=parseInt(val,16);
+	if(isNaN(v)||v<0||v>255){ return; }
+	try{
+		await rpc("memory.write",{type:currentMem.type,start:addr,data:fmtHex(v)});
+		if(!liveOn){ refreshMem(); } else {
+			currentMem.data=currentMem.data.substr(0,(addr-currentMem.start)*2)+fmtHex(v)+currentMem.data.substr((addr-currentMem.start)*2+2);
+			paintMem();
+		}
+	}catch(e){}
+}
+
+async function setLiveOff(){
+	if(liveOn){ liveOn=false; try{ await rpc("subscribe",{events:["frame","paused","resumed","break","romLoaded","stopped"],ranges:[]}); }catch(e){} }
+}
+async function setLiveOn(){
+	const p=memParams();
+	liveType=p.type; liveStart=p.start; liveLen=p.length; liveOn=true;
+	try{ await rpc("subscribe",{events:["frame","paused","resumed","break","romLoaded","stopped"],ranges:[{type:liveType,start:liveStart,length:liveLen}]}); }catch(e){}
+}
+
+/* ---- Trace ---- */
+async function refreshTrace(){
+	try{
+		const cpu=$("traceCpu").value, count=parseInt($("traceCount").value,10)||200;
+		const rows=await rpc("trace",{cpu:cpu,count:count});
+		if(!rows) return;
+		let h="";
+		for(const t of rows){
+			h+=`<div class="line"><span class="pc">$${fmtHex(t.pc,6)}</span> <span class="op">${t.byteCode||""}</span> ${esc(t.output||"")}</div>`;
+		}
+		const view=$("traceView"); view.innerHTML=h;
+		if($("traceAuto").checked){ view.scrollTop=view.scrollHeight; }
+	}catch(e){}
+}
+
+/* ---- Disassembly ---- */
+async function refreshDisasm(){
+	try{
+		const cpu=$("disasmCpu").value, addr=parseInt($("disasmAddr").value,16)||0, count=parseInt($("disasmCount").value,10)||24;
+		const lines=await rpc("disasm",{cpu:cpu,address:addr,count:count});
+		if(!lines) return;
+		let h="";
+		for(const l of lines){
+			const hasAddr=l.address>=0;
+			const pc="<span class=\"pc\">"+fmtHex(hasAddr?l.address:addr,6)+"</span>";
+			h+=`<div class="line" data-addr="${hasAddr?l.address:""}">${pc} <span class="op">${esc(l.byteCode||"")}</span> ${esc(l.text||"")} ${l.comment?'<span class="cmt">; '+esc(l.comment)+'</span>':""}</div>`;
+		}
+		$("disasmView").innerHTML=h;
+		$("disasmView").querySelectorAll(".line[data-addr]").forEach(el=>{
+			el.style.cursor="pointer";
+			el.addEventListener("click",async ()=>{
+				try{ await rpc("breakpoints.set",{cpuType:cpu,memoryType:"SnesMemory",breakOnExec:true,enabled:true,startAddress:parseInt(el.dataset.addr,16),endAddress:parseInt(el.dataset.addr,16)}); refreshBreakpoints(); }catch(e){}
+			});
+		});
+	}catch(e){}
+}
+
+/* ---- Events ---- */
+async function refreshEvents(){
+	try{
+		const cpu=$("eventsCpu").value;
+		const evs=await rpc("events",{cpu:cpu});
+		if(!evs) return;
+		let h="";
+		for(const e of evs.slice(-200)){
+			const dma=e.dmaChannel>=0?" (DMA ch "+e.dmaChannel+")":"";
+			const cls=e.type.indexOf("Dma")>=0?" dma":"";
+			h+=`<div class="line${cls}">${esc(e.type)} <span class="pc">$${fmtHex(e.pc,6)}</span> sl=${e.scanline} cy=${e.cycle} ${e.operation?"["+esc(e.operation.type)+" $"+fmtHex(e.operation.address,6)+" val="+e.operation.value+"]":""}${dma}</div>`;
+		}
+		$("eventsView").innerHTML=h;
+	}catch(e){}
+}
+
+/* ---- Callstack ---- */
+async function refreshCallstack(){
+	try{
+		const cpu=$("csCpu").value;
+		const frames=await rpc("callstack",{cpu:cpu});
+		if(!frames) return;
+		let h="";
+		frames.forEach((f,i)=>{
+			h+=`<div class="line"><span class="pc">[${i}]</span> src=$${fmtHex(f.source,6)} target=$${fmtHex(f.target,6)} ret=$${fmtHex(f.return,6)} ${f.flags}</div>`;
+		});
+		$("csView").innerHTML=h||'<span class="empty">kein Stack</span>';
+	}catch(e){}
+}
+
+/* ---- Breakpoints ---- */
+async function refreshBreakpoints(){
+	try{
+		const bps=await rpc("breakpoints.get");
+		if(!bps) return;
+		let h="<tr><th>CPU</th><th>Mem</th><th>Typ</th><th>Addr</th><th>Cond</th></tr>";
+		for(const b of bps){
+			const addr=(b.startAddress===b.endAddress)?"$"+fmtHex(b.startAddress,6):"$"+fmtHex(b.startAddress,6)+"-"+fmtHex(b.endAddress,6);
+			h+=`<tr><td>${b.cpuType}</td><td>${b.memoryType}</td><td>${b.type}</td><td>${addr}</td><td>${esc(b.condition||"")}</td></tr>`;
+		}
+		$("bpList").innerHTML=h;
+	}catch(e){}
+}
+
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ---- Plugin-System (WebUI) ---- */
+let pluginList=[], activePlugin=null, plFileBase="";
+let plEventHandlers=[], plTimers=[], plRegistry=[];
+
+function saveBlob(name, blob){
+	const a=document.createElement("a");
+	a.href=URL.createObjectURL(blob); a.download=name; a.click();
+	setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+
+const Plugin = {
+	/* ---- Transport: ALLE API-Methoden (JSON-RPC) ---- */
+	rpc: (method,params)=>rpc(method,params),
+	/* ---- Transport: ALLE HTTP-Endpoints ---- */
+	fetch: (path,opts)=>fetch(path,opts),
+	getJson: async(path)=>{ const r=await fetch(path); return r.ok?await r.json():null; },
+	getBlob: async(path)=>{ const r=await fetch(path); return r.ok?await r.blob():null; },
+
+	/* ---- Convenience (deckt alle RPC-Methoden ab) ---- */
+	status: ()=>rpc("status"),
+	rom: ()=>rpc("rom"),
+	memoryRead: (type,start,length)=>rpc("memory.read",{type:type||"SnesWorkRam",start:start||0,length:length||16}),
+	memoryWrite: (type,start,data,values)=>rpc("memory.write",{type:type||"SnesWorkRam",start:start||0,data:data,values:values}),
+	cpu: (cpu)=>rpc("cpu",{cpu:cpu||"Snes"}),
+	ppu: (cpu)=>rpc("ppu",{cpu:cpu||"Snes"}),
+	trace: (count,cpu)=>rpc("trace",{cpu:cpu||"Snes",count:count||100}),
+	disasm: (address,count,cpu)=>rpc("disasm",{cpu:cpu||"Snes",address:address||0,count:count||20}),
+	events: (cpu)=>rpc("events",{cpu:cpu||"Snes"}),
+	callstack: (cpu)=>rpc("callstack",{cpu:cpu||"Snes"}),
+	eval: (expr,cpu)=>rpc("expression",{expr:expr||"",cpu:cpu||"Snes"}),
+	breakpoints: ()=>rpc("breakpoints.get"),
+	setBreakpoint: (o)=>rpc("breakpoints.set",o||{}),
+	clearBreakpoints: ()=>rpc("breakpoints.clear"),
+	control: (action,cpu,stepCount)=>rpc("control",{action:action,cpu:cpu||"Snes",stepCount:stepCount||1}),
+	load: (path)=>rpc("load",{path:path||""}),
+	subscribe: (events,ranges)=>rpc("subscribe",{events:events||[],ranges:ranges||[]}),
+	unsubscribe: ()=>rpc("unsubscribe"),
+
+	/* ---- Gfx / SPC URLs (HTTP) ---- */
+	gfxTilemapUrl: (layer,bg)=>"api/gfx/tilemap?cpu=Snes&layer="+encodeURIComponent(layer||0)+"&bg="+encodeURIComponent(bg||"Black"),
+	gfxScreenUrl: (layers,sprites,bg)=>"api/gfx/screen?cpu=Snes&layers="+encodeURIComponent(layers||"all")+"&sprites="+(sprites===false?0:1)+"&bg="+encodeURIComponent(bg||"Black"),
+	gfxSpritesUrl: ()=>"api/gfx/sprites?cpu=Snes",
+	gfxTilesUrl: (o)=>{ o=o||{}; return "api/gfx/tiles?cpu=Snes&format="+encodeURIComponent(o.format||"Bpp4")+"&mem="+encodeURIComponent(o.mem||"SnesVideoRam")+"&cols="+(o.cols||16)+"&rows="+(o.rows||16)+"&palette="+(o.palette||0)+"&start="+encodeURIComponent(o.start||0)+"&bg="+encodeURIComponent(o.bg||"Black"); },
+	spcUrl: (o)=>{ o=o||{}; return "api/spc?song="+encodeURIComponent(o.song||"")+"&game="+encodeURIComponent(o.game||"")+"&artist="+encodeURIComponent(o.artist||""); },
+	gfxState: ()=>Plugin.getJson("api/gfx/state?cpu=Snes"),
+	spcState: ()=>Plugin.getJson("api/spc/state"),
+
+	/* ---- Daten nach außen schieben ---- */
+	download: async(name,dataOrBlob)=>{ saveBlob(name||"download.bin", dataOrBlob instanceof Blob ? dataOrBlob : new Blob([dataOrBlob],{type:"application/octet-stream"})); },
+	downloadUrl: async(name,url)=>{ const b=await Plugin.getBlob(url); if(b) saveBlob(name||"download", b); },
+	exportFile: (name,data,mode)=>fetch("api/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name||"export.txt",data:data||"",mode:mode||"text"})}),
+
+	/* ---- UI-Integration ---- */
+	log: (msg,level)=>plLog(msg,level),
+	panel: null,
+	onEvent: (fn)=>{ plEventHandlers.push(fn); },
+	interval: (fn,ms)=>{ const t=setInterval(fn,ms); plTimers.push(t); return t; },
+	timeout: (fn,ms)=>setTimeout(fn,ms),
+
+	/* ---- Registrierung (vom Plugin-Datei aufgerufen) ---- */
+	register: (desc)=>{ plRegistry.push(desc); }
+};
+
+function plLog(msg,level){
+	const el=$("plLog");
+	if(el.querySelector(".empty")) el.innerHTML="";
+	const line=document.createElement("div");
+	line.className="line"+(level==="err"?"":"");
+	line.style.color=level==="err"?"var(--err)":(level==="warn"?"var(--warn)":(level==="ok"?"var(--ok)":""));
+	line.textContent=("["+new Date().toLocaleTimeString()+"] ")+msg;
+	el.appendChild(line);
+	el.scrollTop=el.scrollHeight;
+}
+
+function plLogClear(){
+	const el=$("plLog"); el.innerHTML='<span class="empty">Plugin-Log (leer)</span>';
+}
+
+async function plRefresh(){
+	try{
+		const j=await fetch("api/plugins").then(r=>r.json());
+		pluginList=(j&&j.plugins)||[];
+		const sel=$("plSelect");
+		sel.innerHTML="";
+		pluginList.forEach(p=>{
+			const o=document.createElement("option");
+			o.value=p.file; o.textContent=p.name+(p.description?" — "+p.description:"");
+			sel.appendChild(o);
+		});
+		if(pluginList.length){ plFileBase=pluginList[0].file; await plLoad(pluginList[0].file); }
+		else { $("plName").value=""; plFileBase=""; }
+	}catch(e){}
+}
+
+async function plLoad(file){
+	plFileBase=file;
+	$("plName").value=file||"";
+	try{
+		const r=await fetch("api/plugins/"+encodeURIComponent(file));
+		if(r.ok) $("plEditor").value=await r.text();
+	}catch(e){}
+}
+
+function plNew(){
+	plFileBase="";
+	$("plName").value="mein_plugin";
+	$("plEditor").value='// @name Mein Plugin\n// @description Analyse-Script\nPlugin.register({\n\tname: "Mein Plugin",\n\tasync init(api){\n\t\tapi.log("Plugin gestartet");\n\t\tconst s = await api.status();\n\t\tapi.log("ROM: " + (s ? s.romName : "-"));\n\t\treturn { dispose(){ api.log("gestoppt"); } };\n\t}\n});';
+}
+
+async function plSave(){
+	try{
+		await fetch("api/plugins",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("plName").value.trim(),content:$("plEditor").value})});
+		await plRefresh();
+	}catch(e){}
+}
+
+async function plDelete(){
+	try{
+		await fetch("api/plugins/"+encodeURIComponent($("plName").value.trim()),{method:"DELETE"});
+		if(activePlugin) plStop();
+		await plRefresh();
+	}catch(e){}
+}
+
+function plDownload(){
+	saveBlob(($("plName").value.trim()||"plugin")+".js", new Blob([$("plEditor").value],{type:"text/javascript"}));
+}
+
+function plStop(){
+	if(activePlugin && activePlugin.instance && activePlugin.instance.dispose){
+		try{ activePlugin.instance.dispose(); }catch(e){}
+	}
+	plTimers.forEach(t=>clearInterval(t)); plTimers=[];
+	plEventHandlers=[];
+	activePlugin=null;
+	$("plStatus").textContent="Kein Plugin aktiv.";
+	$("plPanel").style.display="none"; $("plPanel").innerHTML="";
+}
+
+async function plRun(){
+	plStop();
+	plRegistry=[];
+	plLogClear();
+	Plugin.panel=$("plPanel");
+	Plugin.panel.innerHTML="";
+	$("plPanel").style.display="";
+	const content=$("plEditor").value;
+	try{
+		const s=document.createElement("script");
+		s.textContent=content;
+		document.body.appendChild(s);
+		document.body.removeChild(s);
+	}catch(e){ plLog("Script-Fehler: "+(e&&e.message||e),"err"); return; }
+	if(plRegistry.length===0){ plLog("Plugin hat Plugin.register({name, init}) nicht aufgerufen.","err"); return; }
+	const desc=plRegistry[0];
+	activePlugin=desc;
+	$("plStatus").textContent="Aktiv: "+(desc.name||"plugin");
+	try{
+		const inst=desc.init ? desc.init(Plugin) : null;
+		if(inst && typeof inst.then==="function"){
+			inst.catch && inst.catch(e=>plLog("init-Fehler: "+(e&&e.message||e),"err"));
+		} else {
+			activePlugin.instance=inst;
+		}
+	}catch(e){ plLog("init-Fehler: "+e.message,"err"); }
+	plLog("Plugin '"+(desc.name||"")+"' gestartet.","ok");
+}
+
+function bindPl(){
+	$("btnPlRefresh").onclick=plRefresh;
+	$("btnPlNew").onclick=plNew;
+	$("btnPlSave").onclick=plSave;
+	$("btnPlDelete").onclick=plDelete;
+	$("btnPlDownload").onclick=plDownload;
+	$("btnPlRun").onclick=plRun;
+	$("btnPlStop").onclick=plStop;
+	$("plSelect").addEventListener("change",e=>{ plLoad(e.target.value); });
+}
+
+/* ---- Sound / SPC ---- */
+async function refreshSpc(){
+	try{
+		const res=await fetch("/api/spc/state");
+		if(!res.ok){ $("spcView").innerHTML='<span class="empty">Kein APU-Zustand (HTTP '+res.status+')</span>'; return; }
+		const s=await res.json();
+		if(!s) return;
+		let h=`<div class="line"><span class="pc">SPC</span> PC=$${fmtHex(s.cpu.pc,4)} A=$${fmtHex(s.cpu.a,2)} X=$${fmtHex(s.cpu.x,2)} Y=$${fmtHex(s.cpu.y,2)} SP=$${fmtHex(s.cpu.sp,2)} PS=$${fmtHex(s.cpu.ps,2)} DspReg=$${fmtHex(s.cpu.dspRegSelect,2)} state=${s.cpu.stopState}</div>`;
+		h+=`<div class="line"><span class="pc">DSP</span> MVOLL=$${fmtHex(s.dsp.mvoll,2)} MVOLR=$${fmtHex(s.dsp.mvolr,2)} KON=$${fmtHex(s.dsp.kon,2)} KOF=$${fmtHex(s.dsp.kof,2)} FLG=$${fmtHex(s.dsp.flg,2)} DIR=$${fmtHex(s.dsp.dir,2)} ESA=$${fmtHex(s.dsp.esa,2)} EDL=${s.dsp.edl} EON=$${fmtHex(s.dsp.eon,2)} NON=$${fmtHex(s.dsp.non,2)}</div>`;
+		h+=`<div class="line"><span class="pc">Timer</span> T0=${s.timers.t0.output}/${s.timers.t0.target} T1=${s.timers.t1.output}/${s.timers.t1.target} T2=${s.timers.t2.output}/${s.timers.t2.target}</div>`;
+		s.dsp.voices.forEach(v=>{
+			const state=v.active?"on":"--";
+			h+=`<div class="line"><span class="pc">V${v.voice}</span> ${state} src=${v.source} volL=${v.volumeLeft} volR=${v.volumeRight} pitch=${v.pitch}${v.keyOn?" KON":""}${v.echo?" ECHO":""}${v.noise?" NOISE":""}${v.pitchModulation?" PMOD":""}</div>`;
+		});
+		$("spcView").innerHTML=h;
+	}catch(e){}
+}
+
+function downloadSpc(){
+	const params=new URLSearchParams();
+	if($("spcSong").value.trim()) params.set("song",$("spcSong").value.trim());
+	if($("spcGame").value.trim()) params.set("game",$("spcGame").value.trim());
+	if($("spcArtist").value.trim()) params.set("artist",$("spcArtist").value.trim());
+	const qs=params.toString();
+	fetch("/api/spc"+(qs?"?"+qs:"")).then(res=>{
+		if(!res.ok) throw new Error("HTTP "+res.status);
+		return res.blob();
+	}).then(blob=>{
+		const name=($("spcSong").value.trim().replace(/[^a-zA-Z0-9_-]+/g,"_")||"terranigma")+".spc";
+		const a=document.createElement("a");
+		a.href=URL.createObjectURL(blob); a.download=name; a.click();
+		setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+	}).catch(()=>{});
+}
+
+function bindSpc(){
+	$("btnSpcDownload").onclick=downloadSpc;
+	$("btnSpcWav").onclick=async ()=>{
+		const seconds=parseInt($("spcWavSeconds").value,10)||30;
+		plLog("WAV-Aufnahme für "+seconds+" s läuft …");
+		try{
+			const res=await fetch("/api/spc/wav?seconds="+seconds);
+			if(!res.ok){ plLog("Aufnahme fehlgeschlagen (HTTP "+res.status+")","err"); return; }
+			const blob=await res.blob();
+			const a=document.createElement("a");
+			a.href=URL.createObjectURL(blob); a.download="terranigma_"+seconds+"s.wav"; a.click();
+			setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+			plLog("WAV fertig ("+seconds+" s).","ok");
+		}catch(e){ plLog("Aufnahme-Fehler: "+e.message,"err"); }
+	};
+}
+
+/* ---- Gfx / Karte ---- */
+let gfxObjUrl=null;
+
+function gfxScreenLayers(){
+	let layers=[];
+	document.querySelectorAll("#gfxScreenOpts input[data-layer]").forEach(cb=>{ if(cb.checked) layers.push(parseInt(cb.dataset.layer,10)); });
+	return layers.join(",")||"all";
+}
+
+function gfxUrl(){
+	const view=$("gfxView").value, bg=$("gfxBg").value;
+	if(view==="live"){
+		//Echter gerenderter Frame (Main+Sub via Color Math, mit Effekten/Transparenz)
+		return "/api/gfx/tilemap?cpu=Snes&layer=main&bg="+encodeURIComponent(bg);
+	}
+	if(view==="screen"){
+		return "/api/gfx/screen?cpu=Snes&layers="+encodeURIComponent(gfxScreenLayers())+"&sprites="+($("gfxSprites").checked?1:0)+"&bg="+encodeURIComponent(bg);
+	}
+	if(view==="map"){
+		return "/api/gfx/tilemap?cpu=Snes&layer="+encodeURIComponent($("gfxMapLayer").value)+"&bg="+encodeURIComponent(bg);
+	}
+	if(view==="sprites"){
+		return "/api/gfx/sprites?cpu=Snes";
+	}
+	const cols=parseInt($("gfxTilesCols").value,10)||16, rows=parseInt($("gfxTilesRows").value,10)||16;
+	const pal=parseInt($("gfxTilesPal").value,10)||0;
+	return "/api/gfx/tiles?cpu=Snes&format="+encodeURIComponent($("gfxTilesFormat").value)+"&mem="+encodeURIComponent($("gfxTilesMem").value)
+		+"&cols="+cols+"&rows="+rows+"&palette="+pal+"&start="+encodeURIComponent($("gfxTilesStart").value)+"&bg="+encodeURIComponent(bg);
+}
+
+let gfxZoom=1;
+
+function applyGfxZoom(){
+	const img=$("gfxImage");
+	if(!img.naturalWidth) return;
+	img.style.width=(img.naturalWidth*gfxZoom)+"px";
+	img.style.height=(img.naturalHeight*gfxZoom)+"px";
+	$("gfxZoomInfo").textContent=img.naturalWidth+"x"+img.naturalHeight+" @ "+gfxZoom+"x";
+}
+
+async function refreshGfx(){
+	try{
+		const url=gfxUrl();
+		const res=await fetch(url);
+		if(!res.ok){
+			$("gfxImage").style.display="none";
+			$("gfxInfo").textContent="Fehler HTTP "+res.status;
+			return;
+		}
+		const blob=await res.blob();
+		if(gfxObjUrl) URL.revokeObjectURL(gfxObjUrl);
+		gfxObjUrl=URL.createObjectURL(blob);
+		$("gfxImage").src=gfxObjUrl;
+		$("gfxImage").style.display="block";
+		$("gfxInfo").textContent=url;
+	}catch(e){}
+}
+
+function downloadGfx(){
+	const url=gfxUrl();
+	fetch(url).then(res=>{
+		if(!res.ok) throw new Error("HTTP "+res.status);
+		return res.blob();
+	}).then(blob=>{
+		const view=$("gfxView").value;
+		let name="terranigma";
+		if(view==="live") name="terranigma_live";
+		else if(view==="screen") name="terranigma_screen";
+		else if(view==="map") name="terranigma_bg"+(parseInt($("gfxMapLayer").value,10)+1);
+		else if(view==="sprites") name="terranigma_sprites";
+		else name="terranigma_tiles";
+		const a=document.createElement("a");
+		a.href=URL.createObjectURL(blob); a.download=name+".png"; a.click();
+		setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+	}).catch(()=>{});
+}
+
+function gfxPythonSnippet(){
+	const view=$("gfxView").value;
+	if(view==="live"){
+		return `# Terranigma Live-Screen (Main+Sub, mit Effekten) als PNG je Position
+from PIL import Image
+import urllib.request, io
+
+BASE = "http://127.0.0.1:8901"
+
+def fetch(params):
+    url = BASE + "/api/gfx/tilemap?" + params
+    with urllib.request.urlopen(url) as r:
+        return Image.open(io.BytesIO(r.read())).convert("RGBA")
+
+COLS, ROWS = 8, 8   # Raster der durchlaufenen Screens
+sheet = Image.new("RGBA", (256*COLS, 224*ROWS), (0,0,0,0))
+
+for r in range(ROWS):
+    for c in range(COLS):
+        img = fetch("cpu=Snes&layer=main&bg=Black")
+        sheet.paste(img, (c*256, r*224))
+
+sheet.save("terranigma_live.png")`;
+	}
+	const layers=gfxScreenLayers();
+	const sprites=$("gfxSprites").checked?1:0;
+	const bg=$("gfxBg").value;
+	return `# Terranigma Karten-Export (MesenCE Live API)
+# 1) In Mesen die Stadt laden, ggf. Layer ohne NPCs/Wolken aktivieren.
+# 2) Frames: mit +1 Frame / Bewegung durch die Karte schreiten und je Position speichern.
+# 3) Die PNGs stitchen (hier Beispiel mit Pillow):
+
+from PIL import Image
+import urllib.request, io
+
+BASE = "http://127.0.0.1:8901"
+
+def fetch(params):
+    url = BASE + "/api/gfx/screen?" + params
+    with urllib.request.urlopen(url) as r:
+        return Image.open(io.BytesIO(r.read())).convert("RGBA")
+
+COLS, ROWS = 8, 8   # Raster der durchlaufenen Screens
+bg = "${bg}"        # Transparent => frei, sonst Black/White/Magenta
+sheet = Image.new("RGBA", (256*COLS, 224*ROWS), (0,0,0,0))
+
+for r in range(ROWS):
+    for c in range(COLS):
+        img = fetch("cpu=Snes&layers=${layers}&sprites=${sprites}&bg=" + bg)
+        sheet.paste(img, (c*256, r*224))
+
+sheet.save("terranigma_stadt.png")`;
+}
+
+function gfxSyncOptions(){
+	const view=$("gfxView").value;
+	$("gfxScreenOpts").style.display = view==="screen" ? "" : "none";
+	$("gfxMapOpts").style.display = view==="map" ? "" : "none";
+	$("gfxTilesOpts").style.display = view==="tiles" ? "" : "none";
+	$("gfxPython").textContent=gfxPythonSnippet();
+}
+
+function bindGfx(){
+	$("btnGfxRefresh").onclick=refreshGfx;
+	$("btnGfxDownload").onclick=downloadGfx;
+	$("gfxView").addEventListener("change",()=>{ gfxSyncOptions(); refreshGfx(); });
+	$("gfxBg").addEventListener("change",()=>{ gfxSyncOptions(); refreshGfx(); });
+	["gfxScreenOpts","gfxMapOpts","gfxTilesOpts"].forEach(id=>{
+		document.getElementById(id).addEventListener("change",()=>{ gfxSyncOptions(); refreshGfx(); });
+	});
+	$("gfxImage").addEventListener("load",applyGfxZoom);
+	document.querySelectorAll("[data-zoom]").forEach(b=>{
+		b.addEventListener("click",()=>{
+			gfxZoom=parseInt(b.dataset.zoom,10)||1;
+			document.querySelectorAll("[data-zoom]").forEach(x=>x.classList.remove("primary"));
+			b.classList.add("primary");
+			applyGfxZoom();
+		});
+	});
+	gfxSyncOptions();
+}
+
+/* ---- Controls ---- */
+function bindControls(){
+	$("btnPause").onclick=()=>rpc("control",{action:"pause"});
+	$("btnResume").onclick=()=>rpc("control",{action:"resume"});
+	$("btnStep").onclick=()=>{ rpc("control",{action:"step",cpu:"Snes",stepCount:1}).then(()=>{ refreshCpuPpu(); refreshTrace(); }); };
+	$("btnStepOver").onclick=()=>rpc("control",{action:"stepOver",cpu:"Snes"});
+	$("btnStepOut").onclick=()=>rpc("control",{action:"stepOut",cpu:"Snes"});
+	$("btnFrame").onclick=()=>rpc("control",{action:"runSingleFrame"});
+	$("btnReset").onclick=()=>rpc("control",{action:"reset"});
+	$("btnPower").onclick=()=>rpc("control",{action:"powerCycle"});
+	$("btnReload").onclick=()=>rpc("control",{action:"reload"});
+	$("btnLoad").onclick=async ()=>{ try{ const ok=await rpc("load",{path:$("loadPath").value.trim()}); if(ok){ setTimeout(refreshAll,1500); } }catch(e){} };
+	$("btnEval").onclick=async ()=>{
+		try{
+			const r=await rpc("expression",{expr:$("exprInput").value,cpu:"Snes"});
+			$("exprResult").textContent=r?("$"+fmtHex(r.value,8)):"-";
+			$("exprType").textContent=r?r.resultType:"-";
+		}catch(e){}
+	};
+	$("exprInput").addEventListener("keydown",e=>{ if(e.key==="Enter") $("btnEval").click(); });
+	$("btnMemRead").onclick=refreshMem;
+	$("memLive").addEventListener("change",async e=>{
+		if(e.target.checked){ await setLiveOn(); refreshMem(); }
+		else{ await setLiveOff(); refreshMem(); }
+	});
+	$("btnBpAdd").onclick=async ()=>{
+		try{
+			await rpc("breakpoints.set",{
+				cpuType:$("bpCpu").value, memoryType:$("bpMemType").value,
+				breakOnExec:$("bpX").checked, breakOnRead:$("bpR").checked, breakOnWrite:$("bpW").checked,
+				enabled:true, startAddress:parseInt($("bpAddr").value,16)||0, endAddress:parseInt($("bpAddr").value,16)||0
+			});
+			refreshBreakpoints();
+		}catch(e){}
+	};
+	$("btnBpClear").onclick=async ()=>{ try{ await rpc("breakpoints.clear"); refreshBreakpoints(); }catch(e){} };
+	$("btnDisasmRead").onclick=refreshDisasm;
+	$("btnDisasmPrev").onclick=()=>{ const n=parseInt($("disasmCount").value,10)||24; $("disasmAddr").value="0x"+fmtHex((parseInt($("disasmAddr").value,16)||0)-n*2,6); refreshDisasm(); };
+	$("btnDisasmNext").onclick=()=>{ const n=parseInt($("disasmCount").value,10)||24; $("disasmAddr").value="0x"+fmtHex((parseInt($("disasmAddr").value,16)||0)+n*2,6); refreshDisasm(); };
+	$("btnCsRefresh").onclick=refreshCallstack;
+	$("disasmAddr").addEventListener("keydown",e=>{ if(e.key==="Enter") refreshDisasm(); });
+	$("memType").addEventListener("change",()=>{ if(liveOn){ setLiveOn(); } refreshMem(); });
+}
+
+let activeTab="trace";
+function bindTabs(){
+	document.querySelectorAll(".tabs button").forEach(btn=>{
+		btn.addEventListener("click",()=>{
+			document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+			document.querySelectorAll(".tabpanel").forEach(p=>p.classList.remove("active"));
+			btn.classList.add("active");
+			activeTab=btn.dataset.tab;
+			document.getElementById("tab-"+activeTab).classList.add("active");
+			if(activeTab==="trace") refreshTrace();
+			if(activeTab==="disasm") refreshDisasm();
+			if(activeTab==="events") refreshEvents();
+			if(activeTab==="callstack") refreshCallstack();
+			if(activeTab==="gfx") refreshGfx();
+			if(activeTab==="spc") refreshSpc();
+			if(activeTab==="plugins") plRefresh();
+		});
+	});
+}
+
+populateSelects();
+bindControls();
+bindTabs();
+bindGfx();
+bindSpc();
+bindPl();
+connect();
+</script>
+</body>
+</html>

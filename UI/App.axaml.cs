@@ -74,6 +74,10 @@ namespace Mesen
 						ConfigManager.ResetSettings(false);
 						desktop.MainWindow = new MainWindow();
 					}
+					Mesen.LiveApi.LiveApiServer.Start();
+					desktop.MainWindow.Closed += (s, e) => {
+						Mesen.LiveApi.LiveApiServer.Stop();
+					};
 				}
 			}
 			base.OnFrameworkInitializationCompleted();
