@@ -450,6 +450,36 @@ namespace Mesen.Interop
 			public byte value;
 			public UInt32 vramAddr;
 		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct InteropWramLogEntry
+		{
+			public UInt64 id;
+			public UInt64 frame;
+			public Int32 cycle;
+			public UInt32 pc;
+			public UInt16 addr;
+			public byte bank;
+			public byte value;
+			public UInt16 width;
+			public sbyte memType;
+			public byte reserved;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct InteropTrackerEntry
+		{
+			public UInt64 id;
+			public UInt64 frame;
+			public Int32 cycle;
+			public byte type;
+			public byte bank;
+			public UInt16 addr;
+			public UInt32 pc;
+			public byte value;
+			public byte extra;
+			public UInt16 extra2;
+		}
 #pragma warning restore IDE1006
 
 		[DllImport(DllPath, EntryPoint = "snes_set_dma_log_enabled")] public static extern void SnesSetDmaLogEnabled([MarshalAs(UnmanagedType.I1)] bool enabled);
@@ -462,6 +492,18 @@ namespace Mesen.Interop
 		[DllImport(DllPath, EntryPoint = "snes_set_vram_log_enabled")] public static extern void SnesSetVramLogEnabled([MarshalAs(UnmanagedType.I1)] bool enabled);
 		[DllImport(DllPath, EntryPoint = "snes_get_vram_log_count")] public static extern UInt32 SnesGetVramLogCount();
 		[DllImport(DllPath, EntryPoint = "snes_get_vram_log")] public static extern UInt32 SnesGetVramLog([Out] InteropVramLogEntry[] entries, UInt32 start, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_set_wram_log_config")] public static extern void SnesSetWramLogConfig([MarshalAs(UnmanagedType.I1)] bool enabled, UInt32 start, UInt32 end, UInt16 minLen, Int32 memType);
+		[DllImport(DllPath, EntryPoint = "snes_get_wram_log_count")] public static extern UInt32 SnesGetWramLogCount();
+		[DllImport(DllPath, EntryPoint = "snes_get_wram_log")] public static extern UInt32 SnesGetWramLog([Out] InteropWramLogEntry[] entries, UInt32 start, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_get_wram_log_since")] public static extern UInt32 SnesGetWramLogSince([Out] InteropWramLogEntry[] entries, UInt64 sinceId, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_tracker_start")] public static extern void SnesTrackerStart([MarshalAs(UnmanagedType.LPUTF8Str)] string? filePath, Int32 memType, UInt32 start, UInt32 end, [MarshalAs(UnmanagedType.I1)] bool onRead, [MarshalAs(UnmanagedType.I1)] bool onWrite, UInt32 value, [MarshalAs(UnmanagedType.I1)] bool valueSet, [MarshalAs(UnmanagedType.I1)] bool logExec, UInt64 maxBytes, Int32 bufferMode, UInt64 bufferSizeMb);
+		[DllImport(DllPath, EntryPoint = "snes_tracker_get_buffer_len")] public static extern UInt64 SnesTrackerGetBufferLen();
+		[DllImport(DllPath, EntryPoint = "snes_tracker_stop")] public static extern void SnesTrackerStop();
+		[DllImport(DllPath, EntryPoint = "snes_tracker_is_enabled")] public static extern bool SnesTrackerIsEnabled();
+		[DllImport(DllPath, EntryPoint = "snes_tracker_is_tracking")] public static extern bool SnesTrackerIsTracking();
+		[DllImport(DllPath, EntryPoint = "snes_tracker_get_count")] public static extern UInt32 SnesTrackerGetCount();
+		[DllImport(DllPath, EntryPoint = "snes_tracker_get_trigger_count")] public static extern UInt64 SnesTrackerGetTriggerCount();
+		[DllImport(DllPath, EntryPoint = "snes_get_tracker_log")] public static extern UInt32 SnesGetTrackerLog([Out] InteropTrackerEntry[] entries, UInt32 start, UInt32 count);
 		[DllImport(DllPath)] public static extern void SetEventViewerConfig(CpuType cpuType, InteropNesEventViewerConfig config);
 		[DllImport(DllPath)] public static extern void SetEventViewerConfig(CpuType cpuType, InteropGbEventViewerConfig config);
 		[DllImport(DllPath)] public static extern void SetEventViewerConfig(CpuType cpuType, InteropGbaEventViewerConfig config);

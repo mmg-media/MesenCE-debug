@@ -56,8 +56,29 @@ th{color:var(--dim); font-weight:normal;}
 .empty{color:var(--dim); font-style:italic;}
 input[type=text],input[type=number],select{min-width:0;}
 .w50{width:70px;} .w90{width:100px;}
-.ipad{width:36px;height:28px;padding:0;font-size:12px;margin:1px;}
+.ipad{width:38px;height:32px;padding:0;font-size:12px;margin:1px;border-radius:6px;user-select:none;}
 .ipad:active{background:var(--accent); color:#000;}
+
+/* SNES-Controller-Layout */
+.snespad{display:flex; flex-direction:column; align-items:center; gap:8px;}
+.snespad-shoulders{display:flex; justify-content:space-between; width:216px;}
+.snespad-shoulders .ipad{width:76px;}
+.snespad-body{display:flex; gap:30px; align-items:center;}
+.snespad .reg td{padding:3px;}
+.snespad-body .ipad{width:42px; height:34px; border-radius:50%; font-weight:bold;}
+.snespad-faces .ipad[data-key="A"]{color:var(--flash);}
+.snespad-faces .ipad[data-key="B"]{color:#e8a35a;}
+.snespad-faces .ipad[data-key="X"]{color:#5ab8e8;}
+.snespad-faces .ipad[data-key="Y"]{color:#7ae85a;}
+.snespad-selstart{display:flex; gap:12px; justify-content:center;}
+.snespad-selstart .ipad{width:64px; font-size:10px;}
+
+/* Status-Tabelle */
+.kv{width:100%; border-collapse:collapse;}
+.kv th{width:84px; text-align:left; color:var(--dim); font-weight:normal; padding:2px 8px 2px 0; white-space:nowrap; vertical-align:top; border:none;}
+.kv td{padding:2px 6px; border:none; word-break:break-all;}
+.status-state{display:flex; align-items:center; gap:6px; margin-bottom:6px;}
+.status-state .dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
 </style>
 </head>
 <body>
@@ -100,25 +121,42 @@ input[type=text],input[type=number],select{min-width:0;}
 		</div>
 		<div class="panel" id="inputPanel">
 			<h2>Input (Fernsteuerung)</h2>
-			<div class="row" style="justify-content:center;">
-				<table class="reg">
-					<tr><td colspan="3"><div class="row" style="justify-content:center;"><button class="ipad" data-key="L" style="margin-right:6px;">L</button><button class="ipad" data-key="R">R</button></div></td></tr>
-					<tr><td></td><td><button class="ipad" data-key="Up">▲</button></td><td></td></tr>
-					<tr><td><button class="ipad" data-key="Left">◀</button></td><td><button class="ipad" data-key="Select">SEL</button></td><td><button class="ipad" data-key="Right">▶</button></td></tr>
-					<tr><td></td><td><button class="ipad" data-key="Down">▼</button></td><td></td></tr>
-				</table>
-				<table class="reg" style="margin-left:8px;"><tr><td><button class="ipad" data-key="A">A</button></td><td><button class="ipad" data-key="B">B</button></td></tr>
-				<tr><td><button class="ipad" data-key="X">X</button></td><td><button class="ipad" data-key="Y">Y</button></td></tr>
-				<tr><td colspan="2"><button class="ipad" data-key="Start" style="width:100%;">Start</button></td></tr></table>
+			<div class="snespad">
+				<div class="snespad-shoulders">
+					<button class="ipad" data-key="L">L</button>
+					<button class="ipad" data-key="R">R</button>
+				</div>
+				<div class="snespad-body">
+					<table class="reg">
+						<tr><td></td><td><button class="ipad" data-key="Up">▲</button></td><td></td></tr>
+						<tr><td><button class="ipad" data-key="Left">◀</button></td><td></td><td><button class="ipad" data-key="Right">▶</button></td></tr>
+						<tr><td></td><td><button class="ipad" data-key="Down">▼</button></td><td></td></tr>
+					</table>
+					<table class="reg snespad-faces">
+						<tr><td></td><td><button class="ipad" data-key="X">X</button></td><td></td></tr>
+						<tr><td><button class="ipad" data-key="Y">Y</button></td><td></td><td><button class="ipad" data-key="A">A</button></td></tr>
+						<tr><td></td><td><button class="ipad" data-key="B">B</button></td><td></td></tr>
+					</table>
+				</div>
+				<div class="snespad-selstart">
+					<button class="ipad" data-key="Select">Select</button>
+					<button class="ipad" data-key="Start">Start</button>
+				</div>
 			</div>
 			<div class="row" style="color:var(--dim);font-size:11px;">Gedrückt halten = Taste halten (für Scroll/Karte). Nutzt die Input-Zuordnung (Pad1).</div>
 		</div>
 		<div class="panel" id="romPanel">
 			<h2>ROM / Status</h2>
-			<div class="gridrow"><label>Frame</label><span id="statusFrame">-</span><label>Paused</label><span id="statusPaused">-</span></div>
-			<div class="gridrow"><label>Name</label><span id="statusRomName">-</span></div>
-			<div class="gridrow"><label>SHA1</label><span id="statusRomHash" style="font-size:11px;">-</span></div>
-			<div class="row" style="margin-top:4px;"><label>Load ROM</label><input type="text" id="loadPath" style="flex:1;" placeholder="C:\pfad\zum\rom.sfc"><button id="btnLoad">Load</button></div>
+			<div class="status-state">
+				<span id="statusPausedDot" class="dot off"></span>
+				<span id="statusPaused" style="font-weight:bold;">-</span>
+			</div>
+			<table class="kv">
+				<tr><th>Frame</th><td id="statusFrame">-</td></tr>
+				<tr><th>ROM-Name</th><td id="statusRomName">-</td></tr>
+				<tr><th>SHA1</th><td id="statusRomHash" style="font-size:11px;">-</td></tr>
+			</table>
+			<div class="row" style="margin-top:6px;"><label>Load ROM</label><input type="text" id="loadPath" style="flex:1;" placeholder="C:\pfad\zum\rom.sfc"><button id="btnLoad">Load</button></div>
 		</div>
 	</div>
 
@@ -165,6 +203,7 @@ input[type=text],input[type=number],select{min-width:0;}
 			<button class="active" data-tab="trace">Trace</button>
 			<button data-tab="disasm">Disassembly</button>
 			<button data-tab="events">Events</button>
+			<button data-tab="tracker">Tracker</button>
 			<button data-tab="callstack">Callstack</button>
 			<button data-tab="gfx">Gfx / Karte</button>
 			<button data-tab="spc">Sound / SPC</button>
@@ -213,6 +252,16 @@ input[type=text],input[type=number],select{min-width:0;}
 				<button id="btnVramRefresh">Refresh</button>
 			</div>
 			<div class="log" id="vramLogView" style="height:180px;overflow:auto;"><span class="empty">VRAM-Writes laden …</span></div>
+			<h2 style="margin-top:8px;">WRAM/Register-Writes (R3.1, PC + Run)</h2>
+			<div class="row">
+				<label>Mem</label><select id="wramLogMem" class="w50"><option selected>SnesWorkRam</option><option>SnesRegister</option><option>SnesSaveRam</option><option>SnesVideoRam</option></select>
+				<label>start</label><input type="text" id="wramLogStart" value="0x4000" class="w50">
+				<label>end</label><input type="text" id="wramLogEnd" value="0x40FF" class="w50">
+				<label>minLen</label><input type="text" id="wramLogMinLen" value="1" class="w50">
+				<span style="color:var(--dim);font-size:11px;" id="wramLogTotal">– Einträge</span>
+				<button id="btnWramRefresh">Refresh</button>
+			</div>
+			<div class="log" id="wramLogView" style="height:180px;overflow:auto;"><span class="empty">WRAM-Writes laden …</span></div>
 			<h2 style="margin-top:8px;">DMA-Kanäle (live)</h2>
 			<div class="log" id="dmaView" style="height:130px;"><span class="empty">DMA-Status laden …</span></div>
 			<h2 style="margin-top:8px;">DMA-Log (kumulativ, P1.1)</h2>
@@ -230,6 +279,31 @@ input[type=text],input[type=number],select{min-width:0;}
 		<div class="panel tabpanel" id="tab-callstack">
 			<div class="row"><label>CPU</label><select id="csCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select><button id="btnCsRefresh">Refresh</button></div>
 			<div class="log" id="csView"></div>
+		</div>
+
+		<div class="panel tabpanel" id="tab-tracker">
+			<h2>Universal-Tracker (Trigger → Ablauf-Log)</h2>
+			<div class="row">
+				<label>Mem</label><select id="trkMem" class="w50"><option selected>SnesWorkRam</option><option>SnesRegister</option><option>SnesVideoRam</option><option>SnesSaveRam</option><option>SnesPrgRom</option></select>
+				<label>start</label><input type="text" id="trkStart" value="0x4000" class="w50">
+				<label>end</label><input type="text" id="trkEnd" value="0x40FF" class="w50">
+				<label>Wert</label><input type="text" id="trkValue" value="" class="w50" placeholder="leer = egal">
+			</div>
+			<div class="row">
+				<label><input type="checkbox" id="trkOnRead" checked> bei Read</label>
+				<label><input type="checkbox" id="trkOnWrite" checked> bei Write</label>
+				<label><input type="checkbox" id="trkLogExec" checked> jeden Befehl</label>
+				<label>Puffer</label><select id="trkMode" class="w50"><option value="disk">Disk</option><option value="ram">RAM</option></select>
+				<label>Größe</label><input type="text" id="trkSize" value="256" class="w50" title="maxMb (Disk) bzw. bufferMb (RAM)">
+				<span style="color:var(--dim);font-size:11px;" id="trkStatus">–</span>
+			</div>
+			<div class="row">
+				<button class="primary" id="btnTrkStart">Tracker starten</button>
+				<button id="btnTrkStop">Stoppen</button>
+				<button id="btnTrkRefresh">Refresh</button>
+			</div>
+			<div class="row" style="color:var(--dim);font-size:11px;">Sobald die Region gelesen/geschrieben wird, startet der Tracker und loggt jeden Befehl, WRAM-Write, VRAM-Zugriff, DMA und Interrupt bis zum Stop (Ring + Datei in LiveApiExports).</div>
+			<div class="log" id="trkView" style="height:320px;overflow:auto;"><span class="empty">Tracker starten …</span></div>
 		</div>
 
 		<div class="panel tabpanel" id="tab-gfx">
@@ -450,8 +524,9 @@ function startTimers(){
 	statusTimer=setInterval(refreshStatus,1000);
 	traceTimer=setInterval(()=>{ if(activeTab==="trace") refreshTrace(); },400);
 	timers.push(setInterval(()=>{ if(activeTab==="disasm") refreshDisasm(); },800));
-	timers.push(setInterval(()=>{ if(activeTab==="events" && $("eventsAuto").checked){ refreshEvents(); refreshDma(); refreshDmaLog(); refreshEvHist(); refreshVramLog(); } },1200));
+	timers.push(setInterval(()=>{ if(activeTab==="events" && $("eventsAuto").checked){ refreshEvents(); refreshDma(); refreshDmaLog(); refreshEvHist(); refreshVramLog(); refreshWramLog(); } },1200));
 	timers.push(setInterval(()=>{ if(activeTab==="callstack") refreshCallstack(); },2000));
+	timers.push(setInterval(()=>{ if(activeTab==="tracker") refreshTracker(); },1000));
 	timers.push(setInterval(()=>{ if(activeTab==="gfx" && $("gfxLive").checked) refreshGfx(); },600));
 	timers.push(setInterval(()=>{ if(activeTab==="spc" && $("spcLive").checked) refreshSpc(); },400));
 	timers.push(setInterval(refreshCpuPpu,300));
@@ -481,7 +556,8 @@ async function refreshStatus(){
 		const s=await rpc("status");
 		if(!s) return;
 		$("statusFrame").textContent=s.frame;
-		$("statusPaused").textContent=s.paused?"ja":"nein";
+		$("statusPaused").textContent=s.paused?"Pausiert":"Läuft";
+		$("statusPausedDot").className="dot "+(s.paused?"off":"on");
 		$("statusRomName").textContent=s.romName||"(kein ROM)";
 		$("statusRomHash").textContent=s.romHash||"-";
 		$("statusText").textContent=s.paused?"Paused":(s.romLoaded?"Running":"Kein ROM");
@@ -709,6 +785,43 @@ async function refreshVramLog(){
 	}catch(e){}
 }
 
+async function refreshWramLog(){
+	try{
+		const mem=encodeURIComponent($("wramLogMem").value||"SnesWorkRam");
+		const start=encodeURIComponent($("wramLogStart").value||"0");
+		const end=encodeURIComponent($("wramLogEnd").value||"0xFFFF");
+		const minLen=parseInt($("wramLogMinLen").value||"1");
+		const count=200;
+		const d=await fetch("api/wram/writes?cpu=Snes&count="+count+"&memType="+mem+"&start="+start+"&end="+end+"&minLen="+minLen).then(r=>r.json());
+		if(!d) return;
+		$("wramLogTotal").textContent=d.count+" Einträge";
+		let h="<table class='tbl'><tr><th>Id</th><th>Fr</th><th>PC</th><th>Adresse</th><th>Wert</th><th>Breite</th></tr>";
+		(d.entries||[]).slice().reverse().forEach(e=>{
+			const a="7E"===e.bank||"7F"===e.bank ? "$"+e.bank+":"+fmtHex(e.addr,4) : "$"+e.bank+":"+fmtHex(e.addr,4);
+			h+=`<tr><td>${e.id}</td><td>${e.frame}</td><td>$${fmtHex(e.pc,6)}</td><td>${a}</td><td>${e.value}</td><td>${e.width}</td></tr>`;
+		});
+		$("wramLogView").innerHTML=h||'<span class="empty">keine Writes im Bereich</span>';
+	}catch(e){}
+}
+
+async function refreshTracker(){
+	try{
+		const s=await fetch("api/tracker/status").then(r=>r.json());
+		if(!s) return;
+		$("trkStatus").textContent=(s.enabled?"aktiv":"aus")+(s.tracking?" · getriggert":"")+" · "+s.count+" Einträge"+(s.bufferLen?(" · Puffer "+Math.round(s.bufferLen/1048576)+"MB"):"");
+		const d=await fetch("api/tracker/log?count=300").then(r=>r.json());
+		if(!d||!d.entries) return;
+		let h="<table class='tbl'><tr><th>#</th><th>Fr</th><th>Typ</th><th>PC</th><th>Adresse</th><th>Wert</th></tr>";
+		(d.entries||[]).slice(-300).reverse().forEach(e=>{
+			let addr="";
+			if(e.type==="DMA"){ addr="ch"+e.channel+(e.hdma?"h":"")+" dst="+fmtHex(e.dest,2)+(e.vramAddr?" vram=$"+fmtHex(e.vramAddr,4):"")+" len="+e.length; }
+			else if(e.addr!==undefined){ addr="7E"===e.bank||"7F"===e.bank||"00"===e.bank ? "$"+e.bank+":"+fmtHex(e.addr,4) : "$"+e.bank+":"+fmtHex(e.addr,4); }
+			h+=`<tr><td>${e.id}</td><td>${e.frame}</td><td>${e.type}</td><td>$${fmtHex(e.pc,6)}</td><td>${addr}</td><td>${e.value!==undefined?e.value:""}</td></tr>`;
+		});
+		$("trkView").innerHTML=h||'<span class="empty">keine Einträge</span>';
+	}catch(e){}
+}
+
 /* ---- Callstack ---- */
 async function refreshCallstack(){
 	try{
@@ -769,6 +882,7 @@ const Plugin = {
 	events: (cpu)=>rpc("events",{cpu:cpu||"Snes"}),
 	eventsHistory: (count,type,since,cpu)=>Plugin.getJson("api/events/history?cpu="+encodeURIComponent(cpu||"Snes")+"&count="+(count||100)+(type?"&type="+encodeURIComponent(type):"")+"&since="+(since||0)),
 	vramWrites: (count,since,cpu)=>Plugin.getJson("api/vram/writes?cpu="+encodeURIComponent(cpu||"Snes")+"&count="+(count||100)+"&since="+(since||0)),
+	wramWrites: (opts)=>Plugin.getJson("api/wram/writes?cpu=Snes&count="+((opts&&opts.count)||100)+"&since="+((opts&&opts.since)||0)+"&start="+encodeURIComponent((opts&&opts.start)||"0")+"&end="+encodeURIComponent((opts&&opts.end)||"0xFFFF")+"&minLen="+((opts&&opts.minLen)||1)+"&memType="+encodeURIComponent((opts&&opts.memType)||"SnesWorkRam")),
 	dmaLog: (count,since)=>Plugin.getJson("api/dma/log?cpu=Snes&count="+(count||100)+"&since="+(since||0)),
 	dmaLogCount: ()=>Plugin.getJson("api/dma/log/count"),
 	snapshot: (cpu)=>Plugin.getJson("api/snapshot?cpu="+encodeURIComponent(cpu||"Snes")),
@@ -792,6 +906,9 @@ const Plugin = {
 	gfxSpritesJson: ()=>Plugin.getJson("api/gfx/sprites.json?cpu=Snes"),
 	spritesDecoded: ()=>Plugin.getJson("api/gfx/sprites_decoded?cpu=Snes"),
 	spcState: ()=>Plugin.getJson("api/spc/state"),
+	trackerStart: (opts)=>fetch("api/tracker",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(opts||{})}).then(r=>r.json()),	trackerStop: ()=>fetch("api/tracker/stop",{method:"POST"}).then(r=>r.json()),
+	trackerStatus: ()=>Plugin.getJson("api/tracker/status"),
+	trackerLog: (count,since)=>Plugin.getJson("api/tracker/log?count="+(count||500)+"&since="+(since||0)),
 
 	/* ---- Daten nach außen schieben ---- */
 	download: async(name,dataOrBlob)=>{ saveBlob(name||"download.bin", dataOrBlob instanceof Blob ? dataOrBlob : new Blob([dataOrBlob],{type:"application/octet-stream"})); },
@@ -1251,6 +1368,23 @@ function bindControls(){
 	$("evHistCount").addEventListener("change",()=>refreshEvHist());
 	$("btnVramRefresh").addEventListener("click",()=>refreshVramLog());
 	$("vramLogCount").addEventListener("change",()=>refreshVramLog());
+	$("btnWramRefresh").addEventListener("click",()=>refreshWramLog());
+	$("wramLogMem").addEventListener("change",()=>refreshWramLog());
+	$("wramLogStart").addEventListener("change",()=>refreshWramLog());
+	$("wramLogEnd").addEventListener("change",()=>refreshWramLog());
+	$("wramLogMinLen").addEventListener("change",()=>refreshWramLog());
+	$("btnTrkStart").addEventListener("click",async()=>{
+		const val=$("trkValue").value.trim();
+		const mode=$("trkMode").value;
+		const size=parseInt($("trkSize").value||"256");
+		const body={memType:$("trkMem").value,start:$("trkStart").value,end:$("trkEnd").value,onRead:$("trkOnRead").checked,onWrite:$("trkOnWrite").checked,valueSet:!!val,logExec:$("trkLogExec").checked,mode:mode};
+		if(mode==="ram") body.bufferMb=size; else body.maxMb=size;
+		if(val) body.value=val;
+		await fetch("api/tracker",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+		refreshTracker();
+	});
+	$("btnTrkStop").addEventListener("click",async()=>{ await fetch("api/tracker/stop",{method:"POST"}); refreshTracker(); });
+	$("btnTrkRefresh").addEventListener("click",()=>refreshTracker());
 	document.querySelectorAll(".ipad[data-key]").forEach(btn=>{
 		const key=btn.dataset.key;
 		const press=(p)=>{ fetch("/api/input",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:key,pressed:p})}); };
@@ -1271,8 +1405,9 @@ function bindTabs(){
 			document.getElementById("tab-"+activeTab).classList.add("active");
 			if(activeTab==="trace") refreshTrace();
 			if(activeTab==="disasm") refreshDisasm();
-	if(activeTab==="events") { refreshEvents(); refreshDma(); refreshDmaLog(); refreshEvHist(); refreshVramLog(); }
-			if(activeTab==="callstack") refreshCallstack();
+	if(activeTab==="events") { refreshEvents(); refreshDma(); refreshDmaLog(); refreshEvHist(); refreshVramLog(); refreshWramLog(); }
+	if(activeTab==="callstack") refreshCallstack();
+	if(activeTab==="tracker") refreshTracker();
 			if(activeTab==="gfx") refreshGfx();
 			if(activeTab==="spc") refreshSpc();
 			if(activeTab==="plugins") plRefresh();

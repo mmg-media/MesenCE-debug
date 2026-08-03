@@ -152,6 +152,8 @@ void SnesDebugger::ProcessInstruction()
 	InstructionProgress.LastMemOperation = operation;
 	InstructionProgress.StartCycle = state.CycleCount;
 
+	SnesTracker::AppendExec(_emu->GetFrameCount(), _memoryManager->GetHClock(), pc);
+
 	if(addressInfo.Address >= 0) {
 		uint8_t cpuFlags = state.PS & (ProcFlags::IndexMode8 | ProcFlags::MemoryMode8);
 		if(addressInfo.Type == MemoryType::SnesPrgRom) {
@@ -227,6 +229,10 @@ void SnesDebugger::ProcessRead(uint32_t addr, uint8_t value, MemoryOperationType
 	InstructionProgress.LastMemOperation = operation;
 	SnesCpuState& state = GetCpuState();
 
+	if(_cpuType == CpuType::Snes) {
+		SnesTracker::CheckMemoryOp(1, _debugger->GetProgramCounter(CpuType::Snes, true), _emu->GetFrameCount(), _memoryManager->GetHClock(), addr, value, addressInfo.Type);
+	}
+
 	if(IsRegister(addr)) {
 		_eventManager->AddEvent(DebugEventType::Register, operation);
 	}
@@ -288,8 +294,25 @@ void SnesDebugger::ProcessWrite(uint32_t addr, uint8_t value, MemoryOperationTyp
 		_disassembler->InvalidateCache(addressInfo, _cpuType);
 	}
 
+	if(_cpuType == CpuType::Snes) {
+		SnesTracker::CheckMemoryOp(2, _debugger->GetProgramCounter(CpuType::Snes, true), _emu->GetFrameCount(), _memoryManager->GetHClock(), addr, value, addressInfo.Type);
+	}
+
 	if(IsRegister(addr)) {
 		_eventManager->AddEvent(DebugEventType::Register, operation);
+	}
+
+	if(type != MemoryOperationType::DmaWrite && _cpuType == CpuType::Snes) {
+		//R3.1: WRAM/Register-Write-Log (CPU-Writes mit PC + Zieladresse)
+		uint32_t pc = _debugger->GetProgramCounter(CpuType::Snes, true);
+		SnesWramLog::Append(
+			_emu->GetFrameCount(),
+			_memoryManager->GetHClock(),
+			pc,
+			addr,
+			value,
+			addressInfo.Type);
+		SnesTracker::Append(SnesTracker::MemW, _emu->GetFrameCount(), _memoryManager->GetHClock(), pc, addr, value, 0, 0);
 	}
 
 	if(_traceLogger->IsEnabled()) {
@@ -399,6 +422,7 @@ void SnesDebugger::ProcessInterrupt(uint32_t originalPc, uint32_t currentPc, boo
 		evt.BreakpointId = -1;
 		evt.DmaChannel = -1;
 		SnesEventLog::Append(evt, _emu->GetFrameCount());
+		SnesTracker::AppendInterrupt(forNmi ? SnesTracker::Nmi : SnesTracker::Irq, _emu->GetFrameCount(), _memoryManager->GetHClock(), _debugger->GetProgramCounter(CpuType::Snes, true));
 	}
 
 	AddressInfo ret = _memoryMappings->GetAbsoluteAddress(originalPc);
@@ -433,13 +457,15 @@ void SnesDebugger::ProcessPpuWrite(uint16_t addr, uint8_t value, MemoryType memo
 {
 	if(memoryType == MemoryType::SnesVideoRam) {
 		//R2.2: VRAM-Write (0x2118/0x2119) mit schreibendem PC und Zieladresse loggen
+		uint32_t pc = _debugger->GetProgramCounter(CpuType::Snes, true);
 		SnesVramLog::Append(
 			_emu->GetFrameCount(),
 			_memoryManager->GetHClock(),
 			(int16_t)_ppu->GetScanline(),
-			_debugger->GetProgramCounter(CpuType::Snes, true),
+			pc,
 			addr >> 1,
 			value);
+		SnesTracker::Append(SnesTracker::Vram, _emu->GetFrameCount(), _memoryManager->GetHClock(), pc, addr >> 1, value, 0, 0);
 	}
 
 	MemoryOperationInfo operation(addr, value, MemoryOperationType::Write, memoryType);

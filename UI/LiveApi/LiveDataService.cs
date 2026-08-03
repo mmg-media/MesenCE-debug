@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -825,6 +826,57 @@ namespace Mesen.LiveApi
 			});
 		}
 
+		/// <summary>
+		/// R3.1: WRAM/Register-Write-Log (CPU-Writes mit PC + Zieladresse).
+		/// Adressfilter (start/end, 16-Bit-Offsets) + minLen (Run-Länge) gegen Anti-Flut.
+		/// </summary>
+		public static JsonNode? GetWramWrites(string cpuType, int count, UInt64 since, string? startHex, string? endHex, UInt32 minLen, string? memTypeName)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null || cpu.Value != CpuType.Snes) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					MemoryType memType = ParseMemoryType(memTypeName ?? "SnesWorkRam") ?? MemoryType.SnesWorkRam;
+					UInt32 start = ParseAddress(startHex ?? "0");
+					UInt32 end = String.IsNullOrEmpty(endHex) ? 0xFFFF : ParseAddress(endHex);
+					UInt16 minRun = (UInt16)Math.Max(minLen, 1);
+
+					DebugApi.InitializeDebugger();
+					DebugApi.SnesSetWramLogConfig(true, start, end, minRun, (Int32)memType);
+					UInt32 total = DebugApi.SnesGetWramLogCount();
+					if(total == 0 || count <= 0) {
+						return new JsonObject() { ["count"] = total, ["entries"] = new JsonArray() };
+					}
+
+					UInt32 n = Math.Min((UInt32)count, total);
+					DebugApi.InteropWramLogEntry[] entries = new DebugApi.InteropWramLogEntry[n];
+					UInt32 got = DebugApi.SnesGetWramLogSince(entries, since, n);
+
+					JsonArray arr = new JsonArray();
+					for(int i = 0; i < (int)got; i++) {
+						DebugApi.InteropWramLogEntry e = entries[i];
+						arr.Add((JsonNode)(new JsonObject() {
+							["id"] = e.id,
+							["frame"] = e.frame,
+							["cycle"] = e.cycle,
+							["pc"] = e.pc,
+							["bank"] = $"{e.bank:X2}",
+							["addr"] = e.addr,
+							["value"] = e.value,
+							["width"] = e.width,
+							["memType"] = ((MemoryType)e.memType).ToString()
+						}));
+					}
+
+					return new JsonObject() { ["count"] = total, ["entries"] = arr };
+				} catch {
+					return null;
+				}
+			});
+		}
+
 		private static string GetDmaModeText(int mode)
 		{
 			switch(mode) {
@@ -982,6 +1034,7 @@ namespace Mesen.LiveApi
 			}
 			return RunExclusive(() => {
 				try {
+					EnsureEventViewerVisible();
 					DebugEventInfo[] events = DebugApi.GetDebugEvents(cpu.Value);
 					List<LiveApiEventInfo> result = new List<LiveApiEventInfo>();
 					foreach(DebugEventInfo evt in events) {
@@ -1062,8 +1115,9 @@ namespace Mesen.LiveApi
 						CpuType = bp.CpuType.ToString(),
 						MemoryType = bp.MemoryType.ToString(),
 						Type = bp.Type.ToString(),
-						StartAddress = bp.StartAddress,
-						EndAddress = bp.EndAddress,
+						//SnesVideoRam wird in Wort-Adressen gemeldet (konsistent zu /api/vram/writes)
+						StartAddress = bp.MemoryType == MemoryType.SnesVideoRam ? bp.StartAddress >> 1 : bp.StartAddress,
+						EndAddress = bp.MemoryType == MemoryType.SnesVideoRam ? bp.EndAddress >> 1 : bp.EndAddress,
 						Enabled = bp.Enabled,
 						Condition = bp.Condition
 					});
@@ -1072,23 +1126,62 @@ namespace Mesen.LiveApi
 			});
 		}
 
+		private static void EnsureEventViewerVisible()
+		{
+			try {
+				//Ohne sichtbare Event-Kategorien filtert der Core alle Events aus `/api/events`
+				//(Default: MarkedBreakpoints/Nmi/Irq unsichtbar) -> markEvent-Breakpoints liefern 0 Events.
+				InteropSnesEventViewerConfig cfg = new InteropSnesEventViewerConfig() {
+					Irq = new InteropEventViewerCategoryCfg() { Visible = true, Color = 0xFF8040 },
+					Nmi = new InteropEventViewerCategoryCfg() { Visible = true, Color = 0x40C080 },
+					MarkedBreakpoints = new InteropEventViewerCategoryCfg() { Visible = true, Color = 0xFF4040 },
+					PpuRegisterVramWrites = new InteropEventViewerCategoryCfg() { Visible = true, Color = 0x8080FF },
+					PpuRegisterCgramWrites = new InteropEventViewerCategoryCfg() { Visible = true, Color = 0xC080FF },
+					PpuRegisterOamWrites = new InteropEventViewerCategoryCfg() { Visible = true, Color = 0x80FFFF },
+					CpuRegisterWrites = new InteropEventViewerCategoryCfg() { Visible = true, Color = 0xFFC080 },
+					WorkRamRegisterWrites = new InteropEventViewerCategoryCfg() { Visible = true, Color = 0xC0FF80 },
+					ShowPreviousFrameEvents = true
+				};
+				DebugApi.SetEventViewerConfig(CpuType.Snes, cfg);
+			} catch {
+			}
+		}
+
 		public static bool SetBreakpoint(LiveApiBreakpointSetRequest request)
 		{
 			return RunExclusive(() => {
 				try {
+					CpuType cpu = ParseCpuType(request.CpuType) ?? CpuType.Snes;
+					MemoryType memType = ParseMemoryType(request.MemoryType) ?? MemoryType.SnesMemory;
+					UInt32 start = request.StartAddress;
+					UInt32 end = request.EndAddress;
+					if(memType == MemoryType.SnesVideoRam) {
+						//SnesVideoRam-Breakpoints verwenden Wort-Adressen (konsistent zu /api/vram/writes):
+						//der Core matcht auf Byte-Adressen (vramAddr<<1), daher hier konvertieren.
+						start = start << 1;
+						end = (end << 1) | 1;
+					}
+
 					Breakpoint bp = new Breakpoint() {
-						CpuType = ParseCpuType(request.CpuType) ?? CpuType.Snes,
-						MemoryType = ParseMemoryType(request.MemoryType) ?? MemoryType.SnesMemory,
+						CpuType = cpu,
+						MemoryType = memType,
 						BreakOnRead = request.BreakOnRead,
 						BreakOnWrite = request.BreakOnWrite,
 						BreakOnExec = request.BreakOnExec,
 						Forbid = request.Forbid,
 						Enabled = request.Enabled,
 						MarkEvent = request.MarkEvent,
-						StartAddress = request.StartAddress,
-						EndAddress = request.EndAddress,
+						StartAddress = start,
+						EndAddress = end,
 						Condition = request.Condition
 					};
+
+					//Sicherstellen, dass der CPU-Typ an den Core übertragen wird: Ohne AddCpuType
+					//(das normalerweise das Debugger-Fenster beim Öffnen aufruft) sendet
+					//SetBreakpoints() ein leeres Array an den Core -> Breakpoints feuern nie (D1/D5).
+					DebugApi.InitializeDebugger();
+					EnsureEventViewerVisible();
+					BreakpointManager.AddCpuType(cpu);
 					BreakpointManager.AddBreakpoint(bp);
 					return true;
 				} catch {
@@ -1109,10 +1202,128 @@ namespace Mesen.LiveApi
 			});
 		}
 
+		private static string GetExportsFolder()
+		{
+			string dir = Path.Combine(AppContext.BaseDirectory, "LiveApiExports");
+			try {
+				Directory.CreateDirectory(dir);
+			} catch {
+			}
+			return dir;
+		}
+
+		/// <summary>
+		/// Universal-Tracker starten: Trigger auf Memory-Lesen/Schreiben einer Region; danach wird ein
+		/// chronologischer Ablauf (Exec/MemW/VRAM/DMA/Interrupt) in Ring + Datei geloggt.
+		/// </summary>
+		public static JsonNode? TrackerStart(string? memTypeName, string? startHex, string? endHex, bool onRead, bool onWrite, string? valueHex, bool valueSet, bool logExec, UInt64 maxBytes, string? mode, UInt64 bufferSizeMb)
+		{
+			return RunExclusive(() => {
+				try {
+					DebugApi.InitializeDebugger();
+					MemoryType memType = ParseMemoryType(memTypeName ?? "SnesWorkRam") ?? MemoryType.SnesWorkRam;
+					UInt32 start = ParseAddress(startHex ?? "0");
+					UInt32 end = String.IsNullOrEmpty(endHex) ? 0xFFFF : ParseAddress(endHex);
+					UInt32 value = ParseAddress(valueHex ?? "0");
+					Int32 bufferMode = mode == "ram" ? 1 : 0;
+					string filePath = Path.Combine(GetExportsFolder(), $"tracker_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+					DebugApi.SnesTrackerStart(filePath, (Int32)memType, start, end, onRead, onWrite, value, valueSet, logExec, maxBytes, bufferMode, bufferSizeMb);
+					return new JsonObject() { ["ok"] = true, ["file"] = filePath };
+				} catch {
+					return new JsonObject() { ["ok"] = false };
+				}
+			});
+		}
+
+		public static JsonNode? TrackerStop()
+		{
+			return RunExclusive(() => {
+				try {
+					UInt32 count = DebugApi.SnesTrackerGetCount();
+					UInt64 triggerCount = DebugApi.SnesTrackerGetTriggerCount();
+					DebugApi.SnesTrackerStop();
+					return new JsonObject() { ["ok"] = true, ["count"] = count, ["triggerCount"] = triggerCount };
+				} catch {
+					return new JsonObject() { ["ok"] = false };
+				}
+			});
+		}
+
+		public static JsonNode? TrackerStatus()
+		{
+			return RunExclusive(() => {
+				try {
+					return new JsonObject() {
+						["enabled"] = DebugApi.SnesTrackerIsEnabled(),
+						["tracking"] = DebugApi.SnesTrackerIsTracking(),
+						["count"] = DebugApi.SnesTrackerGetCount(),
+						["triggerCount"] = DebugApi.SnesTrackerGetTriggerCount(),
+						["bufferLen"] = DebugApi.SnesTrackerGetBufferLen()
+					};
+				} catch {
+					return new JsonObject() { ["ok"] = false };
+				}
+			});
+		}
+
+		public static JsonNode? GetTrackerLog(int count, UInt32 since)
+		{
+			return RunExclusive(() => {
+				try {
+					UInt32 total = DebugApi.SnesTrackerGetCount();
+					if(total == 0 || count <= 0 || since >= total) {
+						return new JsonObject() { ["count"] = total, ["entries"] = new JsonArray() };
+					}
+					UInt32 n = Math.Min((UInt32)count, total - since);
+					DebugApi.InteropTrackerEntry[] entries = new DebugApi.InteropTrackerEntry[n];
+					UInt32 got = DebugApi.SnesGetTrackerLog(entries, since, n);
+
+					JsonArray arr = new JsonArray();
+					for(int i = 0; i < (int)got; i++) {
+						DebugApi.InteropTrackerEntry e = entries[i];
+						string type = e.type switch {
+							0 => "Exec",
+							2 => "MemW",
+							3 => "VRAM",
+							4 => "DMA",
+							5 => "Nmi",
+							6 => "Irq",
+							_ => "?"
+						};
+						JsonObject entry = new JsonObject() {
+							["id"] = e.id,
+							["frame"] = e.frame,
+							["cycle"] = e.cycle,
+							["type"] = type,
+							["pc"] = e.pc,
+							["bank"] = $"{e.bank:X2}",
+							["addr"] = e.addr,
+							["value"] = e.value
+						};
+						if(e.type == 4) {
+							//DMA: pc-Feld = vramAddr, addr = dest (BBAD), value = channel|hdma<<7, extra/extra2 = length
+							entry["channel"] = e.value & 0x7F;
+							entry["hdma"] = (e.value & 0x80) != 0;
+							entry["vramAddr"] = e.pc;
+							entry["dest"] = e.addr;
+							entry["length"] = (UInt32)e.extra | ((UInt32)e.extra2 << 8);
+						}
+						arr.Add((JsonNode)entry);
+					}
+
+					return new JsonObject() { ["count"] = total, ["entries"] = arr };
+				} catch {
+					return new JsonObject() { ["ok"] = false };
+				}
+			});
+		}
+
 		public static bool Control(string action, string cpuType, UInt32 stepCount)
 		{
 			return RunExclusive(() => {
 				try {
+
+
 					switch(action) {
 						case "pause":
 							EmuApi.Pause();
@@ -1218,6 +1429,22 @@ namespace Mesen.LiveApi
 				return result;
 			}
 			return null;
+		}
+
+		public static UInt32 ParseAddress(string value)
+		{
+			if(String.IsNullOrEmpty(value)) {
+				return 0;
+			}
+			value = value.Trim();
+			try {
+				if(value.StartsWith("0x") || value.StartsWith("0X")) {
+					return Convert.ToUInt32(value.Substring(2), 16);
+				}
+				return Convert.ToUInt32(value, 10);
+			} catch {
+				return 0;
+			}
 		}
 
 		public static CpuType? ParseCpuType(string type)

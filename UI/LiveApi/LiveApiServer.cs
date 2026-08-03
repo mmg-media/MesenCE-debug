@@ -171,6 +171,9 @@ namespace Mesen.LiveApi
 					case "/api/vram/writes":
 						result = LiveDataService.GetVramWrites(Query(context, "cpu", "Snes"), (Int32)ParseUInt(Query(context, "count", "100")), ParseUInt(Query(context, "since", "0")));
 						break;
+					case "/api/wram/writes":
+						result = LiveDataService.GetWramWrites(Query(context, "cpu", "Snes"), (Int32)ParseUInt(Query(context, "count", "100")), ParseUInt(Query(context, "since", "0")), Query(context, "start", ""), Query(context, "end", ""), ParseUInt(Query(context, "minLen", "1")), Query(context, "memType", "SnesWorkRam"));
+						break;
 					case "/api/dma/log/count":
 						result = SerializeJson(new JsonObject() { ["count"] = DebugApi.SnesGetDmaLogCount() });
 						break;
@@ -252,6 +255,40 @@ namespace Mesen.LiveApi
 						} else {
 							status = 405;
 						}
+						break;
+					case "/api/tracker":
+						if(method == "POST") {
+							JsonObject? trk = await ReadJsonBody<JsonObject>(context, LiveApiSerializerContext.Default.JsonObject);
+							result = LiveDataService.TrackerStart(
+								trk?["memType"]?.GetValue<string>(),
+								trk?["start"]?.GetValue<string>(),
+								trk?["end"]?.GetValue<string>(),
+								trk?["onRead"]?.GetValue<bool>() ?? false,
+								trk?["onWrite"]?.GetValue<bool>() ?? true,
+								trk?["value"]?.GetValue<string>(),
+								trk?["valueSet"]?.GetValue<bool>() ?? false,
+								trk?["logExec"]?.GetValue<bool>() ?? true,
+								(UInt64)(trk?["maxMb"]?.GetValue<UInt32>() ?? 100) * 1024 * 1024,
+								trk?["mode"]?.GetValue<string>() ?? "disk",
+								(UInt64)(trk?["bufferMb"]?.GetValue<UInt32>() ?? 256));
+						} else if(method == "GET") {
+							result = LiveDataService.TrackerStatus();
+						} else {
+							status = 405;
+						}
+						break;
+					case "/api/tracker/stop":
+						if(method == "POST") {
+							result = LiveDataService.TrackerStop();
+						} else {
+							status = 405;
+						}
+						break;
+					case "/api/tracker/status":
+						result = LiveDataService.TrackerStatus();
+						break;
+					case "/api/tracker/log":
+						result = LiveDataService.GetTrackerLog((Int32)ParseUInt(Query(context, "count", "500")), ParseUInt(Query(context, "since", "0")));
 						break;
 					case "/api/gfx/state":
 						result = GfxService.GetGfxState(Query(context, "cpu", "Snes"));
@@ -757,6 +794,13 @@ namespace Mesen.LiveApi
 				"POST /api/input {key,pressed}  (z. B. Pad1 Up)",
 				"GET  /api/disasm?cpu=Snes&address=0x8000&count=20",
 				"GET  /api/events?cpu=Snes",
+				"GET  /api/events/history?cpu=Snes&count=100&type=Nmi  (Ring, since=ID)",
+				"GET  /api/vram/writes?cpu=Snes&count=100  (PC + Zieladresse)",
+				"GET  /api/wram/writes?cpu=Snes&start=0&end=0xFFFF&minLen=1&memType=SnesWorkRam  (PC + Run)",
+				"GET  /api/dma/log?cpu=Snes&count=100  /api/dma/log/count  /api/dma/log/enable?enable=1",
+				"GET  /api/snapshot?cpu=Snes  (atomar: frame/scroll/nametable/dma)",
+				"POST /api/savestate {action:save|load,slot}",
+				"POST /api/tracker {memType,start,end,onRead,onWrite,value,logExec,mode:ram|disk,bufferMb}  | GET /api/tracker/status | POST /api/tracker/stop | GET /api/tracker/log",
 				"GET  /api/callstack?cpu=Snes",
 				"GET  /api/expression?expr=A:B&cpu=Snes",
 				"GET/POST/DELETE /api/breakpoints",
@@ -767,6 +811,7 @@ namespace Mesen.LiveApi
 				"GET  /api/gfx/screen?cpu=Snes&layers=all&sprites=1&bg=Black",
 				"GET  /api/gfx/sprites?cpu=Snes",
 				"GET  /api/gfx/sprites.json?cpu=Snes",
+				"GET  /api/gfx/sprites_decoded?cpu=Snes  (dekodierte OAM-Liste)",
 				"GET  /api/gfx/tiles?cpu=Snes&format=Bpp4&mem=SnesVideoRam&cols=16&rows=16&palette=0&start=0&bg=Black",
 				"GET  /api/spc?song=&game=&artist=  (.spc Snapshot, octet-stream)",
 				"GET  /api/spc/wav?seconds=30  (WAV-Aufnahme des laufenden Audio)",

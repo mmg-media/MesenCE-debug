@@ -4,6 +4,7 @@
 #include "SNES/SnesMemoryManager.h"
 #include "SNES/SnesConsole.h"
 #include "SNES/SnesPpu.h"
+#include "SNES/Debugger/SnesDebugLog.h"
 #include "Shared/Emulator.h"
 #include "Utilities/Serializer.h"
 
@@ -147,6 +148,21 @@ void SnesDmaController::RunDma(DmaChannelConfig& channel)
 	if(DmaLogEnabled) {
 		AppendDmaLogEntry(_activeChannel & 0x07, (_activeChannel & HdmaChannelFlag) != 0, channel.InvertDirection, channel);
 	}
+
+	//Universal-Tracker: DMA-Eintrag unabhängig vom DmaLog (pc=vramAddr, addr=dest, value=channel|hdma<<7)
+	uint16_t trackerVram = 0;
+	if(channel.DestAddress == 0x18 || channel.DestAddress == 0x19) {
+		trackerVram = _memoryManager->GetConsole()->GetPpu()->GetDebugVramAddress();
+	}
+	SnesTracker::Append(
+		SnesTracker::Dma,
+		_memoryManager->GetEmu()->GetFrameCount(),
+		(int32_t)(_memoryManager->GetMasterClock() & 0x7FFFFFFF),
+		trackerVram,
+		channel.DestAddress,
+		(_activeChannel & 0x07) | ((_activeChannel & HdmaChannelFlag) ? 0x80 : 0),
+		(uint8_t)(channel.TransferSize & 0xFF),
+		(uint16_t)(channel.TransferSize >> 8));
 
 	const uint8_t* transferOffsets = _transferOffset[channel.TransferMode];
 
