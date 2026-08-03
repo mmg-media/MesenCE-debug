@@ -1,3 +1,4 @@
+using Mesen.Config;
 using Mesen.Config.Shortcuts;
 using Mesen.Debugger;
 using Mesen.Interop;
@@ -6,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading;
 
 namespace Mesen.LiveApi
@@ -494,6 +496,458 @@ namespace Mesen.LiveApi
 			});
 		}
 
+		/// <summary>
+		/// Aktiviert/deaktiviert den Trace-Logger für eine CPU (damit /api/trace Daten liefert).
+		/// </summary>
+		public static bool SetTraceEnabled(string cpuType, bool enabled)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return false;
+			}
+			return RunExclusive(() => {
+				try {
+					DebugApi.SetTraceOptions(cpu.Value, new InteropTraceLoggerOptions() {
+						Enabled = enabled,
+						IndentCode = false,
+						UseLabels = false,
+						Condition = new byte[1000],
+						Format = new byte[1000]
+					});
+					if(!enabled) {
+						DebugApi.ClearExecutionTrace();
+					}
+					return true;
+				} catch {
+					return false;
+				}
+			});
+		}
+
+		/// <summary>
+		/// DMA-Kanal-Zustand (Register $4300-$437F + $420B/$420C): Quelle, Ziel, Länge, Mode pro Kanal.
+		/// </summary>
+		public static JsonNode? GetDmaState(string cpuType)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null || cpu.Value != CpuType.Snes) {
+				return null;
+			}
+			return RunExclusive(() => GetDmaStateInternal(cpu.Value));
+		}
+
+		private static JsonNode? GetDmaStateInternal(CpuType cpu)
+		{
+			try {
+				byte[] regs = DebugApi.GetMemoryValues(MemoryType.SnesRegister, 0x4300, 0x437F);
+				byte mdmaen = DebugApi.GetMemoryValues(MemoryType.SnesRegister, 0x420B, 0x420B)[0];
+				byte hdmaen = DebugApi.GetMemoryValues(MemoryType.SnesRegister, 0x420C, 0x420C)[0];
+
+				JsonArray channels = new JsonArray();
+				for(int ch = 0; ch < 8; ch++) {
+					int off = ch * 16;
+					byte dmap = regs[off + 0];
+					byte bbad = regs[off + 1];
+					UInt16 sourceAddr = (UInt16)(regs[off + 2] | (regs[off + 3] << 8));
+					byte sourceBank = regs[off + 4];
+					UInt16 size = (UInt16)(regs[off + 5] | (regs[off + 6] << 8));
+					byte hdmaBank = regs[off + 7];
+					byte hdmaAddr = regs[off + 8];
+					byte hdmaAddrHi = regs[off + 9];
+
+					bool isHdma = (dmap & 0x80) != 0;
+					bool toCpu = (dmap & 0x01) != 0; //0 = CPU->Peripherie, 1 = Peripherie->CPU
+					int mode = (dmap >> 1) & 0x07;
+					bool enabled = ((isHdma ? hdmaen : mdmaen) & (1 << ch)) != 0;
+
+					channels.Add((JsonNode)(new JsonObject() {
+						["channel"] = ch,
+						["enabled"] = enabled,
+						["hdma"] = isHdma,
+						["toCpu"] = toCpu,
+						["direction"] = toCpu ? "Peripherie->CPU" : "CPU->Peripherie",
+						["mode"] = mode,
+						["modeText"] = GetDmaModeText(mode),
+						["destAddr"] = bbad,
+						["destName"] = GetDmaDestName(bbad),
+						["source"] = $"${sourceBank:X2}:{sourceAddr:X4}",
+						["sourceBank"] = sourceBank,
+						["sourceAddr"] = sourceAddr,
+						["length"] = size,
+						["hdmaBank"] = hdmaBank,
+						["hdmaAddr"] = (UInt16)(hdmaAddr | (hdmaAddrHi << 8))
+					}));
+				}
+
+				return new JsonObject() {
+					["mdmaen"] = mdmaen,
+					["hdmaen"] = hdmaen,
+					["channels"] = channels
+				};
+			} catch {
+				return null;
+			}
+		}
+
+		/// <summary>
+		/// Atomarer Snapshot aller Map-Scanning-Daten in EINEM Gate (konsistenter Frame):
+		/// Scroll, Layer, Nametable (BG2 0x3800), CGRAM, VRAM-Tiles, DMA-Zustand.
+		/// </summary>
+		public static JsonNode? GetSnapshot(string cpuType)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null || cpu.Value != CpuType.Snes) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					SnesPpuState ppu = DebugApi.GetPpuState<SnesPpuState>(cpu.Value);
+					byte[] vram = DebugApi.GetMemoryState(MemoryType.SnesVideoRam);
+					byte[] cgram = DebugApi.GetMemoryState(MemoryType.SnesCgRam);
+					bool paused = EmuApi.IsRunning() && EmuApi.IsPaused();
+
+					JsonArray layers = new JsonArray();
+					for(int i = 0; i < 4; i++) {
+						LayerConfig layer = ppu.Layers[i];
+						layers.Add((JsonNode)(new JsonObject() {
+							["index"] = i,
+							["name"] = "BG" + (i + 1),
+							["tilemapAddress"] = layer.TilemapAddress,
+							["chrAddress"] = layer.ChrAddress,
+							["hScroll"] = layer.HScroll,
+							["vScroll"] = layer.VScroll,
+							["doubleWidth"] = layer.DoubleWidth,
+							["doubleHeight"] = layer.DoubleHeight
+						}));
+					}
+
+					return new JsonObject() {
+						["frame"] = Interlocked.Read(ref _frameCount),
+						["paused"] = paused,
+						["bgMode"] = ppu.BgMode,
+						["mainScreenLayers"] = ppu.MainScreenLayers,
+						["subScreenLayers"] = ppu.SubScreenLayers,
+						["scroll"] = new JsonObject() {
+							["bg1H"] = ppu.Layers[0].HScroll,
+							["bg1V"] = ppu.Layers[0].VScroll,
+							["bg2H"] = ppu.Layers[1].HScroll,
+							["bg2V"] = ppu.Layers[1].VScroll,
+							["bg3H"] = ppu.Layers[2].HScroll,
+							["bg3V"] = ppu.Layers[2].VScroll,
+							["bg4H"] = ppu.Layers[3].HScroll,
+							["bg4V"] = ppu.Layers[3].VScroll
+						},
+						["layers"] = layers,
+						["nametable"] = new JsonObject() {
+							["type"] = "SnesVideoRam",
+							["start"] = 0x3800,
+							["length"] = 0x800,
+							["data"] = ToHex(vram, 0x3800, 0x800)
+						},
+						["cgram"] = new JsonObject() {
+							["start"] = 0,
+							["length"] = cgram.Length,
+							["data"] = ToHex(cgram, 0, cgram.Length)
+						},
+						["vramTiles"] = new JsonObject() {
+							["start"] = 0,
+							["length"] = Math.Min(vram.Length, 0x4000),
+							["data"] = ToHex(vram, 0, Math.Min(vram.Length, 0x4000))
+						},
+						["dma"] = GetDmaStateInternal(cpu.Value)
+					};
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		public static string ToHex(byte[] data, int offset, int length)
+		{
+			length = Math.Min(length, data.Length - offset);
+			StringBuilder sb = new StringBuilder(length * 2);
+			for(int i = 0; i < length; i++) {
+				sb.Append(data[offset + i].ToString("X2"));
+			}
+			return sb.ToString();
+		}
+
+		/// <summary>
+		/// Kumulativer DMA-Log (Anforderung P1.1): Ring-Puffer mit jedem DMA/HDMA-Block.
+		/// count = max. Einträge, since = inkrementelles Abholen (Index ab dem geliefert wird).
+		/// </summary>
+		public static JsonNode? GetDmaLog(string cpuType, int count, UInt32 since)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null || cpu.Value != CpuType.Snes) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					UInt32 total = DebugApi.SnesGetDmaLogCount();
+					if(total == 0 || since >= total || count <= 0) {
+						return new JsonObject() { ["count"] = total, ["entries"] = new JsonArray() };
+					}
+
+					UInt32 start = since;
+					UInt32 n = Math.Min((UInt32)count, total - start);
+					DebugApi.InteropDmaLogEntry[] entries = new DebugApi.InteropDmaLogEntry[n];
+					UInt32 got = DebugApi.SnesGetDmaLog(entries, start, n);
+
+					JsonArray arr = new JsonArray();
+					for(int i = 0; i < (int)got; i++) {
+						DebugApi.InteropDmaLogEntry e = entries[i];
+						arr.Add((JsonNode)(new JsonObject() {
+							["frame"] = e.frame,
+							["cycle"] = e.cycle,
+							["channel"] = e.channel,
+							["isHdma"] = e.isHdma != 0,
+							["toCpu"] = e.toCpu != 0,
+							["mode"] = e.mode,
+							["source"] = $"${e.sourceBank:X2}:{e.sourceAddr:X4}",
+							["sourceBank"] = e.sourceBank,
+							["sourceAddr"] = e.sourceAddr,
+							["destAddr"] = e.destAddr,
+							["destName"] = GetDmaDestName((byte)e.destAddr),
+							["vramAddr"] = e.vramAddr,
+							["length"] = e.length
+						}));
+					}
+
+					return new JsonObject() { ["count"] = total, ["entries"] = arr };
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		/// <summary>
+		/// R2.1: Kumulative Event-Historie (Ring-Puffer). Wird beim Aufruf automatisch aktiviert.
+		/// </summary>
+		public static JsonNode? GetEventHistory(string cpuType, int count, UInt64 since, string? typeFilter)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null || cpu.Value != CpuType.Snes) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					DebugApi.InitializeDebugger();
+					DebugApi.SnesSetEventLogEnabled(true);
+					UInt32 total = DebugApi.SnesGetEventLogCount();
+					if(total == 0 || count <= 0) {
+						return new JsonObject() { ["count"] = total, ["entries"] = new JsonArray() };
+					}
+
+					UInt32 n = Math.Min((UInt32)count, total);
+					DebugApi.InteropEventLogEntry[] entries = new DebugApi.InteropEventLogEntry[n];
+					UInt32 got = DebugApi.SnesGetEventLogSince(entries, since, n);
+
+					DebugEventType? filter = null;
+					if(!String.IsNullOrEmpty(typeFilter)) {
+						filter = Enum.TryParse<DebugEventType>(typeFilter, true, out DebugEventType t) ? t : null;
+					}
+
+					JsonArray arr = new JsonArray();
+					for(int i = 0; i < (int)got; i++) {
+						DebugApi.InteropEventLogEntry e = entries[i];
+						DebugEventType type = (DebugEventType)e.type;
+						if(filter != null && type != filter.Value) {
+							continue;
+						}
+						arr.Add((JsonNode)(new JsonObject() {
+							["id"] = e.id,
+							["frame"] = e.frame,
+							["cycle"] = e.cycle,
+							["scanline"] = e.scanline,
+							["type"] = type.ToString(),
+							["pc"] = e.pc,
+							["breakpointId"] = e.breakpointId,
+							["dmaChannel"] = e.dmaChannel,
+							["operation"] = new JsonObject() {
+								["address"] = e.opAddress,
+								["value"] = e.opValue,
+								["type"] = ((MemoryOperationType)e.opType).ToString(),
+								["memType"] = ((MemoryType)e.opMemType).ToString()
+							}
+						}));
+					}
+
+					return new JsonObject() { ["count"] = total, ["entries"] = arr };
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		/// <summary>
+		/// R2.2: VRAM-Write-Historie (CPU-Writes auf 0x2118/0x2119) mit PC und Zieladresse.
+		/// </summary>
+		public static JsonNode? GetVramWrites(string cpuType, int count, UInt32 since)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null || cpu.Value != CpuType.Snes) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					DebugApi.InitializeDebugger();
+					DebugApi.SnesSetVramLogEnabled(true);
+					UInt32 total = DebugApi.SnesGetVramLogCount();
+					if(total == 0 || since >= total || count <= 0) {
+						return new JsonObject() { ["count"] = total, ["entries"] = new JsonArray() };
+					}
+
+					UInt32 start = since;
+					UInt32 n = Math.Min((UInt32)count, total - start);
+					DebugApi.InteropVramLogEntry[] entries = new DebugApi.InteropVramLogEntry[n];
+					UInt32 got = DebugApi.SnesGetVramLog(entries, start, n);
+
+					JsonArray arr = new JsonArray();
+					for(int i = 0; i < (int)got; i++) {
+						DebugApi.InteropVramLogEntry e = entries[i];
+						arr.Add((JsonNode)(new JsonObject() {
+							["type"] = "VramWrite",
+							["frame"] = e.frame,
+							["cycle"] = e.cycle,
+							["pc"] = e.pc,
+							["scanline"] = e.scanline,
+							["isDma"] = e.isDma != 0,
+							["value"] = e.value,
+							["vramAddr"] = e.vramAddr
+						}));
+					}
+
+					return new JsonObject() { ["count"] = total, ["entries"] = arr };
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		private static string GetDmaModeText(int mode)
+		{
+			switch(mode) {
+				case 0: return "1 Byte (B=1, A=1)";
+				case 1: return "2 Bytes (B=2, A=2)";
+				case 2: return "2 Bytes (B=2, A=1)";
+				case 3: return "4 Bytes (B=4, A=4)";
+				case 4: return "4 Bytes (B=4, A=2)";
+				case 5: return "2 Bytes (B=2, A=1), Quelle +1";
+				case 6: return "3 Bytes (B=3, A=1)";
+				case 7: return "4 Bytes (B=4, A=1)";
+				default: return mode.ToString();
+			}
+		}
+
+		private static string GetDmaDestName(byte bbad)
+		{
+			switch(bbad) {
+				case 0x18: return "VRAM Write (2118)";
+				case 0x19: return "VRAM Write (2119)";
+				case 0x39: return "VRAM Read (2139)";
+				case 0x3A: return "VRAM Read (213A)";
+				case 0x04: return "OAM (2104)";
+				case 0x12: return "CG-RAM (2121)";
+				case 0x13: return "CG-RAM (2122)";
+				case 0x21: return "WRAM (2180)";
+				case 0x22: return "WRAM (2180)";
+				case 0x00: return "PPU (2118)";
+				case 0x01: return "PPU (2118)";
+				case 0x30: return "CPU/APU (2140)";
+				case 0x40: return "CPU/APU (2140)";
+				case 0x41: return "CPU/APU (2141)";
+				case 0x42: return "CPU/APU (2142)";
+				case 0x43: return "CPU/APU (2143)";
+				default: return $"${bbad:X2}";
+			}
+		}
+
+		/// <summary>
+		/// Simuliert eine Controller-Taste des Ports 1. key: A, B, X, Y, L, R, Up, Down, Left, Right,
+		/// Start, Select (logisch) – oder ein physischer Tastennamen ("K", "W", "Up", ...).
+		/// holdMs &gt; 0: Taste automatisch nach holdMs loslassen (kein Blockieren).
+		/// </summary>
+		public static JsonNode? SetInput(string key, bool pressed, int holdMs)
+		{
+			JsonNode? result = SetInput(key, pressed);
+			if(pressed && holdMs > 0) {
+				System.Threading.Timer releaseTimer = new System.Threading.Timer(_ => {
+					SetInput(key, false);
+					_releaseTimers.Remove(key);
+				}, null, holdMs, Timeout.Infinite);
+				_releaseTimers[key] = releaseTimer;
+			}
+			return result;
+		}
+
+		private static Dictionary<string, System.Threading.Timer> _releaseTimers = new Dictionary<string, System.Threading.Timer>();
+
+		/// <summary>
+		/// Simuliert eine Controller-Taste des Ports 1. Alle konfigurierten Tastatur-Zuordnungen
+		/// (Mapping1-4) und der physische Tastencode werden gesetzt (nur &lt; 0x205).
+		/// </summary>
+		private static bool _backgroundInputApplied;
+
+		public static JsonNode? SetInput(string key, bool pressed)
+		{
+			try {
+				if(!_backgroundInputApplied) {
+					//Hintergrund-Eingabe aktivieren: Wenn das Mesen-Fenster nicht fokussiert ist (Browser
+					//steuert das Spiel), ist Input sonst deaktiviert (IsInputEnabled == false).
+					if(!ConfigManager.Config.Preferences.AllowBackgroundInput) {
+						ConfigManager.Config.Preferences.AllowBackgroundInput = true;
+						ConfigManager.Config.Preferences.ApplyConfig();
+					}
+					_backgroundInputApplied = true;
+				}
+
+				SnesControllerConfig cfg = ConfigManager.Config.Snes.Port1;
+				Func<KeyMapping, UInt16>? getScanCode = key switch {
+					"A" => m => m.A,
+					"B" => m => m.B,
+					"X" => m => m.X,
+					"Y" => m => m.Y,
+					"L" => m => m.L,
+					"R" => m => m.R,
+					"Up" => m => m.Up,
+					"Down" => m => m.Down,
+					"Left" => m => m.Left,
+					"Right" => m => m.Right,
+					"Start" => m => m.Start,
+					"Select" => m => m.Select,
+					_ => null
+				};
+
+				JsonArray set = new JsonArray();
+				if(getScanCode != null) {
+					foreach(KeyMapping mapping in new[] { cfg.Mapping1, cfg.Mapping2, cfg.Mapping3, cfg.Mapping4 }) {
+						UInt16 scanCode = getScanCode(mapping);
+						if(scanCode != 0 && scanCode < 0x205) {
+							InputApi.SetKeyState(scanCode, pressed);
+							set.Add((JsonNode)JsonValue.Create(scanCode));
+						}
+					}
+				}
+
+				//Zusätzlich physischen Tastennamen auflösen (wie der echte UI-Key-Pfad)
+				UInt16 physCode = InputApi.GetKeyCode(key);
+				if(physCode != 0 && physCode < 0x205) {
+					InputApi.SetKeyState(physCode, pressed);
+					set.Add((JsonNode)JsonValue.Create(physCode));
+				}
+
+				return new JsonObject() {
+					["ok"] = set.Count > 0,
+					["key"] = key,
+					["pressed"] = pressed,
+					["codes"] = set
+				};
+			} catch {
+				return new JsonObject() { ["ok"] = false };
+			}
+		}
+
 		public static LiveApiDisasmLine[] GetDisassembly(string cpuType, UInt32 address, UInt32 count)
 		{
 			CpuType? cpu = ParseCpuType(cpuType);
@@ -678,6 +1132,9 @@ namespace Mesen.LiveApi
 						case "runSingleFrame":
 							EmuApi.ExecuteShortcut(new ExecuteShortcutParams() { Shortcut = EmulatorShortcut.RunSingleFrame });
 							return true;
+						case "toggleFastForward":
+							EmuApi.ExecuteShortcut(new ExecuteShortcutParams() { Shortcut = EmulatorShortcut.ToggleFastForward });
+							return true;
 						case "reset":
 							EmuApi.ExecuteShortcut(new ExecuteShortcutParams() { Shortcut = EmulatorShortcut.Reset });
 							return true;
@@ -701,6 +1158,39 @@ namespace Mesen.LiveApi
 			return RunExclusive(() => {
 				try {
 					return EmuApi.LoadRom(path);
+				} catch {
+					return false;
+				}
+			});
+		}
+
+		/// <summary>
+		/// Savestate speichern/laden (Slot 1-10), für reproduzierbare Tests.
+		/// </summary>
+		public static bool SaveState(UInt32 slot)
+		{
+			return RunExclusive(() => {
+				try {
+					if(slot < 1 || slot > 10) {
+						return false;
+					}
+					EmuApi.SaveState(slot);
+					return true;
+				} catch {
+					return false;
+				}
+			});
+		}
+
+		public static bool LoadState(UInt32 slot)
+		{
+			return RunExclusive(() => {
+				try {
+					if(slot < 1 || slot > 10) {
+						return false;
+					}
+					EmuApi.LoadState(slot);
+					return true;
 				} catch {
 					return false;
 				}

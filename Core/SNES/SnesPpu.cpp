@@ -1818,6 +1818,11 @@ void SnesPpu::UpdateVramReadBuffer()
 	_state.VramReadBuffer = CanAccessVram() ? _vram[GetVramAddress()] : 0;
 }
 
+uint16_t SnesPpu::GetDebugVramAddress()
+{
+	return GetVramAddress();
+}
+
 uint16_t SnesPpu::GetVramAddress()
 {
 	uint16_t addr = _state.VramAddress;

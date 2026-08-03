@@ -2,6 +2,9 @@
 #include "SNES/SnesDmaController.h"
 #include "SNES/DmaControllerTypes.h"
 #include "SNES/SnesMemoryManager.h"
+#include "SNES/SnesConsole.h"
+#include "SNES/SnesPpu.h"
+#include "Shared/Emulator.h"
 #include "Utilities/Serializer.h"
 
 static constexpr uint8_t _transferByteCount[8] = { 1, 2, 2, 4, 4, 4, 2, 4 };
@@ -15,6 +18,65 @@ static constexpr uint8_t _transferOffset[8][4] = {
 	{ 0, 0, 0, 0 },
 	{ 0, 0, 1, 1 }
 };
+
+SnesDmaController::DmaLogEntry SnesDmaController::DmaLog[SnesDmaController::DmaLogSize] = {};
+uint32_t SnesDmaController::DmaLogHead = 0;
+uint32_t SnesDmaController::DmaLogCount = 0;
+bool SnesDmaController::DmaLogEnabled = false;
+
+void SnesDmaController::SetDmaLogEnabled(bool enabled)
+{
+	if(enabled && !DmaLogEnabled) {
+		//(Re-)Aktivierung leert den Ring (verwirft Stale-Einträge)
+		DmaLogHead = 0;
+		DmaLogCount = 0;
+	}
+	DmaLogEnabled = enabled;
+}
+
+uint32_t SnesDmaController::GetDmaLogCount()
+{
+	return DmaLogCount;
+}
+
+uint32_t SnesDmaController::GetDmaLog(DmaLogEntry* entries, uint32_t start, uint32_t count)
+{
+	if(!entries || start >= DmaLogCount) {
+		return 0;
+	}
+	uint32_t available = DmaLogCount - start;
+	uint32_t toCopy = count < available ? count : available;
+	uint32_t oldest = (DmaLogHead + DmaLogSize - DmaLogCount) % DmaLogSize;
+	for(uint32_t i = 0; i < toCopy; i++) {
+		entries[i] = DmaLog[(oldest + start + i) % DmaLogSize];
+	}
+	return toCopy;
+}
+
+void SnesDmaController::AppendDmaLogEntry(uint8_t channel, bool isHdma, bool toCpu, DmaChannelConfig& config)
+{
+	DmaLogEntry entry = {};
+	entry.frame = _memoryManager->GetEmu()->GetFrameCount();
+	entry.cycle = (int32_t)(_memoryManager->GetMasterClock() & 0x7FFFFFFF);
+	entry.channel = channel;
+	entry.isHdma = isHdma ? 1 : 0;
+	entry.toCpu = toCpu ? 1 : 0;
+	entry.mode = config.TransferMode;
+	entry.sourceBank = config.SrcBank;
+	entry.sourceAddr = config.SrcAddress;
+	entry.destAddr = config.DestAddress;
+	entry.length = config.TransferSize;
+	entry.vramAddr = 0;
+	if(config.DestAddress == 0x18 || config.DestAddress == 0x19) {
+		//VRAM-Ziel: aktuelle Schreibadresse aus 0x2116/0x2117 (Beginn des Transfers)
+		entry.vramAddr = _memoryManager->GetConsole()->GetPpu()->GetDebugVramAddress();
+	}
+	DmaLog[DmaLogHead] = entry;
+	DmaLogHead = (DmaLogHead + 1) % DmaLogSize;
+	if(DmaLogCount < DmaLogSize) {
+		DmaLogCount++;
+	}
+}
 
 SnesDmaController::SnesDmaController(SnesMemoryManager* memoryManager)
 {
@@ -81,6 +143,10 @@ void SnesDmaController::RunDma(DmaChannelConfig& channel)
 	_dmaClockCounter += 8;
 	_memoryManager->IncMasterClock8();
 	ProcessPendingTransfers();
+
+	if(DmaLogEnabled) {
+		AppendDmaLogEntry(_activeChannel & 0x07, (_activeChannel & HdmaChannelFlag) != 0, channel.InvertDirection, channel);
+	}
 
 	const uint8_t* transferOffsets = _transferOffset[channel.TransferMode];
 

@@ -404,6 +404,64 @@ namespace Mesen.Interop
 		}
 
 		[DllImport(DllPath)] public static extern void SetEventViewerConfig(CpuType cpuType, InteropSnesEventViewerConfig config);
+
+#pragma warning disable IDE1006 // Feldnamen spiegeln bewusst die nativen Strukturen (Marshalling)
+		[StructLayout(LayoutKind.Sequential)]
+		public struct InteropDmaLogEntry
+		{
+			public Int64 frame;
+			public Int32 cycle;
+			public byte channel;
+			public byte isHdma;
+			public byte toCpu;
+			public byte mode;
+			public UInt32 sourceBank;
+			public UInt32 sourceAddr;
+			public UInt32 destAddr;
+			public UInt32 length;
+			public UInt16 vramAddr;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct InteropEventLogEntry
+		{
+			public UInt64 id;
+			public UInt64 frame;
+			public Int32 cycle;
+			public Int16 scanline;
+			public Int32 type;
+			public UInt32 pc;
+			public Int16 breakpointId;
+			public sbyte dmaChannel;
+			public UInt32 opAddress;
+			public Int32 opValue;
+			public sbyte opType;
+			public sbyte opMemType;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct InteropVramLogEntry
+		{
+			public UInt64 frame;
+			public Int32 cycle;
+			public UInt32 pc;
+			public Int16 scanline;
+			public sbyte isDma;
+			public byte value;
+			public UInt32 vramAddr;
+		}
+#pragma warning restore IDE1006
+
+		[DllImport(DllPath, EntryPoint = "snes_set_dma_log_enabled")] public static extern void SnesSetDmaLogEnabled([MarshalAs(UnmanagedType.I1)] bool enabled);
+		[DllImport(DllPath, EntryPoint = "snes_get_dma_log_count")] public static extern UInt32 SnesGetDmaLogCount();
+		[DllImport(DllPath, EntryPoint = "snes_get_dma_log")] public static extern UInt32 SnesGetDmaLog([Out] InteropDmaLogEntry[] entries, UInt32 start, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_set_event_log_enabled")] public static extern void SnesSetEventLogEnabled([MarshalAs(UnmanagedType.I1)] bool enabled);
+		[DllImport(DllPath, EntryPoint = "snes_get_event_log_count")] public static extern UInt32 SnesGetEventLogCount();
+		[DllImport(DllPath, EntryPoint = "snes_get_event_log")] public static extern UInt32 SnesGetEventLog([Out] InteropEventLogEntry[] entries, UInt32 start, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_get_event_log_since")] public static extern UInt32 SnesGetEventLogSince([Out] InteropEventLogEntry[] entries, UInt64 sinceId, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_set_vram_log_enabled")] public static extern void SnesSetVramLogEnabled([MarshalAs(UnmanagedType.I1)] bool enabled);
+		[DllImport(DllPath, EntryPoint = "snes_get_vram_log_count")] public static extern UInt32 SnesGetVramLogCount();
+		[DllImport(DllPath, EntryPoint = "snes_get_vram_log")] public static extern UInt32 SnesGetVramLog([Out] InteropVramLogEntry[] entries, UInt32 start, UInt32 count);
 		[DllImport(DllPath)] public static extern void SetEventViewerConfig(CpuType cpuType, InteropNesEventViewerConfig config);
 		[DllImport(DllPath)] public static extern void SetEventViewerConfig(CpuType cpuType, InteropGbEventViewerConfig config);
 		[DllImport(DllPath)] public static extern void SetEventViewerConfig(CpuType cpuType, InteropGbaEventViewerConfig config);

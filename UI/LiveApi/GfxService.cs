@@ -2,6 +2,7 @@ using Mesen.Interop;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -577,6 +578,71 @@ namespace Mesen.LiveApi
 						return new JsonObject() {
 							["cpu"] = cpu.Value.ToString(),
 							["count"] = sprites.Length,
+							["width"] = previewInfo.VisibleWidth,
+							["height"] = previewInfo.VisibleHeight,
+							["sprites"] = spriteArray
+						};
+					} finally {
+						Marshal.FreeHGlobal(screenPreview);
+					}
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		/// <summary>
+		/// R2.4: Dekodierte Sprite-Liste (Position, Größe, Tile, Palette, Priority, Flip, Sichtbarkeit).
+		/// </summary>
+		public static JsonNode? GetSpritesDecoded(string cpuType)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+
+			return RunExclusive(() => {
+				try {
+					SnesGfxData data = PrepareData(cpu.Value);
+					GetSpritePreviewOptions options = new GetSpritePreviewOptions() {
+						Background = SpriteBackground.Transparent
+					};
+
+					DebugSpritePreviewInfo previewInfo = DebugApi.GetSpritePreviewInfo(cpu.Value, options, data.PpuState, data.PpuToolsState);
+
+					IntPtr screenPreview = Marshal.AllocHGlobal((int)(previewInfo.Width * previewInfo.Height) * 4);
+					try {
+						DebugSpriteInfo[] sprites = Array.Empty<DebugSpriteInfo>();
+						UInt32[] spritePreviews = Array.Empty<UInt32>();
+						DebugApi.GetSpriteList(ref sprites, ref spritePreviews, cpu.Value, options, data.PpuState, data.PpuToolsState, data.Vram, data.SpriteRam, data.Palette, screenPreview);
+
+						JsonArray spriteArray = new JsonArray();
+						for(int i = 0; i < sprites.Length; i++) {
+							DebugSpriteInfo s = sprites[i];
+							bool visible = s.Visibility == SpriteVisibility.Visible;
+							spriteArray.Add((JsonNode)(new JsonObject() {
+								["index"] = s.SpriteIndex,
+								["x"] = s.X,
+								["y"] = s.Y,
+								["rawX"] = s.RawX,
+								["rawY"] = s.RawY,
+								["width"] = s.Width,
+								["height"] = s.Height,
+								["tileIndex"] = s.TileIndex,
+								["tileCount"] = s.TileCount,
+								["palette"] = s.Palette,
+								["priority"] = s.Priority.ToString(),
+								["hflip"] = s.HorizontalMirror == NullableBoolean.True,
+								["vflip"] = s.VerticalMirror == NullableBoolean.True,
+								["visible"] = visible,
+								["visibility"] = s.Visibility.ToString()
+							}));
+						}
+
+						return new JsonObject() {
+							["cpu"] = cpu.Value.ToString(),
+							["count"] = sprites.Length,
+							["visibleCount"] = spriteArray.Count(x => x != null && x["visible"]?.GetValue<bool>() == true),
 							["width"] = previewInfo.VisibleWidth,
 							["height"] = previewInfo.VisibleHeight,
 							["sprites"] = spriteArray

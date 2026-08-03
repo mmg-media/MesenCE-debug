@@ -155,6 +155,54 @@ namespace Mesen.LiveApi
 					case "/api/trace":
 						result = JsonSerializer.SerializeToNode(LiveDataService.GetTrace(Query(context, "cpu", "Snes"), ParseUInt(Query(context, "count", "100"))), LiveApiSerializerContext.Default.LiveApiTraceRowArray);
 						break;
+					case "/api/trace/enable":
+						result = SerializeJson(new JsonObject() { ["ok"] = LiveDataService.SetTraceEnabled(Query(context, "cpu", "Snes"), Query(context, "enable", "1") == "1") });
+						break;
+					case "/api/dma":
+						result = LiveDataService.GetDmaState(Query(context, "cpu", "Snes"));
+						break;
+					case "/api/dma/log":
+						DebugApi.SnesSetDmaLogEnabled(true);
+						result = LiveDataService.GetDmaLog(Query(context, "cpu", "Snes"), (Int32)ParseUInt(Query(context, "count", "100")), ParseUInt(Query(context, "since", "0")));
+						break;
+					case "/api/events/history":
+						result = LiveDataService.GetEventHistory(Query(context, "cpu", "Snes"), (Int32)ParseUInt(Query(context, "count", "100")), ParseUInt(Query(context, "since", "0")), Query(context, "type", ""));
+						break;
+					case "/api/vram/writes":
+						result = LiveDataService.GetVramWrites(Query(context, "cpu", "Snes"), (Int32)ParseUInt(Query(context, "count", "100")), ParseUInt(Query(context, "since", "0")));
+						break;
+					case "/api/dma/log/count":
+						result = SerializeJson(new JsonObject() { ["count"] = DebugApi.SnesGetDmaLogCount() });
+						break;
+					case "/api/dma/log/enable":
+						result = SerializeJson(new JsonObject() { ["ok"] = true, ["enabled"] = Query(context, "enable", "1") == "1" });
+						DebugApi.SnesSetDmaLogEnabled(Query(context, "enable", "1") == "1");
+						break;
+					case "/api/snapshot":
+						result = LiveDataService.GetSnapshot(Query(context, "cpu", "Snes"));
+						break;
+					case "/api/savestate":
+						if(method == "POST") {
+							JsonObject? ssBody = await ReadJsonBody<JsonObject>(context, LiveApiSerializerContext.Default.JsonObject);
+							string? ssAction = ssBody?["action"]?.GetValue<string>();
+							UInt32 ssSlot = ssBody?["slot"]?.GetValue<UInt32>() ?? 1;
+							bool ssOk = ssAction == "save" ? LiveDataService.SaveState(ssSlot) : ssAction == "load" ? LiveDataService.LoadState(ssSlot) : false;
+							result = SerializeJson(new JsonObject() { ["ok"] = ssOk });
+						} else {
+							status = 405;
+						}
+						break;
+					case "/api/input":
+						if(method == "POST") {
+							JsonObject? inputBody = await ReadJsonBody<JsonObject>(context, LiveApiSerializerContext.Default.JsonObject);
+							string? key = inputBody?["key"]?.GetValue<string>();
+							bool pressed = inputBody?["pressed"]?.GetValue<bool>() ?? false;
+							int holdMs = inputBody?["holdMs"]?.GetValue<int>() ?? 0;
+							result = key != null ? LiveDataService.SetInput(key, pressed, holdMs) : SerializeJson(new JsonObject() { ["ok"] = false });
+						} else {
+							status = 405;
+						}
+						break;
 					case "/api/disasm":
 						result = JsonSerializer.SerializeToNode(LiveDataService.GetDisassembly(Query(context, "cpu", "Snes"), ParseUInt(Query(context, "address", "0")), ParseUInt(Query(context, "count", "20"))), LiveApiSerializerContext.Default.LiveApiDisasmLineArray);
 						break;
@@ -210,6 +258,9 @@ namespace Mesen.LiveApi
 						break;
 					case "/api/gfx/sprites.json":
 						result = GfxService.GetSpritesJson(Query(context, "cpu", "Snes"));
+						break;
+					case "/api/gfx/sprites_decoded":
+						result = GfxService.GetSpritesDecoded(Query(context, "cpu", "Snes"));
 						break;
 					case "/api/gfx/tilemap":
 						await WritePng(context, GfxService.GetTilemapPng(Query(context, "cpu", "Snes"), Query(context, "layer", "0"), Query(context, "bg", "Black")));
@@ -701,6 +752,9 @@ namespace Mesen.LiveApi
 				"GET  /api/cpu?cpu=Snes",
 				"GET  /api/ppu?cpu=Snes",
 				"GET  /api/trace?cpu=Snes&count=100",
+				"GET  /api/trace/enable?cpu=Snes&enable=1",
+				"GET  /api/dma?cpu=Snes  (DMA-Kanal-Log)",
+				"POST /api/input {key,pressed}  (z. B. Pad1 Up)",
 				"GET  /api/disasm?cpu=Snes&address=0x8000&count=20",
 				"GET  /api/events?cpu=Snes",
 				"GET  /api/callstack?cpu=Snes",

@@ -1035,6 +1035,7 @@
     <ClCompile Include="SNES\Debugger\NecDspDebugger.cpp" />
     <ClCompile Include="Shared\EmuSettings.cpp" />
     <ClCompile Include="SNES\Debugger\SnesEventManager.cpp" />
+    <ClCompile Include="SNES\Debugger\SnesDebugLog.cpp" />
     <ClCompile Include="Debugger\ExpressionEvaluator.cpp" />
     <ClCompile Include="Netplay\GameClient.cpp" />
     <ClCompile Include="Netplay\GameClientConnection.cpp" />

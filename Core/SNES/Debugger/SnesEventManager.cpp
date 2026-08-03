@@ -8,6 +8,7 @@
 #include "Debugger/Debugger.h"
 #include "Debugger/DebugBreakHelper.h"
 #include "Debugger/BaseEventManager.h"
+#include "SNES/Debugger/SnesDebugLog.h"
 #include "Shared/ColorUtilities.h"
 
 SnesEventManager::SnesEventManager(Debugger* debugger, SnesCpu* cpu, SnesPpu* ppu, SnesMemoryManager* memoryManager, SnesDmaController* dmaController)
@@ -46,6 +47,10 @@ void SnesEventManager::AddEvent(DebugEventType type, MemoryOperationInfo& operat
 
 	evt.ProgramCounter = _debugger->GetProgramCounter(CpuType::Snes, true);
 
+	if(evt.Type != DebugEventType::Register) {
+		SnesEventLog::Append(evt, _debugger->GetEmulator()->GetFrameCount());
+	}
+
 	_debugEvents.push_back(evt);
 }
 
@@ -59,6 +64,10 @@ void SnesEventManager::AddEvent(DebugEventType type)
 	evt.DmaChannel = -1;
 
 	evt.ProgramCounter = (_cpu->GetState().K << 16) | _cpu->GetState().PC;
+
+	if(evt.Type != DebugEventType::Register) {
+		SnesEventLog::Append(evt, _debugger->GetEmulator()->GetFrameCount());
+	}
 
 	_debugEvents.push_back(evt);
 }

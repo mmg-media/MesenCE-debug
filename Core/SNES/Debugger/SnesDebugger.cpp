@@ -16,6 +16,7 @@
 #include "SNES/Debugger/SnesEventManager.h"
 #include "SNES/Debugger/TraceLogger/SnesCpuTraceLogger.h"
 #include "SNES/Debugger/SnesPpuTools.h"
+#include "SNES/Debugger/SnesDebugLog.h"
 #include "Debugger/CdlManager.h"
 #include "Debugger/DebugTypes.h"
 #include "Debugger/DisassemblyInfo.h"
@@ -389,6 +390,17 @@ void SnesDebugger::ProcessCallStackUpdates(AddressInfo& destAddr, uint32_t destP
 
 void SnesDebugger::ProcessInterrupt(uint32_t originalPc, uint32_t currentPc, bool forNmi)
 {
+	if(_cpuType == CpuType::Snes) {
+		DebugEventInfo evt = {};
+		evt.Type = forNmi ? DebugEventType::Nmi : DebugEventType::Irq;
+		evt.ProgramCounter = _debugger->GetProgramCounter(CpuType::Snes, true);
+		evt.Scanline = (int16_t)_ppu->GetScanline();
+		evt.Cycle = _memoryManager->GetHClock();
+		evt.BreakpointId = -1;
+		evt.DmaChannel = -1;
+		SnesEventLog::Append(evt, _emu->GetFrameCount());
+	}
+
 	AddressInfo ret = _memoryMappings->GetAbsoluteAddress(originalPc);
 	AddressInfo dest = _memoryMappings->GetAbsoluteAddress(currentPc);
 
@@ -419,6 +431,17 @@ void SnesDebugger::ProcessPpuRead(uint16_t addr, uint8_t value, MemoryType memor
 
 void SnesDebugger::ProcessPpuWrite(uint16_t addr, uint8_t value, MemoryType memoryType)
 {
+	if(memoryType == MemoryType::SnesVideoRam) {
+		//R2.2: VRAM-Write (0x2118/0x2119) mit schreibendem PC und Zieladresse loggen
+		SnesVramLog::Append(
+			_emu->GetFrameCount(),
+			_memoryManager->GetHClock(),
+			(int16_t)_ppu->GetScanline(),
+			_debugger->GetProgramCounter(CpuType::Snes, true),
+			addr >> 1,
+			value);
+	}
+
 	MemoryOperationInfo operation(addr, value, MemoryOperationType::Write, memoryType);
 	AddressInfo addressInfo { addr, memoryType };
 	_debugger->ProcessBreakConditions(CpuType::Snes, *_step.get(), _breakpointManager.get(), operation, addressInfo);

@@ -74,6 +74,10 @@ public:
 	void Initialize(SnesConsole* console);
 	virtual ~SnesMemoryManager();
 
+	Emulator* GetEmu() { return _emu; }
+
+	SnesConsole* GetConsole() { return _console; }
+
 	void Reset();
 
 	void GenerateMasterClockTable();

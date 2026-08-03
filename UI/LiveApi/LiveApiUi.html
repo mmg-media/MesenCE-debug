@@ -56,6 +56,8 @@ th{color:var(--dim); font-weight:normal;}
 .empty{color:var(--dim); font-style:italic;}
 input[type=text],input[type=number],select{min-width:0;}
 .w50{width:70px;} .w90{width:100px;}
+.ipad{width:36px;height:28px;padding:0;font-size:12px;margin:1px;}
+.ipad:active{background:var(--accent); color:#000;}
 </style>
 </head>
 <body>
@@ -95,6 +97,21 @@ input[type=text],input[type=number],select{min-width:0;}
 			<div class="gridrow"><label>Layers M/S</label><span id="ppuMainLayers">-</span><span id="ppuSubLayers">-</span></div>
 			<div class="gridrow"><label>VRAM Addr</label><span id="ppuVramAddr">-</span><label>OAM Addr</label><span id="ppuOamAddr">-</span></div>
 			<div class="gridrow"><label>CG RAM Addr</label><span id="ppuCgramAddr">-</span><label>Mode7</label><span id="ppuMode7">-</span></div>
+		</div>
+		<div class="panel" id="inputPanel">
+			<h2>Input (Fernsteuerung)</h2>
+			<div class="row" style="justify-content:center;">
+				<table class="reg">
+					<tr><td colspan="3"><div class="row" style="justify-content:center;"><button class="ipad" data-key="L" style="margin-right:6px;">L</button><button class="ipad" data-key="R">R</button></div></td></tr>
+					<tr><td></td><td><button class="ipad" data-key="Up">▲</button></td><td></td></tr>
+					<tr><td><button class="ipad" data-key="Left">◀</button></td><td><button class="ipad" data-key="Select">SEL</button></td><td><button class="ipad" data-key="Right">▶</button></td></tr>
+					<tr><td></td><td><button class="ipad" data-key="Down">▼</button></td><td></td></tr>
+				</table>
+				<table class="reg" style="margin-left:8px;"><tr><td><button class="ipad" data-key="A">A</button></td><td><button class="ipad" data-key="B">B</button></td></tr>
+				<tr><td><button class="ipad" data-key="X">X</button></td><td><button class="ipad" data-key="Y">Y</button></td></tr>
+				<tr><td colspan="2"><button class="ipad" data-key="Start" style="width:100%;">Start</button></td></tr></table>
+			</div>
+			<div class="row" style="color:var(--dim);font-size:11px;">Gedrückt halten = Taste halten (für Scroll/Karte). Nutzt die Input-Zuordnung (Pad1).</div>
 		</div>
 		<div class="panel" id="romPanel">
 			<h2>ROM / Status</h2>
@@ -158,6 +175,7 @@ input[type=text],input[type=number],select{min-width:0;}
 			<div class="row">
 				<label>CPU</label><select id="traceCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
 				<label>Zeilenzahl</label><input type="text" id="traceCount" value="200" class="w50">
+				<label><input type="checkbox" id="traceEnable"> Trace aktivieren</label>
 				<label><input type="checkbox" id="traceAuto" checked> auto-scroll</label>
 			</div>
 			<div class="log" id="traceView"></div>
@@ -180,6 +198,33 @@ input[type=text],input[type=number],select{min-width:0;}
 				<label><input type="checkbox" id="eventsAuto" checked> auto-refresh</label>
 			</div>
 			<div class="log" id="eventsView"></div>
+			<h2 style="margin-top:8px;">Event-Historie (R2.1, kumulativ)</h2>
+			<div class="row">
+				<label>Typ</label><select id="evHistType" class="w50"><option value="">alle</option><option>Nmi</option><option>Irq</option><option>Breakpoint</option></select>
+				<label>Anzahl</label><select id="evHistCount" class="w50"><option>50</option><option selected>100</option><option>200</option><option>500</option></select>
+				<span style="color:var(--dim);font-size:11px;" id="evHistTotal">– Einträge</span>
+				<button id="btnEvHistRefresh">Refresh</button>
+			</div>
+			<div class="log" id="evHistView" style="height:180px;overflow:auto;"><span class="empty">Event-Historie laden …</span></div>
+			<h2 style="margin-top:8px;">VRAM-Writes (R2.2, PC + Ziel)</h2>
+			<div class="row">
+				<label>Anzahl</label><select id="vramLogCount" class="w50"><option selected>100</option><option>300</option><option>1000</option></select>
+				<span style="color:var(--dim);font-size:11px;" id="vramLogTotal">– Einträge</span>
+				<button id="btnVramRefresh">Refresh</button>
+			</div>
+			<div class="log" id="vramLogView" style="height:180px;overflow:auto;"><span class="empty">VRAM-Writes laden …</span></div>
+			<h2 style="margin-top:8px;">DMA-Kanäle (live)</h2>
+			<div class="log" id="dmaView" style="height:130px;"><span class="empty">DMA-Status laden …</span></div>
+			<h2 style="margin-top:8px;">DMA-Log (kumulativ, P1.1)</h2>
+			<div class="row">
+				<label><input type="checkbox" id="dmaLogEnable" checked> Logging aktiv</label>
+				<label>Anzahl</label><select id="dmaLogCount" class="w50">
+					<option>50</option><option selected>100</option><option>200</option><option>500</option><option>1000</option>
+				</select>
+				<span style="color:var(--dim);font-size:11px;" id="dmaLogTotal">– Einträge</span>
+				<button id="btnDmaLogRefresh">Refresh</button>
+			</div>
+			<div class="log" id="dmaLogView" style="height:220px;overflow:auto;"><span class="empty">DMA-Log laden …</span></div>
 		</div>
 
 		<div class="panel tabpanel" id="tab-callstack">
@@ -405,7 +450,7 @@ function startTimers(){
 	statusTimer=setInterval(refreshStatus,1000);
 	traceTimer=setInterval(()=>{ if(activeTab==="trace") refreshTrace(); },400);
 	timers.push(setInterval(()=>{ if(activeTab==="disasm") refreshDisasm(); },800));
-	timers.push(setInterval(()=>{ if(activeTab==="events" && $("eventsAuto").checked) refreshEvents(); },1200));
+	timers.push(setInterval(()=>{ if(activeTab==="events" && $("eventsAuto").checked){ refreshEvents(); refreshDma(); refreshDmaLog(); refreshEvHist(); refreshVramLog(); } },1200));
 	timers.push(setInterval(()=>{ if(activeTab==="callstack") refreshCallstack(); },2000));
 	timers.push(setInterval(()=>{ if(activeTab==="gfx" && $("gfxLive").checked) refreshGfx(); },600));
 	timers.push(setInterval(()=>{ if(activeTab==="spc" && $("spcLive").checked) refreshSpc(); },400));
@@ -606,6 +651,64 @@ async function refreshEvents(){
 	}catch(e){}
 }
 
+async function refreshDma(){
+	try{
+		const d=await fetch("api/dma?cpu=Snes").then(r=>r.json());
+		if(!d) return;
+		let h=`<div class="line">MDMAEN=$${fmtHex(d.mdmaen,2)} HDMAEN=$${fmtHex(d.hdmaen,2)}</div>`;
+		d.channels.forEach(ch=>{
+			h+=`<div class="line"><span class="pc">ch${ch.channel}</span> ${ch.enabled?"<b>AKTIV</b>":"--"} ${ch.direction}${ch.hdma?" HDMA":""} src=${ch.source} → ${ch.destName} ($${fmtHex(ch.destAddr,2)}) len=${ch.length} ${ch.modeText}</div>`;
+		});
+		$("dmaView").innerHTML=h;
+	}catch(e){}
+}
+
+async function refreshDmaLog(){
+	try{
+		if(!$("dmaLogEnable").checked) return;
+		const count=parseInt($("dmaLogCount").value||"100");
+		const d=await fetch("api/dma/log?cpu=Snes&count="+count).then(r=>r.json());
+		if(!d) return;
+		$("dmaLogTotal").textContent=d.count+" Einträge";
+		let h="<table class='tbl'><tr><th>Fr</th><th>Ch</th><th>T</th><th>Modus</th><th>Quelle</th><th>Ziel</th><th>VRAM</th><th>Länge</th></tr>";
+		(d.entries||[]).slice().reverse().forEach(e=>{
+			const vram=(e.vramAddr>0)?"$"+fmtHex(e.vramAddr,4):"";
+			h+=`<tr><td>${e.frame}</td><td>${e.channel}</td><td>${e.isHdma?"HDMA":"DMA"}${e.toCpu?"↑":""}</td><td>${e.mode}</td><td>${esc(e.source)}</td><td>${esc(e.destName)}</td><td>${vram}</td><td>${e.length}</td></tr>`;
+		});
+		$("dmaLogView").innerHTML=h||'<span class="empty">keine Einträge</span>';
+	}catch(e){}
+}
+
+async function refreshEvHist(){
+	try{
+		const type=encodeURIComponent($("evHistType").value);
+		const count=parseInt($("evHistCount").value||"100");
+		const d=await fetch("api/events/history?cpu=Snes&count="+count+(type?"&type="+type:"")).then(r=>r.json());
+		if(!d) return;
+		$("evHistTotal").textContent=d.count+" Einträge";
+		let h="<table class='tbl'><tr><th>Id</th><th>Fr</th><th>Typ</th><th>PC</th><th>Zyklus</th><th>Op</th></tr>";
+		(d.entries||[]).slice().reverse().forEach(e=>{
+			const op=e.operation?"$"+fmtHex(e.operation.address,4)+" val="+e.operation.value:"";
+			h+=`<tr><td>${e.id}</td><td>${e.frame}</td><td>${esc(e.type)}</td><td>$${fmtHex(e.pc,6)}</td><td>${e.cycle}</td><td>${esc(op)}</td></tr>`;
+		});
+		$("evHistView").innerHTML=h||'<span class="empty">keine Events</span>';
+	}catch(e){}
+}
+
+async function refreshVramLog(){
+	try{
+		const count=parseInt($("vramLogCount").value||"100");
+		const d=await fetch("api/vram/writes?cpu=Snes&count="+count).then(r=>r.json());
+		if(!d) return;
+		$("vramLogTotal").textContent=d.count+" Einträge";
+		let h="<table class='tbl'><tr><th>Fr</th><th>PC</th><th>VRAM</th><th>Wert</th><th>Zyklus</th></tr>";
+		(d.entries||[]).slice().reverse().forEach(e=>{
+			h+=`<tr><td>${e.frame}</td><td>$${fmtHex(e.pc,6)}</td><td>$${fmtHex(e.vramAddr,4)}</td><td>${e.value}</td><td>${e.cycle}</td></tr>`;
+		});
+		$("vramLogView").innerHTML=h||'<span class="empty">keine VRAM-Writes</span>';
+	}catch(e){}
+}
+
 /* ---- Callstack ---- */
 async function refreshCallstack(){
 	try{
@@ -664,6 +767,11 @@ const Plugin = {
 	trace: (count,cpu)=>rpc("trace",{cpu:cpu||"Snes",count:count||100}),
 	disasm: (address,count,cpu)=>rpc("disasm",{cpu:cpu||"Snes",address:address||0,count:count||20}),
 	events: (cpu)=>rpc("events",{cpu:cpu||"Snes"}),
+	eventsHistory: (count,type,since,cpu)=>Plugin.getJson("api/events/history?cpu="+encodeURIComponent(cpu||"Snes")+"&count="+(count||100)+(type?"&type="+encodeURIComponent(type):"")+"&since="+(since||0)),
+	vramWrites: (count,since,cpu)=>Plugin.getJson("api/vram/writes?cpu="+encodeURIComponent(cpu||"Snes")+"&count="+(count||100)+"&since="+(since||0)),
+	dmaLog: (count,since)=>Plugin.getJson("api/dma/log?cpu=Snes&count="+(count||100)+"&since="+(since||0)),
+	dmaLogCount: ()=>Plugin.getJson("api/dma/log/count"),
+	snapshot: (cpu)=>Plugin.getJson("api/snapshot?cpu="+encodeURIComponent(cpu||"Snes")),
 	callstack: (cpu)=>rpc("callstack",{cpu:cpu||"Snes"}),
 	eval: (expr,cpu)=>rpc("expression",{expr:expr||"",cpu:cpu||"Snes"}),
 	breakpoints: ()=>rpc("breakpoints.get"),
@@ -681,6 +789,8 @@ const Plugin = {
 	gfxTilesUrl: (o)=>{ o=o||{}; return "api/gfx/tiles?cpu=Snes&format="+encodeURIComponent(o.format||"Bpp4")+"&mem="+encodeURIComponent(o.mem||"SnesVideoRam")+"&cols="+(o.cols||16)+"&rows="+(o.rows||16)+"&palette="+(o.palette||0)+"&start="+encodeURIComponent(o.start||0)+"&bg="+encodeURIComponent(o.bg||"Black"); },
 	spcUrl: (o)=>{ o=o||{}; return "api/spc?song="+encodeURIComponent(o.song||"")+"&game="+encodeURIComponent(o.game||"")+"&artist="+encodeURIComponent(o.artist||""); },
 	gfxState: ()=>Plugin.getJson("api/gfx/state?cpu=Snes"),
+	gfxSpritesJson: ()=>Plugin.getJson("api/gfx/sprites.json?cpu=Snes"),
+	spritesDecoded: ()=>Plugin.getJson("api/gfx/sprites_decoded?cpu=Snes"),
 	spcState: ()=>Plugin.getJson("api/spc/state"),
 
 	/* ---- Daten nach außen schieben ---- */
@@ -1126,6 +1236,28 @@ function bindControls(){
 	$("btnCsRefresh").onclick=refreshCallstack;
 	$("disasmAddr").addEventListener("keydown",e=>{ if(e.key==="Enter") refreshDisasm(); });
 	$("memType").addEventListener("change",()=>{ if(liveOn){ setLiveOn(); } refreshMem(); });
+	$("traceEnable").addEventListener("change",async ()=>{
+		const on=$("traceEnable").checked;
+		try{ await fetch("/api/trace/enable?cpu=Snes&enable="+(on?1:0)); refreshTrace(); }catch(e){}
+	});
+	$("dmaLogEnable").addEventListener("change",async ()=>{
+		const on=$("dmaLogEnable").checked;
+		try{ await fetch("/api/dma/log/enable?enable="+(on?1:0)); refreshDmaLog(); }catch(e){}
+	});
+	$("btnDmaLogRefresh").addEventListener("click",()=>refreshDmaLog());
+	$("dmaLogCount").addEventListener("change",()=>refreshDmaLog());
+	$("btnEvHistRefresh").addEventListener("click",()=>refreshEvHist());
+	$("evHistType").addEventListener("change",()=>refreshEvHist());
+	$("evHistCount").addEventListener("change",()=>refreshEvHist());
+	$("btnVramRefresh").addEventListener("click",()=>refreshVramLog());
+	$("vramLogCount").addEventListener("change",()=>refreshVramLog());
+	document.querySelectorAll(".ipad[data-key]").forEach(btn=>{
+		const key=btn.dataset.key;
+		const press=(p)=>{ fetch("/api/input",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:key,pressed:p})}); };
+		btn.addEventListener("mousedown",()=>press(true));
+		btn.addEventListener("mouseup",()=>press(false));
+		btn.addEventListener("mouseleave",()=>press(false));
+	});
 }
 
 let activeTab="trace";
@@ -1139,7 +1271,7 @@ function bindTabs(){
 			document.getElementById("tab-"+activeTab).classList.add("active");
 			if(activeTab==="trace") refreshTrace();
 			if(activeTab==="disasm") refreshDisasm();
-			if(activeTab==="events") refreshEvents();
+	if(activeTab==="events") { refreshEvents(); refreshDma(); refreshDmaLog(); refreshEvHist(); refreshVramLog(); }
 			if(activeTab==="callstack") refreshCallstack();
 			if(activeTab==="gfx") refreshGfx();
 			if(activeTab==="spc") refreshSpc();
