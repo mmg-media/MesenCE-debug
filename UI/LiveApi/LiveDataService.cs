@@ -1213,6 +1213,26 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
+		/// Emulator während einer nativen Mutation pausieren: Der Emulations-Thread schreibt in den
+		/// Tracker-Puffer (Append/WriteRamLine); Stop/Start gibt den RAM-Puffer per free() frei.
+		/// Ohne Pause -> Use-after-free (Absturz). RunExclusive pausiert den Emulator NICHT.
+		/// </summary>
+		private static T WithEmuPaused<T>(Func<T> action)
+		{
+			bool wasPaused = EmuApi.IsPaused();
+			if(!wasPaused) {
+				EmuApi.Pause();
+			}
+			try {
+				return action();
+			} finally {
+				if(!wasPaused) {
+					DebugApi.ResumeExecution();
+				}
+			}
+		}
+
+		/// <summary>
 		/// Universal-Tracker starten: Trigger auf Memory-Lesen/Schreiben einer Region; danach wird ein
 		/// chronologischer Ablauf (Exec/MemW/VRAM/DMA/Interrupt) in Ring + Datei geloggt.
 		/// </summary>
@@ -1227,7 +1247,10 @@ namespace Mesen.LiveApi
 					UInt32 value = ParseAddress(valueHex ?? "0");
 					Int32 bufferMode = mode == "ram" ? 1 : 0;
 					string filePath = Path.Combine(GetExportsFolder(), $"tracker_{DateTime.Now:yyyyMMdd_HHmmss}.log");
-					DebugApi.SnesTrackerStart(filePath, (Int32)memType, start, end, onRead, onWrite, value, valueSet, logExec, maxBytes, bufferMode, bufferSizeMb);
+					WithEmuPaused(() => {
+						DebugApi.SnesTrackerStart(filePath, (Int32)memType, start, end, onRead, onWrite, value, valueSet, logExec, maxBytes, bufferMode, bufferSizeMb);
+						return true;
+					});
 					return new JsonObject() { ["ok"] = true, ["file"] = filePath };
 				} catch {
 					return new JsonObject() { ["ok"] = false };
@@ -1239,10 +1262,12 @@ namespace Mesen.LiveApi
 		{
 			return RunExclusive(() => {
 				try {
-					UInt32 count = DebugApi.SnesTrackerGetCount();
-					UInt64 triggerCount = DebugApi.SnesTrackerGetTriggerCount();
-					DebugApi.SnesTrackerStop();
-					return new JsonObject() { ["ok"] = true, ["count"] = count, ["triggerCount"] = triggerCount };
+					return WithEmuPaused(() => {
+						UInt32 count = DebugApi.SnesTrackerGetCount();
+						UInt64 triggerCount = DebugApi.SnesTrackerGetTriggerCount();
+						DebugApi.SnesTrackerStop();
+						return new JsonObject() { ["ok"] = true, ["count"] = count, ["triggerCount"] = triggerCount };
+					});
 				} catch {
 					return new JsonObject() { ["ok"] = false };
 				}

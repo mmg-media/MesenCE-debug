@@ -374,8 +374,13 @@ public:
 	static bool TriggerValueSet;
 
 	static char FilePath[1024];
-	static uint8_t* RamBuffer;
-	static uint64_t RamSize;
+	static uint8_t** Chunks;
+	static uint64_t ChunkSize;
+	static uint32_t ChunkCount;
+	static uint32_t CurrentChunk;
+	static uint64_t ChunkOffset;
+	static uint64_t ChunksFilled;
+	static uint32_t FirstChunk;
 	static uint64_t RamLen;
 	static bool RamWrapped;
 	static bool RamWrap;
@@ -385,6 +390,7 @@ public:
 	static uint64_t FileBytes;
 	static FILE* File;
 	static char FileBuffer[8192];
+	static std::atomic<long> WriteCount;
 	static uint32_t FileBufferLen;
 
 	static void Start(const char* filePath, int32_t memType, uint32_t start, uint32_t end, bool onRead, bool onWrite, uint32_t value, bool valueSet, bool logExec, uint64_t maxBytes, uint8_t bufferMode, uint64_t bufferSizeMb);

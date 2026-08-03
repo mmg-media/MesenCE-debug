@@ -91,8 +91,14 @@ bool SnesTracker::LogExec = true;
 uint64_t SnesTracker::MaxBytes = 100ULL * 1024 * 1024;
 uint64_t SnesTracker::FileBytes = 0;
 uint32_t SnesTracker::FileBufferLen = 0;
-uint8_t* SnesTracker::RamBuffer = nullptr;
-uint64_t SnesTracker::RamSize = 0;
+std::atomic<long> SnesTracker::WriteCount(0);
+uint8_t** SnesTracker::Chunks = nullptr;
+uint64_t SnesTracker::ChunkSize = 0;
+uint32_t SnesTracker::ChunkCount = 0;
+uint32_t SnesTracker::CurrentChunk = 0;
+uint64_t SnesTracker::ChunkOffset = 0;
+uint64_t SnesTracker::ChunksFilled = 0;
+uint32_t SnesTracker::FirstChunk = 0;
 uint64_t SnesTracker::RamLen = 0;
 bool SnesTracker::RamWrapped = false;
 bool SnesTracker::RamWrap = true;
@@ -115,17 +121,29 @@ void SnesTracker::Start(const char* filePath, int32_t memType, uint32_t start, u
 	BufferMode = bufferMode;
 	RamLen = 0;
 	RamWrapped = false;
+	CurrentChunk = 0;
+	ChunkOffset = 0;
+	ChunksFilled = 0;
+	FirstChunk = 0;
 
 	if(BufferMode == 1) {
-		RamSize = bufferSizeMb * 1024 * 1024;
-		if(RamSize < 1024 * 1024) {
-			RamSize = 1024 * 1024;
+		//Chunked Ring-Puffer: viele kleine Chunks statt eines riesigen malloc.
+		//ChunkCount = bufferSizeMb / 16, ChunkSize = 16 MB. Bei vollem Ring wird der älteste
+		//Chunk wiederverwendet (gleitendes Fenster, kein Blockieren im Schreibpfad).
+		uint64_t totalBytes = bufferSizeMb * 1024 * 1024;
+		if(totalBytes < 16ULL * 1024 * 1024) {
+			totalBytes = 16ULL * 1024 * 1024;
 		}
-		//Großer virtueller Puffer: malloc nutzt auf Windows VirtualAlloc intern (lazy Commit)
-		RamBuffer = (uint8_t*)malloc((size_t)RamSize);
+		ChunkSize = 16ULL * 1024 * 1024;
+		ChunkCount = (uint32_t)(totalBytes / ChunkSize);
+		Chunks = (uint8_t**)malloc(sizeof(uint8_t*) * ChunkCount);
+		for(uint32_t i = 0; i < ChunkCount; i++) {
+			Chunks[i] = (uint8_t*)malloc((size_t)ChunkSize);
+		}
 	} else {
-		RamBuffer = nullptr;
-		RamSize = 0;
+		Chunks = nullptr;
+		ChunkSize = 0;
+		ChunkCount = 0;
 	}
 
 	if(filePath && filePath[0]) {
@@ -150,23 +168,41 @@ void SnesTracker::Stop()
 	}
 	FileBufferLen = 0;
 
-	if(BufferMode == 1 && RamBuffer) {
-		//RAM-Puffer beim Stop nach Disk spiegeln (einmalig); bei Wrap: [RamLen..ende) + [0..RamLen)
+	//Laufende WriteRamLine-Aufrufe des Emulations-Threads abwarten, bevor der Puffer freigegeben wird
+	Enabled = false;
+	Tracking = false;
+	while(WriteCount.load(std::memory_order_acquire) != 0) {
+		std::this_thread::yield();
+	}
+
+	if(BufferMode == 1 && Chunks) {
+		//Chunks in chronologischer Reihenfolge dumpen (Ring: ältester zuerst)
 		if(FilePath[0] && RamLen > 0) {
 			FILE* f = nullptr;
 			fopen_s(&f, FilePath, "wb");
 			if(f) {
-				if(RamWrapped) {
-					fwrite(RamBuffer + RamLen, 1, (size_t)(RamSize - RamLen), f);
-					fwrite(RamBuffer, 1, (size_t)RamLen, f);
-				} else {
-					fwrite(RamBuffer, 1, (size_t)RamLen, f);
+				uint32_t dumpCount = ChunksFilled < ChunkCount ? ChunksFilled : ChunkCount;
+				uint32_t startIdx = RamWrapped ? FirstChunk : 0;
+				for(uint32_t i = 0; i < dumpCount; i++) {
+					uint32_t idx = (startIdx + i) % ChunkCount;
+					uint64_t len = ChunkSize;
+					if(idx == CurrentChunk) {
+						len = ChunkOffset;
+					}
+					if(len > 0) {
+						fwrite(Chunks[idx], 1, (size_t)len, f);
+					}
 				}
 				fclose(f);
 			}
 		}
-		free(RamBuffer);
-		RamBuffer = nullptr;
+		for(uint32_t i = 0; i < ChunkCount; i++) {
+			free(Chunks[i]);
+		}
+		free(Chunks);
+		Chunks = nullptr;
+		ChunkCount = 0;
+		ChunkSize = 0;
 		RamLen = 0;
 		RamWrapped = false;
 	}
@@ -177,23 +213,36 @@ void SnesTracker::Stop()
 
 void SnesTracker::WriteRamLine(const char* line, int len)
 {
-	if(!RamBuffer || RamSize == 0) {
+	if(!Chunks || ChunkSize == 0) {
 		return;
 	}
-	if(RamLen >= RamSize) {
-		if(!RamWrap) {
-			return;
+	//WriteCount schützt die Chunks davor, während eines laufenden Writes per Stop() freigegeben zu werden
+	WriteCount++;
+
+	if(ChunkOffset >= ChunkSize) {
+		//Chunk voll -> nächsten Chunk (Ring); bei vollem Ring ältesten wiederverwenden (gleitendes Fenster)
+		CurrentChunk = (CurrentChunk + 1) % ChunkCount;
+		ChunkOffset = 0;
+		ChunksFilled++;
+		if(ChunksFilled > ChunkCount) {
+			FirstChunk = (FirstChunk + 1) % ChunkCount;
+			RamWrapped = true;
+		} else if(ChunksFilled == ChunkCount) {
+			RamWrapped = true;
+			FirstChunk = 0;
 		}
-		RamLen = 0;
-		RamWrapped = true;
 	}
-	uint64_t avail = RamSize - RamLen;
+
+	uint64_t avail = ChunkSize - ChunkOffset;
 	uint64_t copy = len < (int)avail ? (uint64_t)len : avail;
-	memcpy(RamBuffer + RamLen, line, (size_t)copy);
+	memcpy(Chunks[CurrentChunk] + ChunkOffset, line, (size_t)copy);
+	ChunkOffset += copy;
 	RamLen += copy;
 	if(copy < (uint64_t)len) {
 		RamWrapped = true;
 	}
+
+	WriteCount--;
 }
 
 void SnesTracker::FlushFile()
