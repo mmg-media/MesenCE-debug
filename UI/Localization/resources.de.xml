@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="MainMenuView">
@@ -1582,7 +1582,7 @@ Plugin.register({
       <Control ID="lblHint5">Strg-Klick: Pixel transparent machen</Control>
       <Control ID="mnuFile">_Datei</Control>
       <Control ID="lblPreview">Vorschau</Control>
-      <Control ID="wndTitle">Kachel-Editor</Control>
+      <Control ID="wndTitle">Tile-Editor</Control>
       <Control ID="lblHint4">Shift-Klick/Rechtsklick: Farbe unter dem Cursor aufnehmen</Control>
     </Form>
     <Form ID="TilemapViewerWindow">
@@ -1605,7 +1605,7 @@ Plugin.register({
     </Form>
     <Form ID="TileViewerWindow">
       <Control ID="chkUseGrayscalePalette">Graustufen-Palette verwenden</Control>
-      <Control ID="wndTitle">Kachel-Viewer</Control>
+      <Control ID="wndTitle">Tile-Viewer</Control>
       <Control ID="lblTileLayout">Kachel-Layout:</Control>
       <Control ID="lblPresets">Voreinstellungen:</Control>
       <Control ID="mnuView">_Ansicht</Control>
@@ -2231,7 +2231,7 @@ Plugin.register({
       <Value ID="HalfSpeed">Halb (50%)</Value>
       <Value ID="Paste">Einfügen</Value>
       <Value ID="DisableBreakpoint">Breakpoint deaktivieren</Value>
-      <Value ID="ViewInTileViewer">Im Kachel-Viewer anzeigen</Value>
+      <Value ID="ViewInTileViewer">Im Tile-Viewer anzeigen</Value>
       <Value ID="GoToAll">Gehe zu Allen...</Value>
       <Value ID="PowerOff">Ausschalten</Value>
       <Value ID="RowFormatSigned24Bits">Vorzeichenbehaftet dezimal (24-Bit)</Value>
@@ -2373,7 +2373,7 @@ Plugin.register({
       <Value ID="ToggleBilinearInterpolation">Bilineare Interpolation verwenden</Value>
       <Value ID="CheckForUpdates">Nach Updates suchen</Value>
       <Value ID="Delete">Löschen</Value>
-      <Value ID="OpenTileViewer">Kachel-Viewer</Value>
+      <Value ID="OpenTileViewer">Tile-Viewer</Value>
       <Value ID="ResetAccessCounters">Zugriffsstatistik zurücksetzen</Value>
       <Value ID="IncreaseSpeed">Geschwindigkeit erhöhen</Value>
       <Value ID="NormalSpeed">Normal (100%)</Value>
@@ -2539,13 +2539,13 @@ Plugin.register({
       <Value ID="SetScale9x">Skalierung 9x</Value>
     </Enum>
     <Enum ID="DebuggerShortcut">
-      <Value ID="TileEditor_TranslateDown">Kachel-Editor - Nach unten verschieben</Value>
+      <Value ID="TileEditor_TranslateDown">Tile-Editor - Nach unten verschieben</Value>
       <Value ID="MemoryViewer_GoToPrevUnknown">Navigieren zu: Vorheriger unbekannter Block</Value>
       <Value ID="GoToCpuVector3">Gehe zu [CPU-Vektor 3]</Value>
       <Value ID="CodeWindow_SwitchView">Code-Fenster: Ansicht wechseln (Disassembly / Quellansicht)</Value>
       <Value ID="SaveRom">ROM speichern</Value>
       <Value ID="MarkAsUnidentified">Auswahl als unbekannt markieren</Value>
-      <Value ID="TileEditor_RotateLeft">Kachel-Editor - Nach links drehen</Value>
+      <Value ID="TileEditor_RotateLeft">Tile-Editor - Nach links drehen</Value>
       <Value ID="TilemapViewer_ViewInMemoryViewer">Tilemap-Viewer - Im Memory-Viewer anzeigen</Value>
       <Value ID="OpenAssembler">Assembler öffnen</Value>
       <Value ID="OpenTraceLogger">Trace-Logger öffnen</Value>
@@ -2561,7 +2561,7 @@ Plugin.register({
       <Value ID="OpenScriptWindow">Skript-Fenster öffnen</Value>
       <Value ID="Paste">Einfügen</Value>
       <Value ID="FindResultList_GoToLocation">Suchergebnisse: Gehe zu Position</Value>
-      <Value ID="TileEditor_TranslateRight">Kachel-Editor - Nach rechts verschieben</Value>
+      <Value ID="TileEditor_TranslateRight">Tile-Editor - Nach rechts verschieben</Value>
       <Value ID="CodeWindow_MoveProgramCounter">Code-Fenster: Programmzähler verschieben</Value>
       <Value ID="TilemapViewer_EditTilemapBreakpoint">Tilemap-Viewer - Breakpoint bearbeiten (Tilemap)</Value>
       <Value ID="StepOver">Einzelschritt (drüber)</Value>
@@ -2577,7 +2577,7 @@ Plugin.register({
       <Value ID="LabelList_Delete">Label-Liste: Label löschen</Value>
       <Value ID="IncreaseFontSize">Schrift vergrößern</Value>
       <Value ID="ScriptWindow_SaveScript">Skript speichern</Value>
-      <Value ID="TileViewer_ViewInMemoryViewer">Kachel-Viewer - Im Memory-Viewer anzeigen</Value>
+      <Value ID="TileViewer_ViewInMemoryViewer">Tile-Viewer - Im Memory-Viewer anzeigen</Value>
       <Value ID="GoToCpuVector4">Gehe zu [CPU-Vektor 4]</Value>
       <Value ID="LabelList_Add">Label-Liste: Label hinzufügen</Value>
       <Value ID="OpenNesHeaderEditor">NES-Header-Editor öffnen</Value>
@@ -2600,7 +2600,7 @@ Plugin.register({
       <Value ID="SaveCdl">CDL-Daten speichern als...</Value>
       <Value ID="MemoryViewer_GoToNextUnknown">Navigieren zu: Nächster unbekannter Block</Value>
       <Value ID="ResetFontSize">Schriftgröße zurücksetzen</Value>
-      <Value ID="TileEditor_TranslateLeft">Kachel-Editor - Nach links verschieben</Value>
+      <Value ID="TileEditor_TranslateLeft">Tile-Editor - Nach links verschieben</Value>
       <Value ID="BreakpointList_GoToLocation">Breakpoint-Liste: Gehe zu Position</Value>
       <Value ID="CodeWindow_ToggleBreakpoint">Code-Fenster: Breakpoint umschalten</Value>
       <Value ID="CallStack_GoToLocation">Callstack: Gehe zu Position</Value>
@@ -2610,7 +2610,7 @@ Plugin.register({
       <Value ID="OpenProfiler">Profiler öffnen</Value>
       <Value ID="CodeWindow_EditComment">Code-Fenster: Kommentar bearbeiten</Value>
       <Value ID="Copy">Kopieren</Value>
-      <Value ID="TileViewer_EditTile">Kachel-Viewer - Kachel bearbeiten</Value>
+      <Value ID="TileViewer_EditTile">Tile-Viewer - Kachel bearbeiten</Value>
       <Value ID="SaveRomAs">ROM speichern unter...</Value>
       <Value ID="MemoryViewer_GoToPrevWrite">Navigieren zu: Vorheriger Schreib-Block</Value>
       <Value ID="RunPpuScanline">Eine PPU-Scanline ausführen</Value>
@@ -2618,11 +2618,11 @@ Plugin.register({
       <Value ID="ScriptWindow_StopScript">Skript stoppen</Value>
       <Value ID="ResetCdl">CDL-Daten zurücksetzen</Value>
       <Value ID="OpenMemoryTools">Memory-Viewer öffnen</Value>
-      <Value ID="SpriteViewer_ViewInTileViewer">Sprite-Viewer - Im Kachel-Viewer anzeigen</Value>
+      <Value ID="SpriteViewer_ViewInTileViewer">Sprite-Viewer - Im Tile-Viewer anzeigen</Value>
       <Value ID="ResetWorkspace">Arbeitsbereich zurücksetzen</Value>
       <Value ID="OpenDebugger">Debugger öffnen</Value>
       <Value ID="LabelList_FindOccurrences">Label-Liste: Alle Vorkommen finden</Value>
-      <Value ID="TileEditor_FlipHorizontal">Kachel-Editor - Horizontal spiegeln</Value>
+      <Value ID="TileEditor_FlipHorizontal">Tile-Editor - Horizontal spiegeln</Value>
       <Value ID="MemoryViewer_EditBreakpoint">Breakpoint bearbeiten</Value>
       <Value ID="OpenDebugLog">Debug-Log öffnen</Value>
       <Value ID="CodeWindow_EditLabel">Code-Fenster: Label bearbeiten</Value>
@@ -2648,7 +2648,7 @@ Plugin.register({
       <Value ID="WatchList_MoveDown">Watch-Liste: Nach unten</Value>
       <Value ID="Reset">Reset</Value>
       <Value ID="MemoryViewer_GoToNextData">Navigieren zu: Nächster Datenblock</Value>
-      <Value ID="TilemapViewer_ViewInTileViewer">Tilemap-Viewer - Im Kachel-Viewer anzeigen</Value>
+      <Value ID="TilemapViewer_ViewInTileViewer">Tilemap-Viewer - Im Tile-Viewer anzeigen</Value>
       <Value ID="Find">Suchen</Value>
       <Value ID="FunctionList_ViewInMemoryViewer">Funktionsliste: Im Memory-Viewer anzeigen</Value>
       <Value ID="CallStack_EditLabel">Callstack: Label bearbeiten</Value>
@@ -2677,11 +2677,11 @@ Plugin.register({
       <Value ID="CodeWindow_DisableEnableBreakpoint">Code-Fenster: Breakpoint deaktivieren/aktivieren</Value>
       <Value ID="ZoomOut">Verkleinern</Value>
       <Value ID="TraceLogger_EditLabel">Trace-Logger - Label bearbeiten</Value>
-      <Value ID="OpenTileViewer">Kachel-Viewer öffnen</Value>
+      <Value ID="OpenTileViewer">Tile-Viewer öffnen</Value>
       <Value ID="Undo">Rückgängig</Value>
       <Value ID="MemoryViewer_Export">Exportieren</Value>
       <Value ID="LabelList_ToggleBreakpoint">Label-Liste: Breakpoint umschalten</Value>
-      <Value ID="TileEditor_RotateRight">Kachel-Editor - Nach rechts drehen</Value>
+      <Value ID="TileEditor_RotateRight">Tile-Editor - Nach rechts drehen</Value>
       <Value ID="MemoryViewer_GoToPrevExec">Navigieren zu: Vorheriger Ausführungs-Block</Value>
       <Value ID="GoToCpuVector2">Gehe zu [CPU-Vektor 2]</Value>
       <Value ID="LabelList_Edit">Label-Liste: Label bearbeiten</Value>
@@ -2697,7 +2697,7 @@ Plugin.register({
       <Value ID="GoToProgramCounter">Gehe zum Programmzähler</Value>
       <Value ID="CodeWindow_AddToWatch">Code-Fenster: Zur Watch-Liste hinzufügen</Value>
       <Value ID="OpenSpriteViewer">Sprite-Viewer öffnen</Value>
-      <Value ID="TileEditor_FlipVertical">Kachel-Editor - Vertikal spiegeln</Value>
+      <Value ID="TileEditor_FlipVertical">Tile-Editor - Vertikal spiegeln</Value>
       <Value ID="WatchList_Edit">Watch-Liste: Eintrag bearbeiten</Value>
       <Value ID="MemoryViewer_ViewInDebugger">Im Debugger anzeigen</Value>
       <Value ID="FindResultList_AddWatch">Suchergebnisse: Zur Watch-Liste hinzufügen</Value>
@@ -2708,7 +2708,7 @@ Plugin.register({
       <Value ID="OpenMemorySearch">Speichersuche öffnen</Value>
       <Value ID="TraceLogger_EditBreakpoint">Trace-Logger - Breakpoint bearbeiten</Value>
       <Value ID="Refresh">Aktualisieren</Value>
-      <Value ID="TileEditor_TranslateUp">Kachel-Editor - Nach oben verschieben</Value>
+      <Value ID="TileEditor_TranslateUp">Tile-Editor - Nach oben verschieben</Value>
       <Value ID="LabelList_AddToWatch">Label-Liste: Zur Watch-Liste hinzufügen</Value>
       <Value ID="CodeWindow_NavigateBack">Code-Fenster: Zurück navigieren</Value>
       <Value ID="OpenGameboyDebugger">Game-Boy-Debugger öffnen</Value>
