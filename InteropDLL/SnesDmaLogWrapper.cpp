@@ -3,7 +3,7 @@
 #include "Core/SNES/DmaControllerTypes.h"
 #include "Core/Shared/Emulator.h"
 
-// DMA-Log-Exports für den kumulativen DMA-Ring-Puffer (Anforderung P1.1)
+// DMA log exports for the cumulative DMA ring buffer (requirement P1.1)
 
 extern "C" {
 	DllExport void __stdcall snes_set_dma_log_enabled(bool enabled)

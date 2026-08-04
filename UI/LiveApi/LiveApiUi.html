@@ -915,14 +915,14 @@ function saveBlob(name, blob){
 }
 
 const Plugin = {
-	/* ---- Transport: ALLE API-Methoden (JSON-RPC) ---- */
+	/* ---- Transport: ALL API methods (JSON-RPC) ---- */
 	rpc: (method,params)=>rpc(method,params),
-	/* ---- Transport: ALLE HTTP-Endpoints ---- */
+	/* ---- Transport: ALL HTTP endpoints ---- */
 	fetch: (path,opts)=>fetch(path,opts),
 	getJson: async(path)=>{ const r=await fetch(path); return r.ok?await r.json():null; },
 	getBlob: async(path)=>{ const r=await fetch(path); return r.ok?await r.blob():null; },
 
-	/* ---- Convenience (deckt alle RPC-Methoden ab) ---- */
+	/* ---- Convenience (covers all RPC methods) ---- */
 	status: ()=>rpc("status"),
 	rom: ()=>rpc("rom"),
 	memoryRead: (type,start,length)=>rpc("memory.read",{type:type||"SnesWorkRam",start:start||0,length:length||16}),
@@ -962,7 +962,7 @@ const Plugin = {
 	trackerStatus: ()=>Plugin.getJson("api/tracker/status"),
 	trackerLog: (count,since)=>Plugin.getJson("api/tracker/log?count="+(count||500)+"&since="+(since||0)),
 
-	/* ---- Daten nach außen schieben ---- */
+	/* ---- Pushing data out ---- */
 	download: async(name,dataOrBlob)=>{ saveBlob(name||"download.bin", dataOrBlob instanceof Blob ? dataOrBlob : new Blob([dataOrBlob],{type:"application/octet-stream"})); },
 	downloadUrl: async(name,url)=>{ const b=await Plugin.getBlob(url); if(b) saveBlob(name||"download", b); },
 	exportFile: (name,data,mode)=>fetch("api/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name||"export.txt",data:data||"",mode:mode||"text"})}),
@@ -974,7 +974,7 @@ const Plugin = {
 	interval: (fn,ms)=>{ const t=setInterval(fn,ms); plTimers.push(t); return t; },
 	timeout: (fn,ms)=>setTimeout(fn,ms),
 
-	/* ---- Registrierung (vom Plugin-Datei aufgerufen) ---- */
+	/* ---- Registration (called from the plugin file) ---- */
 	register: (desc)=>{ plRegistry.push(desc); }
 };
 
@@ -1167,7 +1167,7 @@ function setGfxView(view){
 function gfxUrl(){
 	const view=gfxView, bg=$("gfxBg").value;
 	if(view==="live"){
-		//Echter gerenderter Frame (Main+Sub via Color Math, mit Effekten/Transparenz)
+		//Real rendered frame (Main+Sub via color math, with effects/transparency)
 		return "/api/gfx/live?cpu=Snes";
 	}
 	if(view==="screen"){
@@ -1326,7 +1326,7 @@ async function refreshPalette(){
 		const st=await fetch("api/gfx/state?cpu=Snes&_="+Date.now()).then(r=>r.json());
 		if(!st || !st.palette || !st.palette.colors || st.palette.colors.length===0) return;
 		const sig=st.palette.colors.join(",");
-		if(sig===lastPaletteSig) return; // Palette unverändert
+		if(sig===lastPaletteSig) return; // palette unchanged
 		lastPaletteSig=sig;
 		renderPaletteSwatches(st.palette.colors, st.palette.colorsPerPalette||16);
 	}catch(e){}

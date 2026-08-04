@@ -292,8 +292,8 @@ namespace Mesen.LiveApi
 					}
 
 					// SNES-Renderingmodell: Main-Screen-Ebenen zuerst, dann Sprites, dann Sub-Screen-Ebenen
-					// darüber (Sub = meist Wolken/Overlays via Color Math). Reihenfolge der Checkboxen
-					// wird dabei respektiert, aber Sub-Ebenen landen immer über den Main-Ebenen.
+					// on top (Sub is usually clouds/overlays via color math). The order of the checkboxes
+					// is respected, but Sub layers always end up on top of the Main layers.
 					List<int> mainOrder = new List<int>();
 					List<int> subOrder = new List<int>();
 					foreach(int layerIndex in enabledLayers) {
@@ -305,7 +305,7 @@ namespace Mesen.LiveApi
 						} else if(((state.SubScreenLayers >> layerIndex) & 1) != 0) {
 							subOrder.Add(layerIndex);
 						} else {
-							//Layer auf keinem Screen aktiv -> trotzdem als Main behandeln
+							//Layer not active on any screen -> treat it as Main anyway
 							mainOrder.Add(layerIndex);
 						}
 					}
@@ -331,7 +331,7 @@ namespace Mesen.LiveApi
 
 		/// <summary>
 		/// Echter gerenderter Frame (Main+Sub via Color Math + Helligkeit), direkt aus dem PPU.
-		/// Nutzt den nativen "FinalScreenViewLayer" (Layer 6), der NACH der Farbverrechnung gefüllt wird.
+		/// Uses the native "FinalScreenViewLayer" (layer 6), which is filled AFTER color math.
 		/// </summary>
 		public static byte[]? GetLivePng(string cpuType)
 		{
@@ -592,7 +592,7 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// R2.4: Dekodierte Sprite-Liste (Position, Größe, Tile, Palette, Priority, Flip, Sichtbarkeit).
+		/// R2.4: Decoded sprite list (position, size, tile, palette, priority, flip, visibility).
 		/// </summary>
 		public static JsonNode? GetSpritesDecoded(string cpuType)
 		{

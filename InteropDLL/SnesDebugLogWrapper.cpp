@@ -1,7 +1,7 @@
 #include "Common.h"
 #include "Core/SNES/Debugger/SnesDebugLog.h"
 
-// R2.1/R2.2: Exports für die kumulative Event-Historie und den VRAM-Write-Log
+// R2.1/R2.2: Exports for the cumulative event history and the VRAM write log
 
 extern "C" {
 	DllExport void __stdcall snes_set_event_log_enabled(bool enabled)

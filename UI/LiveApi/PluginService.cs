@@ -6,8 +6,8 @@ using System.Text.Json.Nodes;
 namespace Mesen.LiveApi
 {
 	/// <summary>
-	/// Verwaltet die WebUI-Plugin-Dateien (LiveApiPlugins/*.js) und den Export-Bereich
-	/// (LiveApiExports/) für Logs, Screenshots und andere Daten, die Plugins nach außen schieben.
+	/// Manages the WebUI plugin files (LiveApiPlugins/*.js) and the export area
+	/// (LiveApiExports/) for logs, screenshots and other data that plugins export.
 	/// </summary>
 	public static class PluginService
 	{
@@ -137,8 +137,8 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Schreibt Daten aus einem Plugin in den Export-Ordner.
-		/// mode: "text"/"append" = UTF-8-Text, "png"/"base64" = Base64 → Binärdaten (z. B. Screenshot).
+		/// Writes data from a plugin to the export folder.
+		/// mode: "text"/"append" = UTF-8 text, "png"/"base64" = base64 binary data (e.g. screenshot).
 		/// </summary>
 		public static bool Export(string fileName, string data, string mode)
 		{

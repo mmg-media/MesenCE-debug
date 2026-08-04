@@ -1,4 +1,4 @@
-﻿using Mesen.Config;
+using Mesen.Config;
 using Mesen.Interop;
 using System;
 using System.Collections.Generic;
@@ -20,10 +20,10 @@ namespace Mesen.Localization
 		public static void LoadResources(UiLanguage language)
 		{
 			try {
-				//Basis: Englisch (fehlende Übersetzungen fallen auf Englisch zurück)
+				//Base: English (missing translations fall back to English)
 				LoadResourceFile("en", true);
 
-				//Überlagerung: gewählte Sprache
+				//Overlay: selected language
 				string lang = language switch {
 					UiLanguage.German => "de",
 					UiLanguage.French => "fr",

@@ -1,21 +1,21 @@
 #include "pch.h"
 #include "SNES/Debugger/SnesDebugLog.h"
 
-// R2.1: Ring-Puffer-Speicher für die Event-Historie
+// R2.1: Ring-buffer storage for the event history
 SnesEventLog::Entry SnesEventLog::Log[SnesEventLog::LogSize] = {};
 uint32_t SnesEventLog::Head = 0;
 uint32_t SnesEventLog::Count = 0;
 uint64_t SnesEventLog::NextId = 0;
 bool SnesEventLog::Enabled = false;
 
-// R2.2: Ring-Puffer-Speicher für den VRAM-Write-Log
+// R2.2: Ring-buffer storage for the VRAM write log
 SnesVramLog::Entry SnesVramLog::Log[SnesVramLog::LogSize] = {};
 uint32_t SnesVramLog::Head = 0;
 uint32_t SnesVramLog::Count = 0;
 bool SnesVramLog::Enabled = false;
 
 
-// R3.1: WRAM/Register-Write-Log – Ring-Puffer-Speicher + Run-Coalescing-Zustand
+// R3.1: WRAM/register write log - ring-buffer storage + run-coalescing state
 SnesWramLog::Entry SnesWramLog::Log[SnesWramLog::LogSize] = {};
 uint32_t SnesWramLog::Head = 0;
 uint32_t SnesWramLog::Count = 0;
@@ -44,7 +44,7 @@ void SnesWramLog::Flush()
 
 	HasPending = false;
 	if(PendingWidth < MinLen) {
-		//Run zu kurz: verwerfen (Anti-Flut)
+		//Run too short: discard (anti-flood)
 		return;
 	}
 
@@ -67,7 +67,7 @@ void SnesWramLog::Flush()
 }
 
 
-// Universal-Tracker – Ring + Datei-Log + Trigger
+// Universal tracker - ring + file log + trigger
 SnesTracker::Entry SnesTracker::Log[SnesTracker::LogSize] = {};
 uint32_t SnesTracker::Head = 0;
 uint32_t SnesTracker::Count = 0;
@@ -127,9 +127,9 @@ void SnesTracker::Start(const char* filePath, int32_t memType, uint32_t start, u
 	FirstChunk = 0;
 
 	if(BufferMode == 1) {
-		//Chunked Ring-Puffer: viele kleine Chunks statt eines riesigen malloc.
-		//ChunkCount = bufferSizeMb / 16, ChunkSize = 16 MB. Bei vollem Ring wird der älteste
-		//Chunk wiederverwendet (gleitendes Fenster, kein Blockieren im Schreibpfad).
+		//Chunked ring buffer: many small chunks instead of one huge malloc.
+		//ChunkCount = bufferSizeMb / 16, ChunkSize = 16 MB. When the ring is full, the oldest
+		//chunk is reused (sliding window, no blocking in the write path).
 		uint64_t totalBytes = bufferSizeMb * 1024 * 1024;
 		if(totalBytes < 16ULL * 1024 * 1024) {
 			totalBytes = 16ULL * 1024 * 1024;
@@ -168,7 +168,7 @@ void SnesTracker::Stop()
 	}
 	FileBufferLen = 0;
 
-	//Laufende WriteRamLine-Aufrufe des Emulations-Threads abwarten, bevor der Puffer freigegeben wird
+	//Wait for in-flight WriteRamLine calls from the emulation thread before freeing the buffer
 	Enabled = false;
 	Tracking = false;
 	while(WriteCount.load(std::memory_order_acquire) != 0) {
@@ -176,7 +176,7 @@ void SnesTracker::Stop()
 	}
 
 	if(BufferMode == 1 && Chunks) {
-		//Chunks in chronologischer Reihenfolge dumpen (Ring: ältester zuerst)
+		//Dump chunks in chronological order (ring: oldest first)
 		if(FilePath[0] && RamLen > 0) {
 			FILE* f = nullptr;
 			fopen_s(&f, FilePath, "wb");
@@ -216,11 +216,11 @@ void SnesTracker::WriteRamLine(const char* line, int len)
 	if(!Chunks || ChunkSize == 0) {
 		return;
 	}
-	//WriteCount schützt die Chunks davor, während eines laufenden Writes per Stop() freigegeben zu werden
+	//WriteCount protects the chunks from being freed via Stop() during an in-flight write
 	WriteCount++;
 
 	if(ChunkOffset >= ChunkSize) {
-		//Chunk voll -> nächsten Chunk (Ring); bei vollem Ring ältesten wiederverwenden (gleitendes Fenster)
+		//Chunk full -> next chunk (ring); when the ring is full, reuse the oldest (sliding window)
 		CurrentChunk = (CurrentChunk + 1) % ChunkCount;
 		ChunkOffset = 0;
 		ChunksFilled++;
@@ -307,7 +307,7 @@ void SnesTracker::Append(uint8_t type, uint32_t frame, int32_t cycle, uint32_t p
 	}
 
 	if(Tracking) {
-		//Chronologischer Log (RAM-Puffer oder Datei, gepuffert)
+		//Chronological log (RAM buffer or file, buffered)
 		char line[128];
 		int n = 0;
 		switch(type) {

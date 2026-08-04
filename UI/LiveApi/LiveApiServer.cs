@@ -769,8 +769,8 @@ namespace Mesen.LiveApi
 
 		private static async Task ServeI18n(HttpListenerContext context, string lang)
 		{
-			//Sprach-XML für die WebUI ausliefern (gleiches Format wie Mesens resources.<lang>.xml;
-			//die WebUI liest nur den Form-Block "LiveApiUi")
+			//Serve the language XML for the WebUI (same format as Mesen's resources.<lang>.xml;
+			//the WebUI only reads the "LiveApiUi" form block)
 			string safeLang = lang switch {
 				"de" => "de",
 				"fr" => "fr",

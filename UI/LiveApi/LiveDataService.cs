@@ -499,7 +499,7 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Aktiviert/deaktiviert den Trace-Logger für eine CPU (damit /api/trace Daten liefert).
+		/// Enables/disables the trace logger for a CPU (so /api/trace returns data).
 		/// </summary>
 		public static bool SetTraceEnabled(string cpuType, bool enabled)
 		{
@@ -527,7 +527,7 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// DMA-Kanal-Zustand (Register $4300-$437F + $420B/$420C): Quelle, Ziel, Länge, Mode pro Kanal.
+		/// DMA channel state (registers $4300-$437F + $420B/$420C): source, target, length, mode per channel.
 		/// </summary>
 		public static JsonNode? GetDmaState(string cpuType)
 		{
@@ -592,8 +592,8 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Atomarer Snapshot aller Map-Scanning-Daten in EINEM Gate (konsistenter Frame):
-		/// Scroll, Layer, Nametable (BG2 0x3800), CGRAM, VRAM-Tiles, DMA-Zustand.
+		/// Atomic snapshot of all map-scanning data in a single gate (consistent frame):
+		/// Scroll, layers, nametable (BG2 0x3800), CGRAM, VRAM tiles, DMA state.
 		/// </summary>
 		public static JsonNode? GetSnapshot(string cpuType)
 		{
@@ -675,8 +675,8 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Kumulativer DMA-Log (Anforderung P1.1): Ring-Puffer mit jedem DMA/HDMA-Block.
-		/// count = max. Einträge, since = inkrementelles Abholen (Index ab dem geliefert wird).
+		/// Cumulative DMA log (requirement P1.1): ring buffer holding every DMA/HDMA block.
+		/// count = max. entries, since = incremental fetch (the index from which entries are returned).
 		/// </summary>
 		public static JsonNode? GetDmaLog(string cpuType, int count, UInt32 since)
 		{
@@ -724,7 +724,7 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// R2.1: Kumulative Event-Historie (Ring-Puffer). Wird beim Aufruf automatisch aktiviert.
+		/// R2.1: Cumulative event history (ring buffer). Automatically enabled on first call.
 		/// </summary>
 		public static JsonNode? GetEventHistory(string cpuType, int count, UInt64 since, string? typeFilter)
 		{
@@ -783,7 +783,7 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// R2.2: VRAM-Write-Historie (CPU-Writes auf 0x2118/0x2119) mit PC und Zieladresse.
+		/// R2.2: VRAM write history (CPU writes to 0x2118/0x2119) with PC and target address.
 		/// </summary>
 		public static JsonNode? GetVramWrites(string cpuType, int count, UInt32 since)
 		{
@@ -828,8 +828,8 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// R3.1: WRAM/Register-Write-Log (CPU-Writes mit PC + Zieladresse).
-		/// Adressfilter (start/end, 16-Bit-Offsets) + minLen (Run-Länge) gegen Anti-Flut.
+		/// R3.1: WRAM/register write log (CPU writes with PC + target address).
+		/// Address filter (start/end, 16-bit offsets) + minLen (run length) against flooding.
 		/// </summary>
 		public static JsonNode? GetWramWrites(string cpuType, int count, UInt64 since, string? startHex, string? endHex, UInt32 minLen, string? memTypeName)
 		{
@@ -917,9 +917,9 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Simuliert eine Controller-Taste des Ports 1. key: A, B, X, Y, L, R, Up, Down, Left, Right,
-		/// Start, Select (logisch) – oder ein physischer Tastennamen ("K", "W", "Up", ...).
-		/// holdMs &gt; 0: Taste automatisch nach holdMs loslassen (kein Blockieren).
+		/// Simulates a controller button of port 1. key: A, B, X, Y, L, R, Up, Down, Left, Right,
+		/// Start, Select (logical) - or a physical key name ("K", "W", "Up", ...).
+		/// holdMs &gt; 0: release the key automatically after holdMs (no blocking).
 		/// </summary>
 		public static JsonNode? SetInput(string key, bool pressed, int holdMs)
 		{
@@ -937,8 +937,8 @@ namespace Mesen.LiveApi
 		private static Dictionary<string, System.Threading.Timer> _releaseTimers = new Dictionary<string, System.Threading.Timer>();
 
 		/// <summary>
-		/// Simuliert eine Controller-Taste des Ports 1. Alle konfigurierten Tastatur-Zuordnungen
-		/// (Mapping1-4) und der physische Tastencode werden gesetzt (nur &lt; 0x205).
+		/// Simulates a controller button of port 1. All configured keyboard mappings
+		/// (Mapping1-4) and the physical key code are set (only &lt; 0x205).
 		/// </summary>
 		private static bool _backgroundInputApplied;
 
@@ -946,8 +946,8 @@ namespace Mesen.LiveApi
 		{
 			try {
 				if(!_backgroundInputApplied) {
-					//Hintergrund-Eingabe aktivieren: Wenn das Mesen-Fenster nicht fokussiert ist (Browser
-					//steuert das Spiel), ist Input sonst deaktiviert (IsInputEnabled == false).
+					//Enable background input: when the Mesen window is not focused (the browser
+					//controls the game), input would otherwise be disabled (IsInputEnabled == false).
 					if(!ConfigManager.Config.Preferences.AllowBackgroundInput) {
 						ConfigManager.Config.Preferences.AllowBackgroundInput = true;
 						ConfigManager.Config.Preferences.ApplyConfig();
@@ -983,7 +983,7 @@ namespace Mesen.LiveApi
 					}
 				}
 
-				//Zusätzlich physischen Tastennamen auflösen (wie der echte UI-Key-Pfad)
+				//Additionally resolve physical key names (like the real UI key path)
 				UInt16 physCode = InputApi.GetKeyCode(key);
 				if(physCode != 0 && physCode < 0x205) {
 					InputApi.SetKeyState(physCode, pressed);
@@ -1116,7 +1116,7 @@ namespace Mesen.LiveApi
 						CpuType = bp.CpuType.ToString(),
 						MemoryType = bp.MemoryType.ToString(),
 						Type = bp.Type.ToString(),
-						//SnesVideoRam wird in Wort-Adressen gemeldet (konsistent zu /api/vram/writes)
+						//SnesVideoRam is reported in word addresses (consistent with /api/vram/writes)
 						StartAddress = bp.MemoryType == MemoryType.SnesVideoRam ? bp.StartAddress >> 1 : bp.StartAddress,
 						EndAddress = bp.MemoryType == MemoryType.SnesVideoRam ? bp.EndAddress >> 1 : bp.EndAddress,
 						Enabled = bp.Enabled,
@@ -1177,9 +1177,9 @@ namespace Mesen.LiveApi
 						Condition = request.Condition
 					};
 
-					//Sicherstellen, dass der CPU-Typ an den Core übertragen wird: Ohne AddCpuType
-					//(das normalerweise das Debugger-Fenster beim Öffnen aufruft) sendet
-					//SetBreakpoints() ein leeres Array an den Core -> Breakpoints feuern nie (D1/D5).
+					//Ensure the CPU type is passed to the core: without AddCpuType
+					//(which is normally called by the debugger window when it opens)
+					//SetBreakpoints() sends an empty array to the core -> breakpoints never fire (D1/D5).
 					DebugApi.InitializeDebugger();
 					EnsureEventViewerVisible();
 					BreakpointManager.AddCpuType(cpu);
@@ -1214,9 +1214,9 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Emulator während einer nativen Mutation pausieren: Der Emulations-Thread schreibt in den
-		/// Tracker-Puffer (Append/WriteRamLine); Stop/Start gibt den RAM-Puffer per free() frei.
-		/// Ohne Pause -> Use-after-free (Absturz). RunExclusive pausiert den Emulator NICHT.
+		/// Pause the emulator during a native mutation: the emulation thread writes into the
+		/// tracker buffer (Append/WriteRamLine); Stop/Start frees the RAM buffer via free().
+		/// Without a pause -> use-after-free (crash). RunExclusive does NOT pause the emulator.
 		/// </summary>
 		private static T WithEmuPaused<T>(Func<T> action)
 		{
@@ -1234,8 +1234,8 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Universal-Tracker starten: Trigger auf Memory-Lesen/Schreiben einer Region; danach wird ein
-		/// chronologischer Ablauf (Exec/MemW/VRAM/DMA/Interrupt) in Ring + Datei geloggt.
+		/// Start the universal tracker: trigger on memory read/write of a region; afterwards, a
+		/// chronological trace (Exec/MemW/VRAM/DMA/Interrupt) is logged to ring + file.
 		/// </summary>
 		public static JsonNode? TrackerStart(string? memTypeName, string? startHex, string? endHex, bool onRead, bool onWrite, string? valueHex, bool valueSet, bool logExec, UInt64 maxBytes, string? mode, UInt64 bufferSizeMb)
 		{
@@ -1402,7 +1402,7 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Savestate speichern/laden (Slot 1-10), für reproduzierbare Tests.
+		/// Save/load a savestate (slot 1-10), for reproducible tests.
 		/// </summary>
 		public static bool SaveState(UInt32 slot)
 		{

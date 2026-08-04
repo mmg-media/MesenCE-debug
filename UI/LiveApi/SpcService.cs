@@ -36,7 +36,7 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Erzeugt einen vollständigen .spc-Snapshot des aktuell geladenen Musikstücks/Sound-Sets
+		/// Creates a complete .spc snapshot of the currently loaded track/sound set
 		/// (APU-RAM + DSP-Register + CPU-Register + ID666-Tags), identisch zum Mesen-UI-Export.
 		/// </summary>
 		public static byte[]? ExportSpc(string? songTitle, string? gameTitle, string? artist)
@@ -70,12 +70,12 @@ namespace Mesen.LiveApi
 							WriteFixedLengthString(writer, "MesenCE Live API", 32); // Kommentar
 							WriteFixedLengthString(writer, DateTime.Now.ToString("MM/dd/yyyy"), 11); // Datum
 							WriteFixedLengthString(writer, "", 3);  // Sekunden bis Fade
-							WriteFixedLengthString(writer, "", 5);  // Fade-Länge in ms
+							WriteFixedLengthString(writer, "", 5);  // Fade length in ms
 							WriteFixedLengthString(writer, artist ?? "", 32);
-							writer.Write((short)0); // Keine deaktivierten Kanäle
+							writer.Write((short)0); // No disabled channels
 							WriteFixedLengthString(writer, "", 45); // Reserviert
 
-							// Zuletzt geschriebene Werte der write-only-Register übernehmen
+							// Apply the last written values of the write-only registers
 							spcMemory[0xF0] = spcRam[0xF0];
 							spcMemory[0xF1] = spcRam[0xF1];
 							spcMemory[0xFA] = spcRam[0xFA];
@@ -96,9 +96,9 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Zeichnet das aktuell abgespielte Audio als WAV auf (16-bit Stereo PCM).
-		/// Nutzt den eingebauten Mesen-WaveRecorder – dadurch ist kein eigener SPC-Emulator nötig.
-		/// Hält den Emulator an/fort wie nötig; pausiert ihn danach wieder, falls er vorher pausiert war.
+		/// Records the currently playing audio as a WAV (16-bit stereo PCM).
+		/// Uses the built-in Mesen WaveRecorder - no separate SPC emulator is needed.
+		/// Pauses/resumes the emulator as needed; pauses it again afterwards if it was paused before.
 		/// </summary>
 		public static byte[]? RecordWav(int seconds)
 		{
@@ -151,8 +151,8 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// Startet eine asynchrone WAV-Aufnahme (für automatisierte/komplette Lied-Aufnahmen).
-		/// Der Emulator wird bei Bedarf fortgesetzt und nach Stop wieder pausiert.
+		/// Starts an asynchronous WAV recording (for automated/complete song recordings).
+		/// The emulator is resumed as needed and paused again after the stop.
 		/// </summary>
 		public static JsonObject? StartRecording()
 		{
@@ -225,7 +225,7 @@ namespace Mesen.LiveApi
 			lock(RecordLock) {
 				try {
 					if(RecordApi.WaveIsRecording()) {
-						return null; //noch aktiv, noch nicht lesbar
+						return null; //still active, not readable yet
 					}
 					if(!File.Exists(_recordPath)) {
 						return null;
@@ -238,8 +238,8 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
-		/// JSON-Übersicht über den aktuellen APU/DSP-Zustand: CPU-Register, Timer,
-		/// DSP-Globalregister und alle 8 Voices (Quelle, Lautstärke, Pitch, ADSR, Envelope).
+		/// JSON overview of the current APU/DSP state: CPU registers, timers,
+		/// DSP global registers and all 8 voices (source, volume, pitch, ADSR, envelope).
 		/// </summary>
 		public static JsonNode? GetSpcState()
 		{

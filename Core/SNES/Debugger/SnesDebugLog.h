@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "Debugger/BaseEventManager.h"
 
-// R2.1: Kumulative Event-Historie (Ring-Puffer, nur bei aktivem Logging gefüllt)
+// R2.1: Cumulative event history (ring buffer, only filled while logging is active)
 class SnesEventLog
 {
 public:
@@ -34,7 +34,7 @@ public:
 	static void SetEnabled(bool enabled)
 	{
 		if(enabled && !Enabled) {
-			//(Re-)Aktivierung leert den Ring (verwirft Stale-Einträge)
+			//(Re-)activation clears the ring (discards stale entries)
 			Head = 0;
 			Count = 0;
 		}
@@ -86,7 +86,7 @@ public:
 		return n;
 	}
 
-	//Inkrementelles Abholen ab einer Event-ID (ids sind monoton steigend)
+	//Incremental fetch starting from an event ID (ids are monotonically increasing)
 	static uint32_t GetSince(Entry* entries, uint64_t sinceId, uint32_t count)
 	{
 		if(!Enabled || Count == 0 || count == 0) {
@@ -108,7 +108,7 @@ public:
 	}
 };
 
-// R2.2: VRAM-Write-Historie (Writes auf 0x2118/0x2119, mit PC und Zieladresse)
+// R2.2: VRAM write history (writes to 0x2118/0x2119, with PC and target address)
 class SnesVramLog
 {
 public:
@@ -134,7 +134,7 @@ public:
 	static void SetEnabled(bool enabled)
 	{
 		if(enabled && !Enabled) {
-			//(Re-)Aktivierung leert den Ring (verwirft Stale-Einträge)
+			//(Re-)activation clears the ring (discards stale entries)
 			Head = 0;
 			Count = 0;
 		}
@@ -183,10 +183,10 @@ public:
 };
 
 
-// R3.1: WRAM/Register-Write-Historie (CPU-Writes mit PC, Adressfilter + minLen-Coalescing)
-// Analog zu DMA-Log / events-history, aber für beliebige Speicher-Domänen (default WRAM).
-// Aufeinanderfolgende Writes (gleicher PC, benachbarte Adressen, gleicher Frame) werden zu
-// einem "Run" (width) zusammengefasst; nur Runs mit width >= MinLen werden geloggt (Anti-Flut).
+// R3.1: WRAM/register write history (CPU writes with PC, address filter + minLen coalescing)
+// Similar to the DMA log / events-history, but for arbitrary memory domains (default WRAM).
+// Consecutive writes (same PC, adjacent addresses, same frame) are merged into
+// one "run" (width); only runs with width >= MinLen are logged (anti-flood).
 class SnesWramLog
 {
 public:
@@ -234,7 +234,7 @@ public:
 		Flush();
 		bool configChanged = enabled != Enabled || start != RangeStart || end != RangeEnd || minLen != MinLen || memType != FilterMemType;
 		if(configChanged) {
-			//Config-Änderung (oder Re-Aktivierung) leert den Ring (verwirft Stale-Einträge)
+			//Config change (or re-activation) clears the ring (discards stale entries)
 			Head = 0;
 			Count = 0;
 		}
@@ -259,7 +259,7 @@ public:
 
 		uint16_t addr = (uint16_t)(addr24 & 0xFFFF);
 		if((int32_t)memType != FilterMemType || addr < RangeStart || addr > RangeEnd) {
-			//Nicht im Filter: laufenden Run beenden (Kontinuitätsbruch)
+			//Not in the filter: end the current run (continuity break)
 			Flush();
 			return;
 		}
@@ -268,7 +268,7 @@ public:
 			if(frame != PendingFrame) {
 				Flush();
 			} else if(pc == PendingPc && (int8_t)memType == PendingMemType && addr24 == PendingAddr + 1) {
-				//Kontinuierlicher Run erweitern
+				//Extend a continuous run
 				PendingWidth++;
 				PendingAddr = addr24;
 				return;
@@ -277,7 +277,7 @@ public:
 			}
 		}
 
-		//Neuen Run starten
+		//Start a new run
 		HasPending = true;
 		PendingFrame = frame;
 		PendingPc = pc;
@@ -304,7 +304,7 @@ public:
 		return n;
 	}
 
-	//Inkrementelles Abholen ab einer Event-ID (ids sind monoton steigend)
+	//Incremental fetch starting from an event ID (ids are monotonically increasing)
 	static uint32_t GetSince(Entry* entries, uint64_t sinceId, uint32_t count)
 	{
 		Flush();
@@ -328,8 +328,8 @@ public:
 };
 
 
-// Universal-Tracker: Trigger auf Memory-Lesen/Schreiben einer Region; danach wird ein
-// chronologischer Ablauf (Exec/MemWrite/VRAM/DMA/Interrupt) in Ring + Datei geloggt.
+// Universal tracker: trigger on memory read/write of a region; afterwards, a
+// chronological trace (Exec/MemWrite/VRAM/DMA/Interrupt) is logged to ring + file.
 class SnesTracker
 {
 public:

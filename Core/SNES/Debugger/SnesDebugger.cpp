@@ -303,7 +303,7 @@ void SnesDebugger::ProcessWrite(uint32_t addr, uint8_t value, MemoryOperationTyp
 	}
 
 	if(type != MemoryOperationType::DmaWrite && _cpuType == CpuType::Snes) {
-		//R3.1: WRAM/Register-Write-Log (CPU-Writes mit PC + Zieladresse)
+		//R3.1: WRAM/register write log (CPU writes with PC + target address)
 		uint32_t pc = _debugger->GetProgramCounter(CpuType::Snes, true);
 		SnesWramLog::Append(
 			_emu->GetFrameCount(),
@@ -456,7 +456,7 @@ void SnesDebugger::ProcessPpuRead(uint16_t addr, uint8_t value, MemoryType memor
 void SnesDebugger::ProcessPpuWrite(uint16_t addr, uint8_t value, MemoryType memoryType)
 {
 	if(memoryType == MemoryType::SnesVideoRam) {
-		//R2.2: VRAM-Write (0x2118/0x2119) mit schreibendem PC und Zieladresse loggen
+		//R2.2: Log VRAM write (0x2118/0x2119) with the writing PC and target address
 		uint32_t pc = _debugger->GetProgramCounter(CpuType::Snes, true);
 		SnesVramLog::Append(
 			_emu->GetFrameCount(),

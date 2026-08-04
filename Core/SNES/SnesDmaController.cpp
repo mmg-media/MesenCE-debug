@@ -28,7 +28,7 @@ bool SnesDmaController::DmaLogEnabled = false;
 void SnesDmaController::SetDmaLogEnabled(bool enabled)
 {
 	if(enabled && !DmaLogEnabled) {
-		//(Re-)Aktivierung leert den Ring (verwirft Stale-Einträge)
+		//(Re-)activation clears the ring (discards stale entries)
 		DmaLogHead = 0;
 		DmaLogCount = 0;
 	}
@@ -69,7 +69,7 @@ void SnesDmaController::AppendDmaLogEntry(uint8_t channel, bool isHdma, bool toC
 	entry.length = config.TransferSize;
 	entry.vramAddr = 0;
 	if(config.DestAddress == 0x18 || config.DestAddress == 0x19) {
-		//VRAM-Ziel: aktuelle Schreibadresse aus 0x2116/0x2117 (Beginn des Transfers)
+		//VRAM target: current write address from 0x2116/0x2117 (start of the transfer)
 		entry.vramAddr = _memoryManager->GetConsole()->GetPpu()->GetDebugVramAddress();
 	}
 	DmaLog[DmaLogHead] = entry;
@@ -149,7 +149,7 @@ void SnesDmaController::RunDma(DmaChannelConfig& channel)
 		AppendDmaLogEntry(_activeChannel & 0x07, (_activeChannel & HdmaChannelFlag) != 0, channel.InvertDirection, channel);
 	}
 
-	//Universal-Tracker: DMA-Eintrag unabhängig vom DmaLog (pc=vramAddr, addr=dest, value=channel|hdma<<7)
+	//Universal tracker: DMA entry independent of the DmaLog (pc=vramAddr, addr=dest, value=channel|hdma<<7)
 	uint16_t trackerVram = 0;
 	if(channel.DestAddress == 0x18 || channel.DestAddress == 0x19) {
 		trackerVram = _memoryManager->GetConsole()->GetPpu()->GetDebugVramAddress();
