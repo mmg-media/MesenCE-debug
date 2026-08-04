@@ -8,6 +8,9 @@
 			<Control ID="mnuTools">_Tools</Control>
 			<Control ID="mnuDebug">_Debug</Control>
 			<Control ID="mnuHelp">_Help</Control>
+			<Control ID="mnuLiveApiPort">Configure port...</Control>
+			<Control ID="mnuLiveApiOpenUi">Open UI in browser</Control>
+			<Control ID="mnuLiveApiToggle">Enable / Disable</Control>
 		</Form>
 		<Form ID="AudioConfigView">
 			<Control ID="tpgGeneral">General</Control>
@@ -1951,6 +1954,19 @@
 			<Control ID="connErr">not connected</Control>
 			<Control ID="noStack">no stack</Control>
 			<Control ID="spcNoState">No APU state (HTTP </Control>
+			<Control ID="noData">no data</Control>
+			<Control ID="gfxHttpError">Error HTTP </Control>
+			<Control ID="plTemplate">// @name My Plugin
+// @description Analysis script
+Plugin.register({
+	name: "My Plugin",
+	async init(api){
+		api.log("Plugin started");
+		const s = await api.status();
+		api.log("ROM: " + (s ? s.romName : "-"));
+		return { dispose(){ api.log("stopped"); } };
+	}
+});</Control>
 		</Form>
 	</Forms>
 	<Messages>

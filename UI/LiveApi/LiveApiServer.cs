@@ -725,7 +725,7 @@ namespace Mesen.LiveApi
 		{
 			if(wav == null) {
 				context.Response.StatusCode = 404;
-				byte[] msg = Encoding.UTF8.GetBytes("Keine Aufnahme möglich (Emulator läuft nicht)");
+				byte[] msg = Encoding.UTF8.GetBytes("Recording unavailable (emulator is not running)");
 				context.Response.ContentType = "text/plain; charset=utf-8";
 				context.Response.ContentLength64 = msg.Length;
 				context.Response.AddHeader("Access-Control-Allow-Origin", "*");

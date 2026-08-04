@@ -284,7 +284,7 @@ input[type=text],input[type=number],select{min-width:0;}
 		</div>
 
 		<div class="panel tabpanel" id="tab-callstack">
-			<div class="row"><label>CPU</label><select id="csCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select><button id="btnCsRefresh">Refresh</button></div>
+			<div class="row"><label data-i18n="lblCpu">CPU</label><select id="csCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select><button id="btnCsRefresh" data-i18n="btnRefresh">Refresh</button></div>
 			<div class="log" id="csView"></div>
 		</div>
 
@@ -293,7 +293,7 @@ input[type=text],input[type=number],select{min-width:0;}
 			<div class="row">
 				<label data-i18n="lblMem">Mem</label><select id="trkMem" class="w50"><option selected>SnesWorkRam</option><option>SnesRegister</option><option>SnesVideoRam</option><option>SnesSaveRam</option><option>SnesPrgRom</option></select>
 				<label data-i18n="lblStart">start</label><input type="text" id="trkStart" value="0x4000" class="w50">
-				<label>end</label><input type="text" id="trkEnd" value="0x40FF" class="w50">
+				<label data-i18n="lblEnd">end</label><input type="text" id="trkEnd" value="0x40FF" class="w50">
 				<label data-i18n="lblValue">Wert</label><input type="text" id="trkValue" value="" class="w50" data-i18n-ph="trkValuePh" placeholder="leer = egal">
 			</div>
 			<div class="row">
@@ -603,7 +603,7 @@ async function refreshStatus(){
 		$("statusFrame").textContent=s.frame;
 		$("statusPaused").textContent=s.paused?t("statePaused"):t("stateRunning");
 		$("statusPausedDot").className="dot "+(s.paused?"off":"on");
-		$("statusRomName").textContent=s.romName||"(kein ROM)";
+		$("statusRomName").textContent=s.romName||"("+t("stateNoRom")+")";
 		$("statusRomHash").textContent=s.romHash||"-";
 		$("statusText").textContent=s.paused?t("statePaused"):(s.romLoaded?t("stateRunning"):t("stateNoRom"));
 		$("statusText").style.color=s.paused?"var(--warn)":(s.romLoaded?"var(--ok)":"var(--err)");
@@ -669,7 +669,7 @@ async function refreshMem(){
 	const p=memParams();
 	try{
 		const r=await rpc("memory.read",p);
-		if(!r){ $("memView").innerHTML='<span class="empty">keine Daten</span>'; return; }
+		if(!r){ $("memView").innerHTML=`<span class="empty">${t("noData")}</span>`; return; }
 		currentMem={type:r.type,start:r.start,data:r.data,map:{}};
 		paintMem();
 	}catch(e){}
@@ -1021,7 +1021,7 @@ async function plLoad(file){
 function plNew(){
 	plFileBase="";
 	$("plName").value="mein_plugin";
-	$("plEditor").value='// @name Mein Plugin\n// @description Analyse-Script\nPlugin.register({\n\tname: "Mein Plugin",\n\tasync init(api){\n\t\tapi.log("Plugin gestartet");\n\t\tconst s = await api.status();\n\t\tapi.log("ROM: " + (s ? s.romName : "-"));\n\t\treturn { dispose(){ api.log("gestoppt"); } };\n\t}\n});';
+	$("plEditor").value=t("plTemplate");
 }
 
 async function plSave(){
@@ -1201,7 +1201,7 @@ async function refreshGfx(){
 		const res=await fetch(url);
 		if(!res.ok){
 			$("gfxImage").style.display="none";
-			$("gfxInfo").textContent="Fehler HTTP "+res.status;
+			$("gfxInfo").textContent=t("gfxHttpError")+res.status;
 			return;
 		}
 		const blob=await res.blob();

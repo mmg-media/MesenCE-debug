@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Mesen.Config;
@@ -810,13 +810,13 @@ namespace Mesen.ViewModels
 					SubActions = new List<object>() {
 						new MainMenuAction() {
 							ActionType = ActionType.Custom,
-							CustomText = "Aktivieren / Deaktivieren",
+							CustomText = ResourceHelper.GetViewLabel("MainMenuView", "mnuLiveApiToggle"),
 							IsSelected = () => ConfigManager.Config.LiveApi.Enabled,
 							OnClick = () => ToggleLiveApi()
 						},
 						new MainMenuAction() {
 							ActionType = ActionType.Custom,
-							CustomText = "Port konfigurieren…",
+							CustomText = ResourceHelper.GetViewLabel("MainMenuView", "mnuLiveApiPort"),
 							OnClick = async () => {
 								int? newPort = await LiveApiPortWindow.ShowPrompt(wnd, ConfigManager.Config.LiveApi.Port);
 								if(newPort.HasValue) {
@@ -832,7 +832,7 @@ namespace Mesen.ViewModels
 						},
 						new MainMenuAction() {
 							ActionType = ActionType.Custom,
-							CustomText = "UI im Browser öffnen",
+							CustomText = ResourceHelper.GetViewLabel("MainMenuView", "mnuLiveApiOpenUi"),
 							IsEnabled = () => LiveApiServer.Running,
 							OnClick = () => {
 								Process.Start(new ProcessStartInfo($"http://127.0.0.1:{LiveApiServer.Port}/ui") { UseShellExecute = true });

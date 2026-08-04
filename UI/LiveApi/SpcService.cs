@@ -159,10 +159,10 @@ namespace Mesen.LiveApi
 			lock(RecordLock) {
 				try {
 					if(!EmuApi.IsRunning()) {
-						return new JsonObject() { ["ok"] = false, ["error"] = "Emulator läuft nicht" };
+						return new JsonObject() { ["ok"] = false, ["error"] = "Emulator is not running" };
 					}
 					if(RecordApi.WaveIsRecording()) {
-						return new JsonObject() { ["ok"] = false, ["error"] = "Aufnahme läuft bereits" };
+						return new JsonObject() { ["ok"] = false, ["error"] = "Recording is already in progress" };
 					}
 
 					string dir = Path.Combine(AppContext.BaseDirectory, "LiveApiExports");
@@ -248,7 +248,7 @@ namespace Mesen.LiveApi
 					SpcState cpu = DebugApi.GetCpuState<SpcState>(CpuType.Spc);
 					byte[] dsp = DebugApi.GetMemoryState(MemoryType.SpcDspRegisters);
 					if(dsp == null || dsp.Length < 128) {
-						return new JsonObject() { ["error"] = "DSP-Register nicht verfügbar" };
+						return new JsonObject() { ["error"] = "DSP registers not available" };
 					}
 
 					JsonArray voices = new JsonArray();

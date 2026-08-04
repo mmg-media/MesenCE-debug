@@ -8,6 +8,9 @@
       <Control ID="mnuTools">_Werkzeuge</Control>
       <Control ID="mnuDebug">_Debug</Control>
       <Control ID="mnuHelp">_Hilfe</Control>
+      <Control ID="mnuLiveApiOpenUi">UI im Browser öffnen</Control>
+      <Control ID="mnuLiveApiToggle">Aktivieren / Deaktivieren</Control>
+      <Control ID="mnuLiveApiPort">Port konfigurieren…</Control>
     </Form>
     <Form ID="PreferencesConfigView">
       <Control ID="tpgGeneral">Allgemein</Control>
@@ -283,6 +286,19 @@
       <Control ID="spcNoState">Kein APU-Zustand (HTTP </Control>
       <Control ID="connErr">nicht verbunden</Control>
       <Control ID="noStack">kein Stack</Control>
+      <Control ID="gfxHttpError">Fehler HTTP </Control>
+      <Control ID="noData">keine Daten</Control>
+      <Control ID="plTemplate">// @name Mein Plugin
+// @description Analyse-Script
+Plugin.register({
+	name: "Mein Plugin",
+	async init(api){
+		api.log("Plugin gestartet");
+		const s = await api.status();
+		api.log("ROM: " + (s ? s.romName : "-"));
+		return { dispose(){ api.log("gestoppt"); } };
+	}
+});</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

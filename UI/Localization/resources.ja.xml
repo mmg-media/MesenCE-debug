@@ -191,6 +191,19 @@
       <Control ID="spcNoState">APU状態なし（HTTP </Control>
       <Control ID="connErr">未接続</Control>
       <Control ID="noStack">スタックなし</Control>
+      <Control ID="gfxHttpError">エラー HTTP </Control>
+      <Control ID="noData">データなし</Control>
+      <Control ID="plTemplate">// @name マイプラグイン
+// @description 解析スクリプト
+Plugin.register({
+	name: "マイプラグイン",
+	async init(api){
+		api.log("プラグインを起動しました");
+		const s = await api.status();
+		api.log("ROM: " + (s ? s.romName : "-"));
+		return { dispose(){ api.log("停止しました"); } };
+	}
+});</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>
@@ -303,6 +316,9 @@
       <Control ID="mnuHelp">_ヘルプ</Control>
       <Control ID="mnuFile">_ファイル</Control>
       <Control ID="mnuTools">_ツール</Control>
+      <Control ID="mnuLiveApiOpenUi">ブラウザでUIを開く</Control>
+      <Control ID="mnuLiveApiToggle">有効/無効</Control>
+      <Control ID="mnuLiveApiPort">ポートを設定…</Control>
     </Form>
     <Form ID="SetupWizardWindow">
       <Control ID="chkCreateShortcut">デスクトップにショートカットを作成</Control>

@@ -191,6 +191,19 @@
       <Control ID="spcNoState">无APU状态（HTTP </Control>
       <Control ID="connErr">未连接</Control>
       <Control ID="noStack">无栈</Control>
+      <Control ID="gfxHttpError">错误 HTTP </Control>
+      <Control ID="noData">无数据</Control>
+      <Control ID="plTemplate">// @name 我的插件
+// @description 分析脚本
+Plugin.register({
+	name: "我的插件",
+	async init(api){
+		api.log("插件已启动");
+		const s = await api.status();
+		api.log("ROM: " + (s ? s.romName : "-"));
+		return { dispose(){ api.log("已停止"); } };
+	}
+});</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>
@@ -303,6 +316,9 @@
       <Control ID="mnuHelp">_帮助</Control>
       <Control ID="mnuFile">_文件</Control>
       <Control ID="mnuTools">_工具</Control>
+      <Control ID="mnuLiveApiOpenUi">在浏览器中打开UI</Control>
+      <Control ID="mnuLiveApiToggle">启用/禁用</Control>
+      <Control ID="mnuLiveApiPort">配置端口…</Control>
     </Form>
     <Form ID="SetupWizardWindow">
       <Control ID="chkCreateShortcut">在我的桌面上创建快捷方式</Control>

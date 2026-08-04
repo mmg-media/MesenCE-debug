@@ -191,6 +191,19 @@
       <Control ID="spcNoState">Aucun état APU (HTTP </Control>
       <Control ID="connErr">non connecté</Control>
       <Control ID="noStack">pas de pile</Control>
+      <Control ID="gfxHttpError">Erreur HTTP </Control>
+      <Control ID="noData">aucune donnée</Control>
+      <Control ID="plTemplate">// @name Mon plugin
+// @description Script d'analyse
+Plugin.register({
+	name: "Mon plugin",
+	async init(api){
+		api.log("Plugin démarré");
+		const s = await api.status();
+		api.log("ROM: " + (s ? s.romName : "-"));
+		return { dispose(){ api.log("arrêté"); } };
+	}
+});</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>
@@ -303,6 +316,9 @@
       <Control ID="mnuHelp">_Aide</Control>
       <Control ID="mnuFile">_Fichier</Control>
       <Control ID="mnuTools">_Outils</Control>
+      <Control ID="mnuLiveApiOpenUi">Ouvrir l'interface dans le navigateur</Control>
+      <Control ID="mnuLiveApiToggle">Activer / désactiver</Control>
+      <Control ID="mnuLiveApiPort">Configurer le port…</Control>
     </Form>
     <Form ID="SetupWizardWindow">
       <Control ID="chkCreateShortcut">Créer un raccourci sur mon bureau</Control>
