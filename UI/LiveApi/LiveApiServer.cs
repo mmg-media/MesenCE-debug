@@ -119,6 +119,9 @@ namespace Mesen.LiveApi
 					case "/index.html":
 						await ServeUi(context);
 						return;
+					case "/api/i18n":
+						await ServeI18n(context, Query(context, "lang", "en"));
+						return;
 					case "/api":
 						result = GetIndex();
 						break;
@@ -761,6 +764,44 @@ namespace Mesen.LiveApi
 			context.Response.ContentLength64 = _uiBytes.Length;
 			context.Response.AddHeader("Access-Control-Allow-Origin", "*");
 			await context.Response.OutputStream.WriteAsync(_uiBytes);
+			context.Response.Close();
+		}
+
+		private static async Task ServeI18n(HttpListenerContext context, string lang)
+		{
+			//Sprach-XML für die WebUI ausliefern (gleiches Format wie Mesens resources.<lang>.xml;
+			//die WebUI liest nur den Form-Block "LiveApiUi")
+			string safeLang = lang switch {
+				"de" => "de",
+				"fr" => "fr",
+				"zh" => "zh",
+				"ja" => "ja",
+				_ => "en"
+			};
+			string resourceName = $"Mesen.Localization.resources.{safeLang}.xml";
+			byte[]? xml = null;
+			using(Stream? stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName)) {
+				if(stream != null) {
+					using MemoryStream ms = new MemoryStream();
+					stream.CopyTo(ms);
+					xml = ms.ToArray();
+				}
+			}
+
+			if(xml == null) {
+				context.Response.StatusCode = 404;
+				context.Response.ContentType = "text/plain";
+				byte[] msg = Encoding.UTF8.GetBytes($"i18n '{lang}' nicht gefunden");
+				context.Response.ContentLength64 = msg.Length;
+				await context.Response.OutputStream.WriteAsync(msg);
+			} else {
+				context.Response.StatusCode = 200;
+				context.Response.ContentType = "text/xml; charset=utf-8";
+				context.Response.ContentLength64 = xml.Length;
+				context.Response.AddHeader("Access-Control-Allow-Origin", "*");
+				context.Response.AddHeader("Cache-Control", "no-store");
+				await context.Response.OutputStream.WriteAsync(xml);
+			}
 			context.Response.Close();
 		}
 

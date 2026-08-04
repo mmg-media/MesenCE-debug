@@ -14,6 +14,7 @@ namespace Mesen.LiveApi
 		public string? RomHash { get; set; }
 		public string ConsoleType { get; set; } = "";
 		public UInt64 Frame { get; set; }
+		public string Language { get; set; } = "English";
 	}
 
 	public class LiveApiRomInfo

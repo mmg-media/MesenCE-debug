@@ -1,4 +1,5 @@
-﻿using Mesen.Interop;
+﻿using Mesen.Config;
+using Mesen.Interop;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,24 +17,47 @@ namespace Mesen.Localization
 		private static Dictionary<string, string> _viewLabelCache = new();
 		private static Dictionary<string, string> _messageCache = new();
 
-		public static void LoadResources()
+		public static void LoadResources(UiLanguage language)
 		{
 			try {
-				Assembly assembly = Assembly.GetExecutingAssembly();
+				//Basis: Englisch (fehlende Übersetzungen fallen auf Englisch zurück)
+				LoadResourceFile("en", true);
 
-				using(StreamReader reader = new StreamReader(assembly.GetManifestResourceStream("Mesen.Localization.resources.en.xml")!)) {
-					_resources.LoadXml(reader.ReadToEnd());
+				//Überlagerung: gewählte Sprache
+				string lang = language switch {
+					UiLanguage.German => "de",
+					UiLanguage.French => "fr",
+					UiLanguage.Chinese => "zh",
+					UiLanguage.Japanese => "ja",
+					_ => "en"
+				};
+				if(lang != "en") {
+					LoadResourceFile(lang, false);
+				}
+			} catch {
+			}
+		}
+
+		private static void LoadResourceFile(string lang, bool isBase)
+		{
+			Assembly assembly = Assembly.GetExecutingAssembly();
+			using(StreamReader reader = new StreamReader(assembly.GetManifestResourceStream($"Mesen.Localization.resources.{lang}.xml")!)) {
+				XmlDocument doc = new XmlDocument();
+				doc.LoadXml(reader.ReadToEnd());
+
+				if(isBase) {
+					_resources = doc;
 				}
 
-				foreach(XmlNode node in _resources.SelectNodes("/Resources/Messages/Message")!) {
+				foreach(XmlNode node in doc.SelectNodes("/Resources/Messages/Message")!) {
 					_messageCache[node.Attributes!["ID"]!.Value] = node.InnerText;
 				}
 
 #pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
-				Dictionary<string, Type> enumTypes = Assembly.GetExecutingAssembly().GetTypes().Where(t => t.IsEnum).ToDictionary(t => t.Name);
+				Dictionary<string, Type> enumTypes = assembly.GetTypes().Where(t => t.IsEnum).ToDictionary(t => t.Name);
 #pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
 
-				foreach(XmlNode node in _resources.SelectNodes("/Resources/Enums/Enum")!) {
+				foreach(XmlNode node in doc.SelectNodes("/Resources/Enums/Enum")!) {
 					string enumName = node.Attributes!["ID"]!.Value;
 					if(enumTypes.TryGetValue(enumName, out Type? enumType)) {
 						foreach(XmlNode enumNode in node.ChildNodes) {
@@ -41,12 +65,10 @@ namespace Mesen.Localization
 								_enumLabelCache[(Enum)value!] = enumNode.InnerText;
 							}
 						}
-					} else {
-						throw new Exception("Unknown enum type: " + enumName);
 					}
 				}
 
-				foreach(XmlNode node in _resources.SelectNodes("/Resources/Forms/Form")!) {
+				foreach(XmlNode node in doc.SelectNodes("/Resources/Forms/Form")!) {
 					string viewName = node.Attributes!["ID"]!.Value;
 					foreach(XmlNode formNode in node.ChildNodes) {
 						if(formNode is XmlElement elem) {
@@ -54,7 +76,6 @@ namespace Mesen.Localization
 						}
 					}
 				}
-			} catch {
 			}
 		}
 

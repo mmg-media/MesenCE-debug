@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -656,6 +656,10 @@
     <EmbeddedResource Include="Debugger\Utilities\LuaScripts\ReverseMode.lua" />
     <EmbeddedResource Include="Dependencies.zip" />
     <EmbeddedResource Include="Localization\resources.en.xml" WithCulture="false" Type="Non-Resx" />
+  <EmbeddedResource Include="Localization\resources.de.xml" WithCulture="false" Type="Non-Resx" />
+  <EmbeddedResource Include="Localization\resources.fr.xml" WithCulture="false" Type="Non-Resx" />
+  <EmbeddedResource Include="Localization\resources.zh.xml" WithCulture="false" Type="Non-Resx" />
+  <EmbeddedResource Include="Localization\resources.ja.xml" WithCulture="false" Type="Non-Resx" />
     <EmbeddedResource Include="Utilities\DipSwitchDefinitions.xml" />
     <EmbeddedResource Include="LiveApi\LiveApiUi.html" />
   </ItemGroup>
@@ -700,3 +704,4 @@
 		<Delete Files="$(ProjectDir)Dependencies.zip" />
 	</Target>
 </Project>
+

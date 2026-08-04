@@ -64,8 +64,8 @@ namespace Mesen
 				return 0;
 			}
 
-			//Start loading config file in a separate thread
-			Task.Run(() => ConfigManager.LoadConfig());
+			//Load config synchronously so the selected UI language is applied before the app is built
+			ConfigManager.LoadConfig();
 
 			//Extract core dll & other native dependencies
 			DependencyHelper.ExtractNativeDependencies(ConfigManager.HomeFolder);

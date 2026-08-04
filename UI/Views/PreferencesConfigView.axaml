@@ -26,6 +26,11 @@
 						<TextBlock Text="{l:Translate lblTheme}" Margin="3 0 5 0" />
 						<c:EnumComboBox SelectedItem="{Binding Config.Theme}" Width="75" />
 					</StackPanel>
+					<StackPanel Orientation="Horizontal" Margin="0 4 0 0">
+						<TextBlock Text="{l:Translate lblDisplayLanguage}" Margin="3 0 5 0" />
+						<c:EnumComboBox SelectedItem="{Binding Config.Language}" Width="120" />
+						<TextBlock Text="{l:Translate lblRequiresRestart}" Foreground="#d0a04f" Margin="3 0 0 0" />
+					</StackPanel>
 					<CheckBox Content="{l:Translate chkAutomaticallyCheckForUpdates}" IsChecked="{Binding Config.AutomaticallyCheckForUpdates}" />
 					<CheckBox Content="{l:Translate chkSingleInstance}" IsChecked="{Binding Config.SingleInstance}" />
 

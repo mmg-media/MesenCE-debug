@@ -38,7 +38,7 @@ namespace Mesen
 			this.AttachDeveloperTools();
 #endif
 			AvaloniaXamlLoader.Load(this);
-			ResourceHelper.LoadResources();
+			ResourceHelper.LoadResources(ConfigManager.Config.Preferences.Language);
 		}
 
 		public override void OnFrameworkInitializationCompleted()

@@ -87,23 +87,30 @@ input[type=text],input[type=number],select{min-width:0;}
 	<span class="title">MesenCE Live UI</span>
 	<span id="connDot" class="dot off"></span><span id="connText">offline</span>
 	<span id="statusText">-</span>
+	<select id="langSel" title="Language" style="margin-left:auto;">
+		<option value="en">English</option>
+		<option value="de">Deutsch</option>
+		<option value="fr">Français</option>
+		<option value="zh">中文</option>
+		<option value="ja">日本語</option>
+	</select>
 	<div class="controls">
-		<button class="primary" id="btnPause">Pause</button>
-		<button id="btnResume">Resume</button>
-		<button id="btnStep">Step</button>
-		<button id="btnStepOver">StepOver</button>
-		<button id="btnStepOut">StepOut</button>
-		<button id="btnFrame">+1 Frame</button>
-		<button id="btnReset">Reset</button>
-		<button id="btnPower">Power Cycle</button>
-		<button id="btnReload">Reload</button>
+		<button class="primary" id="btnPause" data-i18n="btnPause">Pause</button>
+		<button id="btnResume" data-i18n="btnResume">Resume</button>
+		<button id="btnStep" data-i18n="btnStep">Step</button>
+		<button id="btnStepOver" data-i18n="btnStepOver">StepOver</button>
+		<button id="btnStepOut" data-i18n="btnStepOut">StepOut</button>
+		<button id="btnFrame" data-i18n="btnFrame">+1 Frame</button>
+		<button id="btnReset" data-i18n="btnReset">Reset</button>
+		<button id="btnPower" data-i18n="btnPower">Power Cycle</button>
+		<button id="btnReload" data-i18n="btnReload">Reload</button>
 	</div>
 </div>
 
 <div class="grid">
 	<div class="col">
 		<div class="panel" id="cpuPanel">
-			<h2>CPU (Snes)</h2>
+			<h2 data-i18n="panelCpu">CPU (Snes)</h2>
 			<table class="reg" id="cpuRegs"></table>
 			<div class="row" style="margin-top:6px;">
 				<span class="flag" data-f="N">N</span><span class="flag" data-f="V">V</span><span class="flag" data-f="M">M</span><span class="flag" data-f="X">X</span><span class="flag" data-f="D">D</span><span class="flag" data-f="I">I</span><span class="flag" data-f="Z">Z</span><span class="flag" data-f="C">C</span>
@@ -111,16 +118,16 @@ input[type=text],input[type=number],select{min-width:0;}
 			</div>
 		</div>
 		<div class="panel" id="ppuPanel">
-			<h2>PPU</h2>
-			<div class="gridrow"><label>Scanline</label><span id="ppuScanline">-</span><label>Cycle</label><span id="ppuCycle">-</span></div>
-			<div class="gridrow"><label>Frame</label><span id="ppuFrame">-</span><label>ForcedBlank</label><span id="ppuForcedBlank">-</span></div>
-			<div class="gridrow"><label>BG Mode</label><span id="ppuBgMode">-</span><label>Bright</label><span id="ppuBrightness">-</span></div>
-			<div class="gridrow"><label>Layers M/S</label><span id="ppuMainLayers">-</span><span id="ppuSubLayers">-</span></div>
-			<div class="gridrow"><label>VRAM Addr</label><span id="ppuVramAddr">-</span><label>OAM Addr</label><span id="ppuOamAddr">-</span></div>
-			<div class="gridrow"><label>CG RAM Addr</label><span id="ppuCgramAddr">-</span><label>Mode7</label><span id="ppuMode7">-</span></div>
+			<h2 data-i18n="panelPpu">PPU</h2>
+			<div class="gridrow"><label data-i18n="lblScanline">Scanline</label><span id="ppuScanline">-</span><label data-i18n="lblCycle">Cycle</label><span id="ppuCycle">-</span></div>
+			<div class="gridrow"><label data-i18n="lblFrame">Frame</label><span id="ppuFrame">-</span><label data-i18n="lblForcedBlank">ForcedBlank</label><span id="ppuForcedBlank">-</span></div>
+			<div class="gridrow"><label data-i18n="lblBgMode">BG Mode</label><span id="ppuBgMode">-</span><label data-i18n="lblBright">Bright</label><span id="ppuBrightness">-</span></div>
+			<div class="gridrow"><label data-i18n="lblLayers">Layers M/S</label><span id="ppuMainLayers">-</span><span id="ppuSubLayers">-</span></div>
+			<div class="gridrow"><label data-i18n="lblVramAddr">VRAM Addr</label><span id="ppuVramAddr">-</span><label data-i18n="lblOamAddr">OAM Addr</label><span id="ppuOamAddr">-</span></div>
+			<div class="gridrow"><label data-i18n="lblCgramAddr">CG RAM Addr</label><span id="ppuCgramAddr">-</span><label data-i18n="lblMode7">Mode7</label><span id="ppuMode7">-</span></div>
 		</div>
 		<div class="panel" id="inputPanel">
-			<h2>Input (Fernsteuerung)</h2>
+			<h2 data-i18n="panelInput">Input (Fernsteuerung)</h2>
 			<div class="snespad">
 				<div class="snespad-shoulders">
 					<button class="ipad" data-key="L">L</button>
@@ -139,60 +146,60 @@ input[type=text],input[type=number],select{min-width:0;}
 					</table>
 				</div>
 				<div class="snespad-selstart">
-					<button class="ipad" data-key="Start">Start</button>
-					<button class="ipad" data-key="Select">Select</button>
+					<button class="ipad" data-key="Start" data-i18n="padStart">Start</button>
+					<button class="ipad" data-key="Select" data-i18n="padSelect">Select</button>
 				</div>
 			</div>
-			<div class="row" style="color:var(--dim);font-size:11px;">Gedrückt halten = Taste halten (für Scroll/Karte). Nutzt die Input-Zuordnung (Pad1).</div>
+			<div class="row" style="color:var(--dim);font-size:11px;" data-i18n="padHint">Gedrückt halten = Taste halten (für Scroll/Karte). Nutzt die Input-Zuordnung (Pad1).</div>
 		</div>
 		<div class="panel" id="romPanel">
-			<h2>ROM / Status</h2>
+			<h2 data-i18n="panelRom">ROM / Status</h2>
 			<div class="status-state">
 				<span id="statusPausedDot" class="dot off"></span>
 				<span id="statusPaused" style="font-weight:bold;">-</span>
 			</div>
 			<table class="kv">
-				<tr><th>Frame</th><td id="statusFrame">-</td></tr>
-				<tr><th>ROM-Name</th><td id="statusRomName">-</td></tr>
+				<tr><th data-i18n="lblFrame">Frame</th><td id="statusFrame">-</td></tr>
+				<tr><th data-i18n="lblRomName">ROM-Name</th><td id="statusRomName">-</td></tr>
 				<tr><th>SHA1</th><td id="statusRomHash" style="font-size:11px;">-</td></tr>
 			</table>
-			<div class="row" style="margin-top:6px;"><label>Load ROM</label><input type="text" id="loadPath" style="flex:1;" placeholder="C:\pfad\zum\rom.sfc"><button id="btnLoad">Load</button></div>
+			<div class="row" style="margin-top:6px;"><label data-i18n="lblLoad">Load ROM</label><input type="text" id="loadPath" style="flex:1;" placeholder="C:\pfad\zum\rom.sfc"><button id="btnLoad" data-i18n="btnLoad">Load</button></div>
 		</div>
 	</div>
 
 	<div class="col">
 		<div class="panel" id="memPanel">
-			<h2>Memory</h2>
+			<h2 data-i18n="panelMem">Memory</h2>
 			<div class="row">
-				<label>Type</label>
+				<label data-i18n="lblType">Type</label>
 				<select id="memType"></select>
-				<label>Start</label><input type="text" id="memStart" value="0" class="w50">
-				<label>Len</label><input type="text" id="memLen" value="0x100" class="w50">
-				<label>CPU</label><select id="memCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option><option>NecDsp</option><option>Cx4</option><option>St018</option></select>
-				<button id="btnMemRead">Read</button>
-				<label style="min-width:0;"><input type="checkbox" id="memLive"> live</label>
+				<label data-i18n="lblStart">Start</label><input type="text" id="memStart" value="0" class="w50">
+				<label data-i18n="lblLen">Len</label><input type="text" id="memLen" value="0x100" class="w50">
+				<label data-i18n="lblCpu">CPU</label><select id="memCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option><option>NecDsp</option><option>Cx4</option><option>St018</option></select>
+				<button id="btnMemRead" data-i18n="btnRead">Read</button>
+				<label style="min-width:0;"><input type="checkbox" id="memLive"> <span data-i18n="lblLive">live</span></label>
 			</div>
-			<div class="mem" id="memView"><span class="empty">Noch kein Bereich geladen.</span></div>
-			<div class="row" style="margin-top:4px;color:var(--dim);font-size:11px;">Klick auf Byte = editieren. Live: geänderte Bytes gelb.</div>
+			<div class="mem" id="memView"><span class="empty" data-i18n="memEmpty">Noch kein Bereich geladen.</span></div>
+			<div class="row" style="margin-top:4px;color:var(--dim);font-size:11px;" data-i18n="memHint">Klick auf Byte = editieren. Live: geänderte Bytes gelb.</div>
 		</div>
 		<div class="panel" id="exprPanel">
-			<h2>Expression</h2>
-			<div class="row"><input type="text" id="exprInput" style="flex:1;" placeholder="z.B. A:B oder 7E2000"><button id="btnEval">Evaluate</button></div>
-			<div class="gridrow"><label>Ergebnis</label><span id="exprResult">-</span><label>Typ</label><span id="exprType">-</span></div>
+			<h2 data-i18n="panelExpr">Expression</h2>
+			<div class="row"><input type="text" id="exprInput" style="flex:1;" data-i18n-ph="lblExprPh" placeholder="z.B. A:B oder 7E2000"><button id="btnEval" data-i18n="btnEval">Evaluate</button></div>
+			<div class="gridrow"><label data-i18n="lblResult">Ergebnis</label><span id="exprResult">-</span><label data-i18n="lblTypeShort">Typ</label><span id="exprType">-</span></div>
 		</div>
 		<div class="panel" id="bpPanel">
-			<h2>Breakpoints</h2>
+			<h2 data-i18n="panelBp">Breakpoints</h2>
 			<div class="row">
-				<label>CPU</label><select id="bpCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option><option>NecDsp</option><option>Cx4</option><option>St018</option></select>
-				<label>Mem</label><select id="bpMemType"></select>
+				<label data-i18n="lblCpu">CPU</label><select id="bpCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option><option>NecDsp</option><option>Cx4</option><option>St018</option></select>
+				<label data-i18n="lblMem">Mem</label><select id="bpMemType"></select>
 			</div>
 			<div class="row">
 				<label><input type="checkbox" id="bpX" checked> X</label>
 				<label><input type="checkbox" id="bpR"> R</label>
 				<label><input type="checkbox" id="bpW"> W</label>
-				<label>Addr</label><input type="text" id="bpAddr" class="w50" placeholder="0x8000">
-				<button id="btnBpAdd">Add</button>
-				<button id="btnBpClear">Clear all</button>
+				<label data-i18n="lblAddr">Addr</label><input type="text" id="bpAddr" class="w50" placeholder="0x8000">
+				<button id="btnBpAdd" data-i18n="btnAdd">Add</button>
+				<button id="btnBpClear" data-i18n="btnClearAll">Clear all</button>
 			</div>
 			<table id="bpList"></table>
 		</div>
@@ -200,80 +207,80 @@ input[type=text],input[type=number],select{min-width:0;}
 
 	<div class="col">
 		<div class="tabs">
-			<button class="active" data-tab="trace">Trace</button>
-			<button data-tab="disasm">Disassembly</button>
-			<button data-tab="events">Events</button>
-			<button data-tab="tracker">Tracker</button>
-			<button data-tab="callstack">Callstack</button>
-			<button data-tab="gfx">Gfx / Karte</button>
-			<button data-tab="spc">Sound / SPC</button>
-			<button data-tab="plugins">Scripts</button>
+			<button class="active" data-tab="trace" data-i18n="tabTrace">Trace</button>
+			<button data-tab="disasm" data-i18n="tabDisasm">Disassembly</button>
+			<button data-tab="events" data-i18n="tabEvents">Events</button>
+			<button data-tab="tracker" data-i18n="tabTracker">Tracker</button>
+			<button data-tab="callstack" data-i18n="tabCallstack">Callstack</button>
+			<button data-tab="gfx" data-i18n="tabGfx">Gfx / Karte</button>
+			<button data-tab="spc" data-i18n="tabSpc">Sound / SPC</button>
+			<button data-tab="plugins" data-i18n="tabPlugins">Scripts</button>
 		</div>
 
 		<div class="panel tabpanel active" id="tab-trace">
 			<div class="row">
-				<label>CPU</label><select id="traceCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
-				<label>Zeilenzahl</label><input type="text" id="traceCount" value="200" class="w50">
-				<label><input type="checkbox" id="traceEnable"> Trace aktivieren</label>
-				<label><input type="checkbox" id="traceAuto" checked> auto-scroll</label>
+				<label data-i18n="lblCpu">CPU</label><select id="traceCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
+				<label data-i18n="lblCount">Zeilenzahl</label><input type="text" id="traceCount" value="200" class="w50">
+				<label><input type="checkbox" id="traceEnable"> <span data-i18n="lblTraceEnable">Trace aktivieren</span></label>
+				<label><input type="checkbox" id="traceAuto" checked> <span data-i18n="lblAutoScroll">auto-scroll</span></label>
 			</div>
 			<div class="log" id="traceView"></div>
 		</div>
 
 		<div class="panel tabpanel" id="tab-disasm">
 			<div class="row">
-				<label>CPU</label><select id="disasmCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
-				<label>Addr</label><input type="text" id="disasmAddr" value="0x8000" class="w90">
-				<label>Zahl</label><input type="text" id="disasmCount" value="24" class="w50">
-				<button id="btnDisasmPrev">&lt;</button><button id="btnDisasmRead">Read</button><button id="btnDisasmNext">&gt;</button>
+				<label data-i18n="lblCpu">CPU</label><select id="disasmCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
+				<label data-i18n="lblAddr">Addr</label><input type="text" id="disasmAddr" value="0x8000" class="w90">
+				<label data-i18n="lblCount">Zahl</label><input type="text" id="disasmCount" value="24" class="w50">
+				<button id="btnDisasmPrev">&lt;</button><button id="btnDisasmRead" data-i18n="btnRead">Read</button><button id="btnDisasmNext">&gt;</button>
 			</div>
 			<div class="log" id="disasmView"></div>
-			<div class="row" style="color:var(--dim);font-size:11px;">Klick auf Zeile = Execute-Breakpoint setzen.</div>
+			<div class="row" style="color:var(--dim);font-size:11px;" data-i18n="disasmHint">Klick auf Zeile = Execute-Breakpoint setzen.</div>
 		</div>
 
 		<div class="panel tabpanel" id="tab-events">
 			<div class="row">
-				<label>CPU</label><select id="eventsCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
-				<label><input type="checkbox" id="eventsAuto" checked> auto-refresh</label>
+				<label data-i18n="lblCpu">CPU</label><select id="eventsCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
+				<label><input type="checkbox" id="eventsAuto" checked> <span data-i18n="lblAutoRefresh">auto-refresh</span></label>
 			</div>
 			<div class="log" id="eventsView"></div>
-			<h2 style="margin-top:8px;">Event-Historie (R2.1, kumulativ)</h2>
+			<h2 style="margin-top:8px;" data-i18n="evHistTitle">Event-Historie (R2.1, kumulativ)</h2>
 			<div class="row">
-				<label>Typ</label><select id="evHistType" class="w50"><option value="">alle</option><option>Nmi</option><option>Irq</option><option>Breakpoint</option></select>
-				<label>Anzahl</label><select id="evHistCount" class="w50"><option>50</option><option selected>100</option><option>200</option><option>500</option></select>
+				<label data-i18n="lblTypeShort">Typ</label><select id="evHistType" class="w50"><option value="" data-i18n="lblAll">alle</option><option>Nmi</option><option>Irq</option><option>Breakpoint</option></select>
+				<label data-i18n="lblCount">Anzahl</label><select id="evHistCount" class="w50"><option>50</option><option selected>100</option><option>200</option><option>500</option></select>
 				<span style="color:var(--dim);font-size:11px;" id="evHistTotal">– Einträge</span>
-				<button id="btnEvHistRefresh">Refresh</button>
+				<button id="btnEvHistRefresh" data-i18n="btnRefresh">Refresh</button>
 			</div>
-			<div class="log" id="evHistView" style="height:180px;overflow:auto;"><span class="empty">Event-Historie laden …</span></div>
-			<h2 style="margin-top:8px;">VRAM-Writes (R2.2, PC + Ziel)</h2>
+			<div class="log" id="evHistView" style="height:180px;overflow:auto;"><span class="empty" data-i18n="evLoading">Event-Historie laden …</span></div>
+			<h2 style="margin-top:8px;" data-i18n="vramTitle">VRAM-Writes (R2.2, PC + Ziel)</h2>
 			<div class="row">
-				<label>Anzahl</label><select id="vramLogCount" class="w50"><option selected>100</option><option>300</option><option>1000</option></select>
+				<label data-i18n="lblCount">Anzahl</label><select id="vramLogCount" class="w50"><option selected>100</option><option>300</option><option>1000</option></select>
 				<span style="color:var(--dim);font-size:11px;" id="vramLogTotal">– Einträge</span>
-				<button id="btnVramRefresh">Refresh</button>
+				<button id="btnVramRefresh" data-i18n="btnRefresh">Refresh</button>
 			</div>
-			<div class="log" id="vramLogView" style="height:180px;overflow:auto;"><span class="empty">VRAM-Writes laden …</span></div>
-			<h2 style="margin-top:8px;">WRAM/Register-Writes (R3.1, PC + Run)</h2>
+			<div class="log" id="vramLogView" style="height:180px;overflow:auto;"><span class="empty" data-i18n="vramLoading">VRAM-Writes laden …</span></div>
+			<h2 style="margin-top:8px;" data-i18n="wramTitle">WRAM/Register-Writes (R3.1, PC + Run)</h2>
 			<div class="row">
-				<label>Mem</label><select id="wramLogMem" class="w50"><option selected>SnesWorkRam</option><option>SnesRegister</option><option>SnesSaveRam</option><option>SnesVideoRam</option></select>
-				<label>start</label><input type="text" id="wramLogStart" value="0x4000" class="w50">
-				<label>end</label><input type="text" id="wramLogEnd" value="0x40FF" class="w50">
-				<label>minLen</label><input type="text" id="wramLogMinLen" value="1" class="w50">
+				<label data-i18n="lblMem">Mem</label><select id="wramLogMem" class="w50"><option selected>SnesWorkRam</option><option>SnesRegister</option><option>SnesSaveRam</option><option>SnesVideoRam</option></select>
+				<label data-i18n="lblStart">start</label><input type="text" id="wramLogStart" value="0x4000" class="w50">
+				<label data-i18n="lblEnd">end</label><input type="text" id="wramLogEnd" value="0x40FF" class="w50">
+				<label data-i18n="lblMinLen">minLen</label><input type="text" id="wramLogMinLen" value="1" class="w50">
 				<span style="color:var(--dim);font-size:11px;" id="wramLogTotal">– Einträge</span>
-				<button id="btnWramRefresh">Refresh</button>
+				<button id="btnWramRefresh" data-i18n="btnRefresh">Refresh</button>
 			</div>
-			<div class="log" id="wramLogView" style="height:180px;overflow:auto;"><span class="empty">WRAM-Writes laden …</span></div>
-			<h2 style="margin-top:8px;">DMA-Kanäle (live)</h2>
-			<div class="log" id="dmaView" style="height:130px;"><span class="empty">DMA-Status laden …</span></div>
-			<h2 style="margin-top:8px;">DMA-Log (kumulativ, P1.1)</h2>
+			<div class="log" id="wramLogView" style="height:180px;overflow:auto;"><span class="empty" data-i18n="wramLoading">WRAM-Writes laden …</span></div>
+			<h2 style="margin-top:8px;" data-i18n="dmaChTitle">DMA-Kanäle (live)</h2>
+			<div class="log" id="dmaView" style="height:130px;"><span class="empty" data-i18n="dmaStatusLoading">DMA-Status laden …</span></div>
+			<h2 style="margin-top:8px;" data-i18n="lblDmaLog">DMA-Log (kumulativ, P1.1)</h2>
 			<div class="row">
-				<label><input type="checkbox" id="dmaLogEnable" checked> Logging aktiv</label>
-				<label>Anzahl</label><select id="dmaLogCount" class="w50">
+				<label><input type="checkbox" id="dmaLogEnable" checked> <span data-i18n="lblLoggingActive">Logging aktiv</span></label>
+				<label data-i18n="lblCount">Anzahl</label><select id="dmaLogCount" class="w50">
 					<option>50</option><option selected>100</option><option>200</option><option>500</option><option>1000</option>
 				</select>
 				<span style="color:var(--dim);font-size:11px;" id="dmaLogTotal">– Einträge</span>
-				<button id="btnDmaLogRefresh">Refresh</button>
+				<button id="btnDmaLogRefresh" data-i18n="btnRefresh">Refresh</button>
 			</div>
-			<div class="log" id="dmaLogView" style="height:220px;overflow:auto;"><span class="empty">DMA-Log laden …</span></div>
+			<div class="log" id="dmaLogView" style="height:220px;overflow:auto;"><span class="empty" data-i18n="dmaLogLoading">DMA-Log laden …</span></div>
 		</div>
 
 		<div class="panel tabpanel" id="tab-callstack">
@@ -282,78 +289,78 @@ input[type=text],input[type=number],select{min-width:0;}
 		</div>
 
 		<div class="panel tabpanel" id="tab-tracker">
-			<h2>Universal-Tracker (Trigger → Ablauf-Log)</h2>
+			<h2 data-i18n="trkTitle">Universal-Tracker (Trigger → Ablauf-Log)</h2>
 			<div class="row">
-				<label>Mem</label><select id="trkMem" class="w50"><option selected>SnesWorkRam</option><option>SnesRegister</option><option>SnesVideoRam</option><option>SnesSaveRam</option><option>SnesPrgRom</option></select>
-				<label>start</label><input type="text" id="trkStart" value="0x4000" class="w50">
+				<label data-i18n="lblMem">Mem</label><select id="trkMem" class="w50"><option selected>SnesWorkRam</option><option>SnesRegister</option><option>SnesVideoRam</option><option>SnesSaveRam</option><option>SnesPrgRom</option></select>
+				<label data-i18n="lblStart">start</label><input type="text" id="trkStart" value="0x4000" class="w50">
 				<label>end</label><input type="text" id="trkEnd" value="0x40FF" class="w50">
-				<label>Wert</label><input type="text" id="trkValue" value="" class="w50" placeholder="leer = egal">
+				<label data-i18n="lblValue">Wert</label><input type="text" id="trkValue" value="" class="w50" data-i18n-ph="trkValuePh" placeholder="leer = egal">
 			</div>
 			<div class="row">
-				<label><input type="checkbox" id="trkOnRead" checked> bei Read</label>
-				<label><input type="checkbox" id="trkOnWrite" checked> bei Write</label>
-				<label><input type="checkbox" id="trkLogExec" checked> jeden Befehl</label>
-				<label>Puffer</label><select id="trkMode" class="w50"><option value="disk">Disk</option><option value="ram">RAM</option></select>
-				<label>Größe</label><input type="text" id="trkSize" value="256" class="w50" title="maxMb (Disk) bzw. bufferMb (RAM)">
+				<label><input type="checkbox" id="trkOnRead" checked> <span data-i18n="lblOnRead">bei Read</span></label>
+				<label><input type="checkbox" id="trkOnWrite" checked> <span data-i18n="lblOnWrite">bei Write</span></label>
+				<label><input type="checkbox" id="trkLogExec" checked> <span data-i18n="lblEveryInstr">jeden Befehl</span></label>
+				<label data-i18n="lblBuffer">Puffer</label><select id="trkMode" class="w50"><option value="disk">Disk</option><option value="ram">RAM</option></select>
+				<label data-i18n="lblLen">Größe</label><input type="text" id="trkSize" value="256" class="w50" title="maxMb (Disk) bzw. bufferMb (RAM)">
 				<span style="color:var(--dim);font-size:11px;" id="trkStatus">–</span>
 			</div>
 			<div class="row">
-				<button class="primary" id="btnTrkStart">Tracker starten</button>
-				<button id="btnTrkStop">Stoppen</button>
-				<button id="btnTrkRefresh">Refresh</button>
+				<button class="primary" id="btnTrkStart" data-i18n="btnTrackerStart">Tracker starten</button>
+				<button id="btnTrkStop" data-i18n="btnTrackerStop">Stoppen</button>
+				<button id="btnTrkRefresh" data-i18n="btnRefresh">Refresh</button>
 			</div>
-			<div class="row" style="color:var(--dim);font-size:11px;">Sobald die Region gelesen/geschrieben wird, startet der Tracker und loggt jeden Befehl, WRAM-Write, VRAM-Zugriff, DMA und Interrupt bis zum Stop (Ring + Datei in LiveApiExports).</div>
-			<div class="log" id="trkView" style="height:320px;overflow:auto;"><span class="empty">Tracker starten …</span></div>
+			<div class="row" style="color:var(--dim);font-size:11px;" data-i18n="trkHint">Sobald die Region gelesen/geschrieben wird, startet der Tracker und loggt jeden Befehl, WRAM-Write, VRAM-Zugriff, DMA und Interrupt bis zum Stop (Ring + Datei in LiveApiExports).</div>
+			<div class="log" id="trkView" style="height:320px;overflow:auto;"><span class="empty" data-i18n="trkLoading">Tracker starten …</span></div>
 		</div>
 
 		<div class="panel tabpanel" id="tab-gfx">
 			<div class="row" style="margin-bottom:6px;">
-				<label>Ansicht</label>
+				<label data-i18n="lblView">Ansicht</label>
 				<div class="gfx-tabs" id="gfxViewTabs" style="flex:1; margin-bottom:0;">
-					<button class="active" data-view="live">Live Main+Sub</button>
-					<button data-view="screen">Screen (Raw)</button>
-					<button data-view="map">Map</button>
-					<button data-view="sprites">Sprites</button>
-					<button data-view="tiles">Tileset</button>
+					<button class="active" data-view="live" data-i18n="gfxViewLive">Live Main+Sub</button>
+					<button data-view="screen" data-i18n="gfxViewScreen">Screen (Raw)</button>
+					<button data-view="map" data-i18n="gfxViewMap">Map</button>
+					<button data-view="sprites" data-i18n="gfxViewSprites">Sprites</button>
+					<button data-view="tiles" data-i18n="gfxViewTiles">Tileset</button>
 				</div>
 			</div>
 			<div class="row">
-				<label>Hintergrund</label>
+				<label data-i18n="lblBg">Hintergrund</label>
 				<select id="gfxBg">
 					<option value="Black">Black</option>
 					<option value="Transparent">Transparent</option>
 					<option value="White">White</option>
 					<option value="Magenta">Magenta</option>
 				</select>
-				<label style="min-width:0;"><input type="checkbox" id="gfxLive" checked> live</label>
-				<button id="btnGfxRefresh">Refresh</button>
+				<label style="min-width:0;"><input type="checkbox" id="gfxLive" checked> <span data-i18n="lblLive">live</span></label>
+				<button id="btnGfxRefresh" data-i18n="btnRefresh">Refresh</button>
 				<button id="btnGfxDownload" class="primary">PNG</button>
 			</div>
 			<div class="row" id="gfxScreenOpts">
-				<label>Layer</label>
+				<label data-i18n="lblLayer">Layer</label>
 				<label style="min-width:0;"><input type="checkbox" data-layer="0" checked> BG1</label>
 				<label style="min-width:0;"><input type="checkbox" data-layer="1" checked> BG2</label>
 				<label style="min-width:0;"><input type="checkbox" data-layer="2" checked> BG3</label>
 				<label style="min-width:0;"><input type="checkbox" data-layer="3" checked> BG4</label>
-				<label style="min-width:0;"><input type="checkbox" id="gfxSprites" checked> Sprites</label>
+				<label style="min-width:0;"><input type="checkbox" id="gfxSprites" checked> <span data-i18n="gfxSprites">Sprites</span></label>
 			</div>
-			<div class="row" style="color:var(--dim);font-size:11px;margin-bottom:6px;">
+			<div class="row" style="color:var(--dim);font-size:11px;margin-bottom:6px;" data-i18n-html="gfxHint">
 				<b>Live Main+Sub</b>: echter gerenderter Frame inkl. Color Math, Wolken/Overlays, Transparenz, Backdrop-Farbe.
 				<b>Screen (Raw-Layer)</b>: manuelle Ebene-Ebenen-Komposition (Main zuerst, Sub darüber, ohne Effekte).
 			</div>
 			<div class="row" id="gfxMapOpts" style="display:none;">
-				<label>Layer</label>
+				<label data-i18n="lblLayer">Layer</label>
 				<select id="gfxMapLayer">
 					<option value="0">BG1</option>
 					<option value="1">BG2</option>
 					<option value="2">BG3</option>
 					<option value="3">BG4</option>
-					<option value="main">Screen Main</option>
-					<option value="sub">Screen Sub</option>
+					<option value="main" data-i18n="gfxScreenMain">Screen Main</option>
+					<option value="sub" data-i18n="gfxScreenSub">Screen Sub</option>
 				</select>
 			</div>
 			<div class="row" id="gfxTilesOpts" style="display:none;">
-				<label>Format</label>
+				<label data-i18n="lblFormat">Format</label>
 				<select id="gfxTilesFormat">
 					<option value="Bpp4">4bpp</option>
 					<option value="Bpp2">2bpp</option>
@@ -361,23 +368,23 @@ input[type=text],input[type=number],select{min-width:0;}
 					<option value="DirectColor">DirectColor</option>
 					<option value="Mode7">Mode7</option>
 				</select>
-				<label>Quelle</label>
+				<label data-i18n="lblSource">Quelle</label>
 				<select id="gfxTilesMem">
 					<option value="SnesVideoRam">VRAM</option>
 					<option value="SnesCgRam">CGRAM</option>
 					<option value="SnesWorkRam">WRAM</option>
 				</select>
-				<label>Spalten</label><input type="text" id="gfxTilesCols" value="16" class="w50">
-				<label>Zeilen</label><input type="text" id="gfxTilesRows" value="16" class="w50">
+				<label data-i18n="lblCols">Spalten</label><input type="text" id="gfxTilesCols" value="16" class="w50">
+				<label data-i18n="lblRows">Zeilen</label><input type="text" id="gfxTilesRows" value="16" class="w50">
 				<input type="hidden" id="gfxTilesPal" value="0">
-				<label>Start</label><input type="text" id="gfxTilesStart" value="0" class="w50">
+				<label data-i18n="lblStart">Start</label><input type="text" id="gfxTilesStart" value="0" class="w50">
 			</div>
 			<div id="gfxPaletteRow" class="row" style="display:none; align-items:flex-start; flex-direction:column; gap:2px; margin-bottom:6px;">
-				<span class="empty" style="font-size:11px;">Paletten (Klick = auswählen):</span>
+				<span class="empty" style="font-size:11px;" data-i18n="lblPalette">Paletten (Klick = auswählen):</span>
 			</div>
 			<div style="margin-bottom:8px;">
 				<div class="row" style="margin-bottom:4px;">
-					<label>Zoom</label>
+					<label data-i18n="lblZoom">Zoom</label>
 					<button data-zoom="1" class="primary">1x</button>
 					<button data-zoom="2">2x</button>
 					<button data-zoom="3">3x</button>
@@ -385,32 +392,32 @@ input[type=text],input[type=number],select{min-width:0;}
 					<span id="gfxZoomInfo" class="empty"></span>
 				</div>
 				<div id="gfxZoomWrap" style="overflow:auto; max-height:640px; border:1px solid var(--border); border-radius:3px;">
-					<img id="gfxImage" alt="Grafik" style="display:none; image-rendering:pixelated; background:repeating-conic-gradient(#1d2430 0% 25%, #151a24 0% 50%) 0 0/16px 16px;">
+					<img id="gfxImage" alt="Graphics" style="display:none; image-rendering:pixelated; background:repeating-conic-gradient(#1d2430 0% 25%, #151a24 0% 50%) 0 0/16px 16px;">
 				</div>
-				<div id="gfxInfo" class="empty">Kein Bild geladen.</div>
+				<div id="gfxInfo" class="empty" data-i18n="gfxInfoEmpty">Kein Bild geladen.</div>
 			</div>
 			<div class="panel" style="background:var(--panel2); margin-bottom:0;">
-				<h2>Python-Export (Stitching)</h2>
+				<h2 data-i18n="lblPython">Python-Export (Stitching)</h2>
 				<pre id="gfxPython" style="font-size:11px; white-space:pre-wrap; color:var(--dim);"></pre>
 			</div>
 		</div>
 
 		<div class="panel tabpanel" id="tab-spc">
 			<div class="row">
-				<label>Song</label><input type="text" id="spcSong" style="flex:1;" placeholder="optional, z. B. Titel">
-				<label>Game</label><input type="text" id="spcGame" style="flex:1;" placeholder="optional">
-				<label>Artist</label><input type="text" id="spcArtist" style="flex:1;" placeholder="optional">
+				<label data-i18n="lblSong">Song</label><input type="text" id="spcSong" style="flex:1;" placeholder="optional, z. B. Titel" data-i18n-ph="spcOptional">
+				<label data-i18n="lblGame">Game</label><input type="text" id="spcGame" style="flex:1;" placeholder="optional">
+				<label data-i18n="lblArtist">Artist</label><input type="text" id="spcArtist" style="flex:1;" placeholder="optional">
 			</div>
 			<div class="row">
-				<button id="btnSpcDownload" class="primary">SPC (.spc) laden</button>
-				<label>als WAV aufnehmen</label>
+				<button id="btnSpcDownload" class="primary" data-i18n="btnSpcLoad">SPC (.spc) laden</button>
+				<label data-i18n="lblWavRecord">als WAV aufnehmen</label>
 				<input type="text" id="spcWavSeconds" value="30" class="w50">
-				<label style="min-width:0;">Sekunden</label>
-				<button id="btnSpcWav">WAV aufnehmen</button>
-				<label style="min-width:0;"><input type="checkbox" id="spcLive" checked> live</label>
+				<label style="min-width:0;" data-i18n="lblSeconds">Sekunden</label>
+				<button id="btnSpcWav" data-i18n="btnSpcWav">WAV aufnehmen</button>
+				<label style="min-width:0;"><input type="checkbox" id="spcLive" checked> <span data-i18n="lblLive">live</span></label>
 			</div>
-			<div class="log" id="spcView" style="height:220px;"><span class="empty">Kein APU-Zustand geladen.</span></div>
-			<div class="row" style="margin-top:6px;color:var(--dim);font-size:11px;">
+			<div class="log" id="spcView" style="height:220px;"><span class="empty" data-i18n="spcEmpty">Kein APU-Zustand geladen.</span></div>
+			<div class="row" style="margin-top:6px;color:var(--dim);font-size:11px;" data-i18n-html="spcHint">
 				Der SPC-Snapshot enthält APU-RAM (64 KB), DSP-Register (128) und CPU-Register des
 				gerade geladenen Musikstücks/Sound-Sets. In einem SPC-Player (z.&nbsp;B. foobar2000+plugin,
 				Winamp, Audiosurf) abspielen und nach WAV/MP3 konvertieren. Für jedes Stück: im Spiel das
@@ -420,24 +427,24 @@ input[type=text],input[type=number],select{min-width:0;}
 
 		<div class="panel tabpanel" id="tab-plugins">
 			<div class="row">
-				<label>Plugin</label>
+				<label data-i18n="lblPlugin">Plugin</label>
 				<select id="plSelect" style="flex:1;"></select>
-				<button id="btnPlRefresh">Refresh</button>
-				<button id="btnPlNew">New</button>
-				<button id="btnPlSave">Save</button>
-				<button id="btnPlDelete">Delete</button>
-				<button id="btnPlDownload">Download</button>
-				<button id="btnPlRun" class="primary">Run</button>
-				<button id="btnPlStop">Stop</button>
+				<button id="btnPlRefresh" data-i18n="btnRefresh">Refresh</button>
+				<button id="btnPlNew" data-i18n="btnNew">New</button>
+				<button id="btnPlSave" data-i18n="btnSave">Save</button>
+				<button id="btnPlDelete" data-i18n="btnDelete">Delete</button>
+				<button id="btnPlDownload" data-i18n="btnDownload">Download</button>
+				<button id="btnPlRun" class="primary" data-i18n="btnRun">Run</button>
+				<button id="btnPlStop" data-i18n="btnStop">Stop</button>
 			</div>
 			<div class="row">
-				<label>Name</label><input type="text" id="plName" style="flex:1;" placeholder="dateiname (ohne .js)">
+				<label data-i18n="lblName">Name</label><input type="text" id="plName" style="flex:1;" placeholder="dateiname (ohne .js)" data-i18n-ph="plNamePh">
 			</div>
 			<textarea id="plEditor" spellcheck="false" placeholder="// @name Mein Plugin&#10;// @description ...&#10;Plugin.register({ name: &quot;Mein Plugin&quot;, init(api){ ... } });" style="width:100%; height:220px; background:#0b0e13; color:var(--text); border:1px solid var(--border); font:12px/1.4 Consolas,monospace; padding:6px; resize:vertical;"></textarea>
-			<div class="row" style="margin-top:6px;"><span id="plStatus" class="empty">Kein Plugin aktiv.</span></div>
+			<div class="row" style="margin-top:6px;"><span id="plStatus" class="empty" data-i18n="plNoActive">Kein Plugin aktiv.</span></div>
 			<div id="plPanel" class="panel" style="background:var(--panel2); display:none; margin-bottom:6px;"></div>
-			<div class="log" id="plLog" style="height:150px;"><span class="empty">Plugin-Log (leer)</span></div>
-			<div class="row" style="margin-top:6px;color:var(--dim);font-size:11px;">
+			<div class="log" id="plLog" style="height:150px;"><span class="empty" data-i18n="plLogEmpty">Plugin-Log (leer)</span></div>
+			<div class="row" style="margin-top:6px;color:var(--dim);font-size:11px;" data-i18n-html="plHint">
 				Plugins sind JS-Dateien im Ordner <b>LiveApiPlugins</b> neben Mesen.exe. Sie haben vollen
 				Zugriff auf die API: <b>rpc()</b> (alle JSON-RPC-Methoden), <b>fetch()</b> (alle Endpoints),
 				<b>download()</b>, <b>exportFile()</b> (schreibt Logs/Screenshots auf den Server),
@@ -459,13 +466,51 @@ let traceTimer=null, statusTimer=null, timers=[];
 
 const $=id=>document.getElementById(id);
 
+
+/* ---- i18n (XML-gesteuert) ---- */
+let uiLang="en";
+let lastServerLang=null;
+let DICT={}, enDICT={};
+function t(key){ return DICT[key]!==undefined?DICT[key]:(enDICT[key]!==undefined?enDICT[key]:key); }
+function applyI18n(){
+	document.querySelectorAll("[data-i18n-html]").forEach(el=>{ el.innerHTML=t(el.dataset.i18nHtml); });
+	document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent=t(el.dataset.i18n); });
+	document.querySelectorAll("[data-i18n-ph]").forEach(el=>{ el.setAttribute("placeholder",t(el.dataset.i18nPh)); });
+}
+async function loadDict(lang, into){
+	try{
+		const r=await fetch("api/i18n?lang="+lang);
+		if(!r.ok) return;
+		const doc=new DOMParser().parseFromString(await r.text(),"text/xml");
+		const forms=doc.getElementsByTagName("Form");
+		for(const f of forms){
+			if(f.getAttribute("ID")==="LiveApiUi"){
+				const controls=f.getElementsByTagName("Control");
+				for(let i=0;i<controls.length;i++){
+					const id=controls[i].getAttribute("ID");
+					if(id) into[id]=controls[i].textContent;
+				}
+				return;
+			}
+		}
+	}catch(e){}
+}
+async function setLanguage(lang, fromServer){
+	if(!lang) return;
+	uiLang=lang;
+	DICT={};
+	await loadDict("en", enDICT);
+	await loadDict(lang, DICT);
+	if(!fromServer){ try{ localStorage.setItem("liveapi_lang",lang); }catch(e){} }
+	applyI18n(); refreshStatus(); refreshAll();
+}
 function fmtHex(n,w){ n=Number(n)>>>0; return n.toString(16).toUpperCase().padStart(w||2,"0"); }
 function byteAt(hex,i){ return parseInt(hex.substr(i*2,2),16); }
 
 function setConn(on){
 	connected=on;
 	$("connDot").className="dot "+(on?"on":"off");
-	$("connText").textContent=on?"verbunden":"offline";
+	$("connText").textContent=on?t("connOn"):t("connOff");
 	if(on){ startTimers(); refreshAll(); } else { stopTimers(); }
 }
 
@@ -483,7 +528,7 @@ function connect(){
 
 function rpc(method,params){
 	return new Promise((resolve,reject)=>{
-		if(!ws || ws.readyState!==1){ reject("nicht verbunden"); return; }
+		if(!ws || ws.readyState!==1){ reject(t("connErr")); return; }
 		const id=nextId++; pending[id]={resolve,reject};
 		ws.send(JSON.stringify({jsonrpc:"2.0",id:id,method:method,params:params||{}}));
 		setTimeout(()=>{ if(pending[id]){ delete pending[id]; reject("timeout"); } },5000);
@@ -556,12 +601,19 @@ async function refreshStatus(){
 		const s=await rpc("status");
 		if(!s) return;
 		$("statusFrame").textContent=s.frame;
-		$("statusPaused").textContent=s.paused?"Pausiert":"Läuft";
+		$("statusPaused").textContent=s.paused?t("statePaused"):t("stateRunning");
 		$("statusPausedDot").className="dot "+(s.paused?"off":"on");
 		$("statusRomName").textContent=s.romName||"(kein ROM)";
 		$("statusRomHash").textContent=s.romHash||"-";
-		$("statusText").textContent=s.paused?"Paused":(s.romLoaded?"Running":"Kein ROM");
+		$("statusText").textContent=s.paused?t("statePaused"):(s.romLoaded?t("stateRunning"):t("stateNoRom"));
 		$("statusText").style.color=s.paused?"var(--warn)":(s.romLoaded?"var(--ok)":"var(--err)");
+		if(s.language && !localStorage.getItem("liveapi_lang") && s.language!==lastServerLang){
+			const m={English:"en",German:"de",French:"fr",Chinese:"zh",Japanese:"ja"};
+			const l=m[s.language]||"en";
+			lastServerLang=s.language;
+			$("langSel").value=l;
+			setLanguage(l,true);
+		}
 	}catch(e){}
 }
 
@@ -733,7 +785,7 @@ async function refreshDma(){
 		if(!d) return;
 		let h=`<div class="line">MDMAEN=$${fmtHex(d.mdmaen,2)} HDMAEN=$${fmtHex(d.hdmaen,2)}</div>`;
 		d.channels.forEach(ch=>{
-			h+=`<div class="line"><span class="pc">ch${ch.channel}</span> ${ch.enabled?"<b>AKTIV</b>":"--"} ${ch.direction}${ch.hdma?" HDMA":""} src=${ch.source} → ${ch.destName} ($${fmtHex(ch.destAddr,2)}) len=${ch.length} ${ch.modeText}</div>`;
+			h+=`<div class="line"><span class="pc">ch${ch.channel}</span> ${ch.enabled?`<b>${t("dmaActive")}</b>`:"--"} ${ch.direction}${ch.hdma?" HDMA":""} src=${ch.source} → ${ch.destName} ($${fmtHex(ch.destAddr,2)}) len=${ch.length} ${ch.modeText}</div>`;
 		});
 		$("dmaView").innerHTML=h;
 	}catch(e){}
@@ -745,13 +797,13 @@ async function refreshDmaLog(){
 		const count=parseInt($("dmaLogCount").value||"100");
 		const d=await fetch("api/dma/log?cpu=Snes&count="+count).then(r=>r.json());
 		if(!d) return;
-		$("dmaLogTotal").textContent=d.count+" Einträge";
-		let h="<table class='tbl'><tr><th>Fr</th><th>Ch</th><th>T</th><th>Modus</th><th>Quelle</th><th>Ziel</th><th>VRAM</th><th>Länge</th></tr>";
+		$("dmaLogTotal").textContent=d.count+" "+t("lblEntries");
+		let h=`<table class='tbl'><tr><th>${t("tblFr")}</th><th>${t("tblCh")}</th><th>T</th><th>${t("tblMode")}</th><th>${t("tblSrc")}</th><th>${t("tblDst")}</th><th>VRAM</th><th>${t("tblLen")}</th></tr>`;
 		(d.entries||[]).slice().reverse().forEach(e=>{
 			const vram=(e.vramAddr>0)?"$"+fmtHex(e.vramAddr,4):"";
 			h+=`<tr><td>${e.frame}</td><td>${e.channel}</td><td>${e.isHdma?"HDMA":"DMA"}${e.toCpu?"↑":""}</td><td>${e.mode}</td><td>${esc(e.source)}</td><td>${esc(e.destName)}</td><td>${vram}</td><td>${e.length}</td></tr>`;
 		});
-		$("dmaLogView").innerHTML=h||'<span class="empty">keine Einträge</span>';
+		$("dmaLogView").innerHTML=h||`<span class="empty">${t("noEntries")}</span>`;
 	}catch(e){}
 }
 
@@ -761,13 +813,13 @@ async function refreshEvHist(){
 		const count=parseInt($("evHistCount").value||"100");
 		const d=await fetch("api/events/history?cpu=Snes&count="+count+(type?"&type="+type:"")).then(r=>r.json());
 		if(!d) return;
-		$("evHistTotal").textContent=d.count+" Einträge";
-		let h="<table class='tbl'><tr><th>Id</th><th>Fr</th><th>Typ</th><th>PC</th><th>Zyklus</th><th>Op</th></tr>";
+		$("evHistTotal").textContent=d.count+" "+t("lblEntries");
+		let h=`<table class='tbl'><tr><th>${t("tblId")}</th><th>${t("tblFr")}</th><th>${t("tblType")}</th><th>${t("tblPc")}</th><th>${t("tblCycle")}</th><th>${t("tblOp")}</th></tr>`;
 		(d.entries||[]).slice().reverse().forEach(e=>{
 			const op=e.operation?"$"+fmtHex(e.operation.address,4)+" val="+e.operation.value:"";
 			h+=`<tr><td>${e.id}</td><td>${e.frame}</td><td>${esc(e.type)}</td><td>$${fmtHex(e.pc,6)}</td><td>${e.cycle}</td><td>${esc(op)}</td></tr>`;
 		});
-		$("evHistView").innerHTML=h||'<span class="empty">keine Events</span>';
+		$("evHistView").innerHTML=h||`<span class="empty">${t("noEntries")}</span>`;
 	}catch(e){}
 }
 
@@ -776,12 +828,12 @@ async function refreshVramLog(){
 		const count=parseInt($("vramLogCount").value||"100");
 		const d=await fetch("api/vram/writes?cpu=Snes&count="+count).then(r=>r.json());
 		if(!d) return;
-		$("vramLogTotal").textContent=d.count+" Einträge";
-		let h="<table class='tbl'><tr><th>Fr</th><th>PC</th><th>VRAM</th><th>Wert</th><th>Zyklus</th></tr>";
+		$("vramLogTotal").textContent=d.count+" "+t("lblEntries");
+		let h=`<table class='tbl'><tr><th>${t("tblFr")}</th><th>${t("tblPc")}</th><th>VRAM</th><th>${t("tblVal")}</th><th>${t("tblCycle")}</th></tr>`;
 		(d.entries||[]).slice().reverse().forEach(e=>{
 			h+=`<tr><td>${e.frame}</td><td>$${fmtHex(e.pc,6)}</td><td>$${fmtHex(e.vramAddr,4)}</td><td>${e.value}</td><td>${e.cycle}</td></tr>`;
 		});
-		$("vramLogView").innerHTML=h||'<span class="empty">keine VRAM-Writes</span>';
+		$("vramLogView").innerHTML=h||`<span class="empty">${t("noEntries")}</span>`;
 	}catch(e){}
 }
 
@@ -794,13 +846,13 @@ async function refreshWramLog(){
 		const count=200;
 		const d=await fetch("api/wram/writes?cpu=Snes&count="+count+"&memType="+mem+"&start="+start+"&end="+end+"&minLen="+minLen).then(r=>r.json());
 		if(!d) return;
-		$("wramLogTotal").textContent=d.count+" Einträge";
-		let h="<table class='tbl'><tr><th>Id</th><th>Fr</th><th>PC</th><th>Adresse</th><th>Wert</th><th>Breite</th></tr>";
+		$("wramLogTotal").textContent=d.count+" "+t("lblEntries");
+		let h=`<table class='tbl'><tr><th>${t("tblId")}</th><th>${t("tblFr")}</th><th>${t("tblPc")}</th><th>${t("tblAddr")}</th><th>${t("tblVal")}</th><th>${t("tblWidth")}</th></tr>`;
 		(d.entries||[]).slice().reverse().forEach(e=>{
 			const a="7E"===e.bank||"7F"===e.bank ? "$"+e.bank+":"+fmtHex(e.addr,4) : "$"+e.bank+":"+fmtHex(e.addr,4);
 			h+=`<tr><td>${e.id}</td><td>${e.frame}</td><td>$${fmtHex(e.pc,6)}</td><td>${a}</td><td>${e.value}</td><td>${e.width}</td></tr>`;
 		});
-		$("wramLogView").innerHTML=h||'<span class="empty">keine Writes im Bereich</span>';
+		$("wramLogView").innerHTML=h||`<span class="empty">${t("noEntries")}</span>`;
 	}catch(e){}
 }
 
@@ -808,17 +860,17 @@ async function refreshTracker(){
 	try{
 		const s=await fetch("api/tracker/status").then(r=>r.json());
 		if(!s) return;
-		$("trkStatus").textContent=(s.enabled?"aktiv":"aus")+(s.tracking?" · getriggert":"")+" · "+s.count+" Einträge"+(s.bufferLen?(" · Puffer "+Math.round(s.bufferLen/1048576)+"MB"):"");
+		$("trkStatus").textContent=(s.enabled?t("stActive"):t("stOff"))+(s.tracking?" · "+t("stTriggered"):"")+" · "+s.count+" "+t("lblEntries")+(s.bufferLen?(" · "+Math.round(s.bufferLen/1048576)+"MB"):"");
 		const d=await fetch("api/tracker/log?count=300").then(r=>r.json());
 		if(!d||!d.entries) return;
-		let h="<table class='tbl'><tr><th>#</th><th>Fr</th><th>Typ</th><th>PC</th><th>Adresse</th><th>Wert</th></tr>";
+		let h=`<table class='tbl'><tr><th>#</th><th>${t("tblFr")}</th><th>${t("tblType")}</th><th>${t("tblPc")}</th><th>${t("tblAddr")}</th><th>${t("tblVal")}</th></tr>`;
 		(d.entries||[]).slice(-300).reverse().forEach(e=>{
 			let addr="";
 			if(e.type==="DMA"){ addr="ch"+e.channel+(e.hdma?"h":"")+" dst="+fmtHex(e.dest,2)+(e.vramAddr?" vram=$"+fmtHex(e.vramAddr,4):"")+" len="+e.length; }
 			else if(e.addr!==undefined){ addr="7E"===e.bank||"7F"===e.bank||"00"===e.bank ? "$"+e.bank+":"+fmtHex(e.addr,4) : "$"+e.bank+":"+fmtHex(e.addr,4); }
 			h+=`<tr><td>${e.id}</td><td>${e.frame}</td><td>${e.type}</td><td>$${fmtHex(e.pc,6)}</td><td>${addr}</td><td>${e.value!==undefined?e.value:""}</td></tr>`;
 		});
-		$("trkView").innerHTML=h||'<span class="empty">keine Einträge</span>';
+		$("trkView").innerHTML=h||`<span class="empty">${t("noEntries")}</span>`;
 	}catch(e){}
 }
 
@@ -832,7 +884,7 @@ async function refreshCallstack(){
 		frames.forEach((f,i)=>{
 			h+=`<div class="line"><span class="pc">[${i}]</span> src=$${fmtHex(f.source,6)} target=$${fmtHex(f.target,6)} ret=$${fmtHex(f.return,6)} ${f.flags}</div>`;
 		});
-		$("csView").innerHTML=h||'<span class="empty">kein Stack</span>';
+		$("csView").innerHTML=h||`<span class="empty">${t("noStack")}</span>`;
 	}catch(e){}
 }
 
@@ -841,7 +893,7 @@ async function refreshBreakpoints(){
 	try{
 		const bps=await rpc("breakpoints.get");
 		if(!bps) return;
-		let h="<tr><th>CPU</th><th>Mem</th><th>Typ</th><th>Addr</th><th>Cond</th></tr>";
+		let h=`<tr><th>${t("tblCpu")}</th><th>${t("tblMem")}</th><th>${t("tblType")}</th><th>Addr</th><th>${t("tblCond")}</th></tr>`;
 		for(const b of bps){
 			const addr=(b.startAddress===b.endAddress)?"$"+fmtHex(b.startAddress,6):"$"+fmtHex(b.startAddress,6)+"-"+fmtHex(b.endAddress,6);
 			h+=`<tr><td>${b.cpuType}</td><td>${b.memoryType}</td><td>${b.type}</td><td>${addr}</td><td>${esc(b.condition||"")}</td></tr>`;
@@ -998,7 +1050,7 @@ function plStop(){
 	plTimers.forEach(t=>clearInterval(t)); plTimers=[];
 	plEventHandlers=[];
 	activePlugin=null;
-	$("plStatus").textContent="Kein Plugin aktiv.";
+	$("plStatus").textContent=t("plNoActive");
 	$("plPanel").style.display="none"; $("plPanel").innerHTML="";
 }
 
@@ -1015,20 +1067,20 @@ async function plRun(){
 		s.textContent=content;
 		document.body.appendChild(s);
 		document.body.removeChild(s);
-	}catch(e){ plLog("Script-Fehler: "+(e&&e.message||e),"err"); return; }
-	if(plRegistry.length===0){ plLog("Plugin hat Plugin.register({name, init}) nicht aufgerufen.","err"); return; }
+	}catch(e){ plLog(t("plErrScript")+(e&&e.message||e),"err"); return; }
+	if(plRegistry.length===0){ plLog(t("plErrNoRegister"),"err"); return; }
 	const desc=plRegistry[0];
 	activePlugin=desc;
-	$("plStatus").textContent="Aktiv: "+(desc.name||"plugin");
+	$("plStatus").textContent=t("plActive")+(desc.name||"plugin");
 	try{
 		const inst=desc.init ? desc.init(Plugin) : null;
 		if(inst && typeof inst.then==="function"){
-			inst.catch && inst.catch(e=>plLog("init-Fehler: "+(e&&e.message||e),"err"));
+			inst.catch && inst.catch(e=>plLog(t("plErrInit")+(e&&e.message||e),"err"));
 		} else {
 			activePlugin.instance=inst;
 		}
-	}catch(e){ plLog("init-Fehler: "+e.message,"err"); }
-	plLog("Plugin '"+(desc.name||"")+"' gestartet.","ok");
+	}catch(e){ plLog(t("plErrInit")+e.message,"err"); }
+	plLog(t("plStarted").replace("{name}",desc.name||""),"ok");
 }
 
 function bindPl(){
@@ -1046,7 +1098,7 @@ function bindPl(){
 async function refreshSpc(){
 	try{
 		const res=await fetch("/api/spc/state");
-		if(!res.ok){ $("spcView").innerHTML='<span class="empty">Kein APU-Zustand (HTTP '+res.status+')</span>'; return; }
+		if(!res.ok){ $("spcView").innerHTML=`<span class="empty">${t("spcNoState")}${res.status})</span>`; return; }
 		const s=await res.json();
 		if(!s) return;
 		let h=`<div class="line"><span class="pc">SPC</span> PC=$${fmtHex(s.cpu.pc,4)} A=$${fmtHex(s.cpu.a,2)} X=$${fmtHex(s.cpu.x,2)} Y=$${fmtHex(s.cpu.y,2)} SP=$${fmtHex(s.cpu.sp,2)} PS=$${fmtHex(s.cpu.ps,2)} DspReg=$${fmtHex(s.cpu.dspRegSelect,2)} state=${s.cpu.stopState}</div>`;
@@ -1081,16 +1133,16 @@ function bindSpc(){
 	$("btnSpcDownload").onclick=downloadSpc;
 	$("btnSpcWav").onclick=async ()=>{
 		const seconds=parseInt($("spcWavSeconds").value,10)||30;
-		plLog("WAV-Aufnahme für "+seconds+" s läuft …");
+		plLog(t("plWav")+seconds+t("plWavSuffix"));
 		try{
 			const res=await fetch("/api/spc/wav?seconds="+seconds);
-			if(!res.ok){ plLog("Aufnahme fehlgeschlagen (HTTP "+res.status+")","err"); return; }
+			if(!res.ok){ plLog(t("plWavFail")+" (HTTP "+res.status+")","err"); return; }
 			const blob=await res.blob();
 			const a=document.createElement("a");
 			a.href=URL.createObjectURL(blob); a.download="terranigma_"+seconds+"s.wav"; a.click();
 			setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-			plLog("WAV fertig ("+seconds+" s).","ok");
-		}catch(e){ plLog("Aufnahme-Fehler: "+e.message,"err"); }
+			plLog(t("plWavDone")+" ("+seconds+" s).","ok");
+		}catch(e){ plLog(t("plWavErr")+e.message,"err"); }
 	};
 }
 
@@ -1184,7 +1236,7 @@ function downloadGfx(){
 function gfxPythonSnippet(){
 	const view=gfxView;
 	if(view==="live"){
-		return `# Terranigma Live-Screen (Main+Sub, mit Effekten) als PNG je Position
+		return `# ${t("pyLiveTitle")}
 from PIL import Image
 import urllib.request, io
 
@@ -1195,7 +1247,7 @@ def fetch(params):
     with urllib.request.urlopen(url) as r:
         return Image.open(io.BytesIO(r.read())).convert("RGBA")
 
-COLS, ROWS = 8, 8   # Raster der durchlaufenen Screens
+COLS, ROWS = 8, 8   # ${t("pyGrid")}
 sheet = Image.new("RGBA", (256*COLS, 224*ROWS), (0,0,0,0))
 
 for r in range(ROWS):
@@ -1208,10 +1260,10 @@ sheet.save("terranigma_live.png")`;
 	const layers=gfxScreenLayers();
 	const sprites=$("gfxSprites").checked?1:0;
 	const bg=$("gfxBg").value;
-	return `# Terranigma Karten-Export (MesenCE Live API)
-# 1) In Mesen die Stadt laden, ggf. Layer ohne NPCs/Wolken aktivieren.
-# 2) Frames: mit +1 Frame / Bewegung durch die Karte schreiten und je Position speichern.
-# 3) Die PNGs stitchen (hier Beispiel mit Pillow):
+	return `# ${t("pyTitle")}
+${t("pySnip1")}
+${t("pySnip2")}
+${t("pySnip3")}
 
 from PIL import Image
 import urllib.request, io
@@ -1223,8 +1275,8 @@ def fetch(params):
     with urllib.request.urlopen(url) as r:
         return Image.open(io.BytesIO(r.read())).convert("RGBA")
 
-COLS, ROWS = 8, 8   # Raster der durchlaufenen Screens
-bg = "${bg}"        # Transparent => frei, sonst Black/White/Magenta
+COLS, ROWS = 8, 8   # ${t("pyGrid")}
+bg = "${bg}"        # ${t("pyBg")}
 sheet = Image.new("RGBA", (256*COLS, 224*ROWS), (0,0,0,0))
 
 for r in range(ROWS):
@@ -1421,6 +1473,9 @@ bindTabs();
 bindGfx();
 bindSpc();
 bindPl();
+$("langSel").addEventListener("change",async ()=>{ await setLanguage($("langSel").value); });
+const savedLang=(()=>{ try{ return localStorage.getItem("liveapi_lang"); }catch(e){ return null; } })();
+if(savedLang){ $("langSel").value=savedLang; setLanguage(savedLang); }
 connect();
 </script>
 </body>

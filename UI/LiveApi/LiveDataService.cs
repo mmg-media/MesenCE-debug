@@ -305,6 +305,7 @@ namespace Mesen.LiveApi
 						status.RomName = info.GetRomName();
 						status.RomPath = info.RomPath;
 						status.ConsoleType = info.ConsoleType.ToString();
+						status.Language = ConfigManager.Config.Preferences.Language.ToString();
 						try {
 							status.RomHash = EmuApi.GetRomHash(HashType.Sha1);
 						} catch {
