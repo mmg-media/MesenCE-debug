@@ -869,7 +869,7 @@ namespace Mesen.LiveApi
 			});
 		}
 
-		public static JsonNode? GetMapLoadReport()
+		public static JsonNode? GetMapLoadReport(bool compact = false)
 		{
 			return RunExclusive(() => {
 				try {
@@ -962,6 +962,36 @@ namespace Mesen.LiveApi
 							["tilemapAddress"] = state.Layers[i].TilemapAddress,
 							["chrAddress"] = state.Layers[i].ChrAddress
 						}));
+					}
+
+					if(compact) {
+						//Compact mode: every distinct ROM source address per category,
+						//sorted by write count (most-used source first). No limit.
+						JsonArray CompactList(JsonArray arr)
+						{
+							JsonArray result = new JsonArray();
+							List<(string Src, int Writes)> items = new();
+							foreach(JsonNode? node in arr) {
+								if(node is JsonObject obj) {
+									items.Add((obj["source"]?.GetValue<string>() ?? "", obj["writes"]?.GetValue<int>() ?? 0));
+								}
+							}
+							items.Sort((a, b) => b.Writes.CompareTo(a.Writes));
+							foreach((string Src, int Writes) it in items) {
+								result.Add((JsonNode)JsonValue.Create(it.Src));
+							}
+							return result;
+						}
+
+						return new JsonObject() {
+							["count"] = total,
+							["enabled"] = DebugApi.SnesMapLoadLogIsEnabled(),
+							["compact"] = true,
+							["bgMode"] = state.BgMode,
+							["tilemap"] = CompactList(tilemap),
+							["tiles"] = CompactList(tiles),
+							["palette"] = CompactList(palette)
+						};
 					}
 
 					return new JsonObject() {

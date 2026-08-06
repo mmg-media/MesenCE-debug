@@ -213,6 +213,7 @@ Plugin.register({
       <Control ID="btnMapLoadArm">Chargement carte : tracer</Control>
       <Control ID="mapLoadError">Erreur</Control>
       <Control ID="mapLoadNoData">Aucune donnée de chargement de carte</Control>
+      <Control ID="mapLoadCompact">Compact</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

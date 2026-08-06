@@ -213,6 +213,7 @@ Plugin.register({
       <Control ID="btnMapLoadArm">地图加载：追踪</Control>
       <Control ID="mapLoadError">错误</Control>
       <Control ID="mapLoadNoData">未捕获地图加载数据</Control>
+      <Control ID="mapLoadCompact">简洁</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

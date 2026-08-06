@@ -329,7 +329,7 @@ namespace Mesen.LiveApi
 						result = LiveDataService.MapLoadStatus();
 						break;
 					case "/api/gfx/mapload/report":
-						result = LiveDataService.GetMapLoadReport();
+						result = LiveDataService.GetMapLoadReport(Query(context, "compact", "0") == "1");
 						break;
 					case "/api/gfx/screen":
 						await WritePng(context, GfxService.GetScreenPng(Query(context, "cpu", "Snes"), Query(context, "layers", "all"), Query(context, "sprites", "1") == "1", Query(context, "bg", "Black")));

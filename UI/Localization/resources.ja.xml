@@ -213,6 +213,7 @@ Plugin.register({
       <Control ID="btnMapLoadArm">マップロード：追跡</Control>
       <Control ID="mapLoadError">エラー</Control>
       <Control ID="mapLoadNoData">マップロードデータなし</Control>
+      <Control ID="mapLoadCompact">コンパクト</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

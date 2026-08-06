@@ -1976,6 +1976,7 @@ Plugin.register({
 			<Control ID="mapLoadArmed">Armed - do the map change, then Report</Control>
 			<Control ID="mapLoadError">Error</Control>
 			<Control ID="mapLoadNoData">No map-load data captured</Control>
+			<Control ID="mapLoadCompact">Compact</Control>
 		</Form>
 	</Forms>
 	<Messages>

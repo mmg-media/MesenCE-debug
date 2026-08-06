@@ -406,6 +406,7 @@ input[type=text],input[type=number],select{min-width:0;}
 				<div class="row" style="margin-top:6px;">
 					<button id="btnMapLoadArm" data-i18n="btnMapLoadArm">Map-Load: Erfassen</button>
 					<button id="btnMapLoadReport" data-i18n="btnMapLoadReport">Report</button>
+					<label style="min-width:0;"><input type="checkbox" id="mapLoadCompact" checked> <span data-i18n="mapLoadCompact">Kompakt</span></label>
 					<span id="mapLoadStatus" class="empty"></span>
 				</div>
 				<pre id="mapLoadReport" style="font-size:11px; white-space:pre-wrap; color:var(--dim); display:none;"></pre>
@@ -1206,6 +1207,14 @@ function gfxUrl(){
 }
 
 function formatMapLoadReport(d){
+	if(d.compact){
+		let out="";
+		const cat=(arr,label)=>{ if((arr||[]).length){ out+=label+":\n"+arr.map(a=>"  "+a).join("\n")+"\n\n"; } };
+		cat(d.tilemap, d.bgMode===7 ? "Tilemap (Mode7 - ganze Karte)" : "Tilemap");
+		cat(d.tiles,"Tiles");
+		cat(d.palette,"Palette");
+		return out.trim()||t("mapLoadNoData");
+	}
 	let out="";
 	const rows=(arr,label)=>{
 		let s="";
@@ -1374,7 +1383,8 @@ function bindGfx(){
 		$("mapLoadReport").style.display="none";
 	};
 	$("btnMapLoadReport").onclick=async ()=>{
-		const d=await fetch("api/gfx/mapload/report").then(r=>r.json());
+		const compact=$("mapLoadCompact").checked;
+		const d=await fetch("api/gfx/mapload/report?compact="+(compact?1:0)).then(r=>r.json());
 		if(!d){ $("mapLoadReport").textContent=t("mapLoadError"); $("mapLoadReport").style.display="block"; return; }
 		$("mapLoadStatus").textContent=d.count+" "+t("lblEntries");
 		$("mapLoadReport").textContent=formatMapLoadReport(d);

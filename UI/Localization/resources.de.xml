@@ -308,6 +308,7 @@ Plugin.register({
       <Control ID="btnMapLoadArm">Map-Load: Erfassen</Control>
       <Control ID="mapLoadError">Fehler</Control>
       <Control ID="mapLoadNoData">Keine Map-Load-Daten erfasst</Control>
+      <Control ID="mapLoadCompact">Kompakt</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>
