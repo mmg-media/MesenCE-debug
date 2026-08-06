@@ -1211,12 +1211,19 @@ function formatMapLoadReport(d){
 		let s="";
 		(arr||[]).forEach(g=>{
 			const targets=(g.targets||[]);
-			const tMin=targets.length?Math.min(...targets):0;
-			s+=label+"  "+g.source+"  ["+g.via+", len="+g.length+", "+(targets.length)+"x]  vram≈$"+tMin.toString(16).toUpperCase()+"\n";
+			const n=targets.length;
+			const hex=v=>"$"+v.toString(16).toUpperCase();
+			let trg="";
+			if(g.targetMin!==undefined && g.targetMax!==undefined && g.targetMin!==g.targetMax){
+				trg="  vram="+hex(g.targetMin)+"-"+hex(g.targetMax);
+			} else if(n){
+				trg="  vram="+hex(Math.min(...targets));
+			}
+			s+=label+"  "+g.source+"  ["+g.via+", len="+g.length+", "+n+"x]"+trg+"\n";
 		});
 		return s;
 	};
-	if((d.tilemap||[]).length) out+="Tilemap:\n"+rows(d.tilemap,"  ")+"\n";
+	if((d.tilemap||[]).length) out+="Tilemap (Mode7: ganze Karte):\n"+rows(d.tilemap,"  ")+"\n";
 	if((d.tiles||[]).length) out+="Tiles:\n"+rows(d.tiles,"  ")+"\n";
 	if((d.palette||[]).length) out+="Palette:\n"+rows(d.palette,"  ")+"\n";
 	if(!out) out=t("mapLoadNoData");

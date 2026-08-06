@@ -885,14 +885,16 @@ namespace Mesen.LiveApi
 						UInt32 got = DebugApi.SnesGetMapLoadLog(entries, 0, n);
 
 						//Tilemap VRAM word-address ranges (layer.TilemapAddress is a byte address; the
-						//VRAM log stores word addresses). A 32x32 tilemap spans 0x800 bytes = 0x400 words.
+						//VRAM log stores word addresses). 32x32 = 0x800 bytes = 0x400 words, 64x64 = 0x1000 words.
+						//Mode-7 uses the whole VRAM as the map, so all VRAM writes are treated as tilemap.
+						bool mode7 = state.BgMode == 7;
 						List<(UInt32 Start, UInt32 End)> tilemapRanges = new();
 						for(int i = 0; i < 4; i++) {
 							if(state.Layers[i].TilemapAddress == 0) {
 								continue;
 							}
 							UInt32 baseWord = (UInt32)(state.Layers[i].TilemapAddress >> 1);
-							tilemapRanges.Add((baseWord, baseWord + 0x400));
+							tilemapRanges.Add((baseWord, baseWord + 0x1000));
 						}
 
 						void Accumulate(JsonArray dest, string sourceHex, string via, UInt32 target, UInt32 length)
@@ -910,12 +912,18 @@ namespace Mesen.LiveApi
 									["via"] = via,
 									["length"] = JsonValue.Create(length),
 									["writes"] = 1,
+									["targetMin"] = JsonValue.Create(target),
+									["targetMax"] = JsonValue.Create(target),
 									["targets"] = new JsonArray() { (JsonNode)JsonValue.Create(target) }
 								};
 								dest.Add((JsonNode)found);
 							} else {
 								found["writes"] = found["writes"]!.GetValue<int>() + 1;
 								found["length"] = JsonValue.Create(found["length"]!.GetValue<UInt32>() + length);
+								UInt32 tMin = found["targetMin"]!.GetValue<UInt32>();
+								UInt32 tMax = found["targetMax"]!.GetValue<UInt32>();
+								found["targetMin"] = JsonValue.Create(Math.Min(tMin, target));
+								found["targetMax"] = JsonValue.Create(Math.Max(tMax, target));
 								((JsonArray)found["targets"]!).Add((JsonNode)JsonValue.Create(target));
 							}
 						}
@@ -933,11 +941,13 @@ namespace Mesen.LiveApi
 							if(e.targetType == 1) {
 								Accumulate(palette, sourceHex, via, e.targetAddr, e.length);
 							} else {
-								bool isTilemap = false;
-								foreach((UInt32 Start, UInt32 End) r in tilemapRanges) {
-									if(e.targetAddr >= r.Start && e.targetAddr < r.End) {
-										isTilemap = true;
-										break;
+								bool isTilemap = mode7;
+								if(!isTilemap) {
+									foreach((UInt32 Start, UInt32 End) r in tilemapRanges) {
+										if(e.targetAddr >= r.Start && e.targetAddr < r.End) {
+											isTilemap = true;
+											break;
+										}
 									}
 								}
 								Accumulate(isTilemap ? tilemap : tiles, sourceHex, via, e.targetAddr, e.length);
