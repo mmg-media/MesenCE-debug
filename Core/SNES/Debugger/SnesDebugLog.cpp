@@ -14,6 +14,14 @@ uint32_t SnesVramLog::Head = 0;
 uint32_t SnesVramLog::Count = 0;
 bool SnesVramLog::Enabled = false;
 
+// R3.2: Ring-buffer storage for the map-load source trace
+SnesMapLoadLog::Entry SnesMapLoadLog::Log[SnesMapLoadLog::LogSize] = {};
+uint32_t SnesMapLoadLog::Head = 0;
+uint32_t SnesMapLoadLog::Count = 0;
+bool SnesMapLoadLog::Enabled = false;
+uint32_t SnesMapLoadLog::LastRomRead = 0xFFFFFFFF;
+uint32_t SnesMapLoadLog::LastWramRead = 0xFFFFFFFF;
+
 
 // R3.1: WRAM/register write log - ring-buffer storage + run-coalescing state
 SnesWramLog::Entry SnesWramLog::Log[SnesWramLog::LogSize] = {};

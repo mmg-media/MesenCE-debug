@@ -231,6 +231,9 @@ void SnesDebugger::ProcessRead(uint32_t addr, uint8_t value, MemoryOperationType
 
 	if(_cpuType == CpuType::Snes) {
 		SnesTracker::CheckMemoryOp(1, _debugger->GetProgramCounter(CpuType::Snes, true), _emu->GetFrameCount(), _memoryManager->GetHClock(), addr, value, addressInfo.Type);
+		//R3.2: remember the last ROM/WRAM read so a following VRAM/CGRAM write
+		//can be attributed to the ROM address that provides the map/tile/palette data.
+		SnesMapLoadLog::TrackRead(addressInfo.Type, addr);
 	}
 
 	if(IsRegister(addr)) {
@@ -455,9 +458,9 @@ void SnesDebugger::ProcessPpuRead(uint16_t addr, uint8_t value, MemoryType memor
 
 void SnesDebugger::ProcessPpuWrite(uint16_t addr, uint8_t value, MemoryType memoryType)
 {
+	uint32_t pc = _debugger->GetProgramCounter(CpuType::Snes, true);
 	if(memoryType == MemoryType::SnesVideoRam) {
 		//R2.2: Log VRAM write (0x2118/0x2119) with the writing PC and target address
-		uint32_t pc = _debugger->GetProgramCounter(CpuType::Snes, true);
 		SnesVramLog::Append(
 			_emu->GetFrameCount(),
 			_memoryManager->GetHClock(),
@@ -466,6 +469,11 @@ void SnesDebugger::ProcessPpuWrite(uint16_t addr, uint8_t value, MemoryType memo
 			addr >> 1,
 			value);
 		SnesTracker::Append(SnesTracker::Vram, _emu->GetFrameCount(), _memoryManager->GetHClock(), pc, addr >> 1, value, 0, 0);
+		//R3.2: map-load source trace (VRAM target)
+		SnesMapLoadLog::AppendCpuWrite(_emu->GetFrameCount(), _memoryManager->GetHClock(), 0, addr >> 1, value, pc);
+	} else if(memoryType == MemoryType::SnesCgRam) {
+		//R3.2: map-load source trace (CGRAM/palette target)
+		SnesMapLoadLog::AppendCpuWrite(_emu->GetFrameCount(), _memoryManager->GetHClock(), 1, addr >> 1, value, pc);
 	}
 
 	MemoryOperationInfo operation(addr, value, MemoryOperationType::Write, memoryType);

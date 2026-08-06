@@ -403,6 +403,12 @@ input[type=text],input[type=number],select{min-width:0;}
 				</div>
 				<div id="gfxInfo" class="empty" data-i18n="gfxInfoEmpty">Kein Bild geladen.</div>
 				<div id="gfxOverlayInfo" class="empty" style="display:none;"></div>
+				<div class="row" style="margin-top:6px;">
+					<button id="btnMapLoadArm" data-i18n="btnMapLoadArm">Map-Load: Erfassen</button>
+					<button id="btnMapLoadReport" data-i18n="btnMapLoadReport">Report</button>
+					<span id="mapLoadStatus" class="empty"></span>
+				</div>
+				<pre id="mapLoadReport" style="font-size:11px; white-space:pre-wrap; color:var(--dim); display:none;"></pre>
 			</div>
 			<div class="panel" style="background:var(--panel2); margin-bottom:0;">
 				<h2 data-i18n="lblPython">Python-Export (Stitching)</h2>
@@ -1199,6 +1205,24 @@ function gfxUrl(){
 		+"&cols="+cols+"&rows="+rows+"&palette="+pal+"&start="+encodeURIComponent($("gfxTilesStart").value)+"&bg="+encodeURIComponent(bg);
 }
 
+function formatMapLoadReport(d){
+	let out="";
+	const rows=(arr,label)=>{
+		let s="";
+		(arr||[]).forEach(g=>{
+			const targets=(g.targets||[]);
+			const tMin=targets.length?Math.min(...targets):0;
+			s+=label+"  "+g.source+"  ["+g.via+", len="+g.length+", "+(targets.length)+"x]  vram≈$"+tMin.toString(16).toUpperCase()+"\n";
+		});
+		return s;
+	};
+	if((d.tilemap||[]).length) out+="Tilemap:\n"+rows(d.tilemap,"  ")+"\n";
+	if((d.tiles||[]).length) out+="Tiles:\n"+rows(d.tiles,"  ")+"\n";
+	if((d.palette||[]).length) out+="Palette:\n"+rows(d.palette,"  ")+"\n";
+	if(!out) out=t("mapLoadNoData");
+	return out;
+}
+
 let gfxZoom=1;
 
 function applyGfxZoom(){
@@ -1336,6 +1360,19 @@ function gfxSyncOptions(){
 function bindGfx(){
 	$("btnGfxRefresh").onclick=refreshGfx;
 	$("btnGfxDownload").onclick=downloadGfx;
+	$("btnMapLoadArm").onclick=async ()=>{
+		const r=await fetch("api/gfx/mapload/arm",{method:"POST"});
+		const d=await r.json();
+		$("mapLoadStatus").textContent=d&&d.ok?t("mapLoadArmed"):t("mapLoadError");
+		$("mapLoadReport").style.display="none";
+	};
+	$("btnMapLoadReport").onclick=async ()=>{
+		const d=await fetch("api/gfx/mapload/report").then(r=>r.json());
+		if(!d){ $("mapLoadReport").textContent=t("mapLoadError"); $("mapLoadReport").style.display="block"; return; }
+		$("mapLoadStatus").textContent=d.count+" "+t("lblEntries");
+		$("mapLoadReport").textContent=formatMapLoadReport(d);
+		$("mapLoadReport").style.display="block";
+	};
 	document.querySelectorAll("#gfxViewTabs button").forEach(b=>{
 		b.addEventListener("click",()=>setGfxView(b.dataset.view));
 	});

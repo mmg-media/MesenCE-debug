@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="LiveApiUi">
@@ -208,6 +208,11 @@ Plugin.register({
       <Control ID="btnSaveState">保存存档</Control>
       <Control ID="lblSlot">槽位</Control>
       <Control ID="btnLoadState">载入存档</Control>
+      <Control ID="mapLoadArmed">已就绪 - 切换地图，然后报告</Control>
+      <Control ID="btnMapLoadReport">报告</Control>
+      <Control ID="btnMapLoadArm">地图加载：追踪</Control>
+      <Control ID="mapLoadError">错误</Control>
+      <Control ID="mapLoadNoData">未捕获地图加载数据</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="LiveApiUi">
@@ -208,6 +208,11 @@ Plugin.register({
       <Control ID="btnSaveState">ステート保存</Control>
       <Control ID="lblSlot">スロット</Control>
       <Control ID="btnLoadState">ステート読込</Control>
+      <Control ID="mapLoadArmed">準備完了 - マップを切り替えてからレポート</Control>
+      <Control ID="btnMapLoadReport">レポート</Control>
+      <Control ID="btnMapLoadArm">マップロード：追跡</Control>
+      <Control ID="mapLoadError">エラー</Control>
+      <Control ID="mapLoadNoData">マップロードデータなし</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

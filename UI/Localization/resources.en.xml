@@ -1971,6 +1971,11 @@ Plugin.register({
 			<Control ID="btnSaveState">Save State</Control>
 			<Control ID="btnLoadState">Load State</Control>
 			<Control ID="lblSlot">Slot</Control>
+			<Control ID="btnMapLoadArm">Map-Load: Trace</Control>
+			<Control ID="btnMapLoadReport">Report</Control>
+			<Control ID="mapLoadArmed">Armed - do the map change, then Report</Control>
+			<Control ID="mapLoadError">Error</Control>
+			<Control ID="mapLoadNoData">No map-load data captured</Control>
 		</Form>
 	</Forms>
 	<Messages>

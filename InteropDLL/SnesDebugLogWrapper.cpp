@@ -98,4 +98,24 @@ extern "C" {
 	{
 		return SnesTracker::Get(entries, start, count);
 	}
+
+	DllExport void __stdcall snes_map_load_log_set_enabled(bool enabled)
+	{
+		SnesMapLoadLog::SetEnabled(enabled);
+	}
+
+	DllExport bool __stdcall snes_map_load_log_is_enabled()
+	{
+		return SnesMapLoadLog::IsEnabled();
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_log_get_count()
+	{
+		return SnesMapLoadLog::GetCount();
+	}
+
+	DllExport uint32_t __stdcall snes_get_map_load_log(SnesMapLoadLog::Entry* entries, uint32_t start, uint32_t count)
+	{
+		return SnesMapLoadLog::Get(entries, start, count);
+	}
 }

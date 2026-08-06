@@ -164,6 +164,21 @@ void SnesDmaController::RunDma(DmaChannelConfig& channel)
 		(uint8_t)(channel.TransferSize & 0xFF),
 		(uint16_t)(channel.TransferSize >> 8));
 
+	//R3.2: map-load source trace - DMA to VRAM (0x18/0x19) or CGRAM (0x22)
+	//records the ROM source (SrcBank:SrcAddr) that provides the tile/tilemap/palette data.
+	if(channel.DestAddress == 0x18 || channel.DestAddress == 0x19 || channel.DestAddress == 0x22) {
+		uint8_t targetType = (channel.DestAddress == 0x22) ? 1 : 0;
+		SnesMapLoadLog::AppendDma(
+			_memoryManager->GetEmu()->GetFrameCount(),
+			(int32_t)(_memoryManager->GetMasterClock() & 0x7FFFFFFF),
+			targetType,
+			targetType == 0 ? trackerVram : 0,
+			channel.SrcBank,
+			channel.SrcAddress,
+			channel.TransferSize,
+			_activeChannel & 0x07);
+	}
+
 	const uint8_t* transferOffsets = _transferOffset[channel.TransferMode];
 
 	uint32_t i = 0;

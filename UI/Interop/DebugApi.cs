@@ -452,6 +452,22 @@ namespace Mesen.Interop
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
+		public struct InteropMapLoadEntry
+		{
+			public UInt64 frame;
+			public Int32 cycle;
+			public byte sourceType;   // 0=DMA, 1=CPU
+			public byte targetType;   // 0=VRAM, 1=CGRAM
+			public UInt32 targetAddr; // VRAM word address / CGRAM index
+			public byte value;
+			public UInt32 sourceAddr; // DMA: SrcBank:SrcAddr; CPU: last ROM/WRAM read
+			public byte sourceMem;    // CPU: MemoryType of source; DMA: 0
+			public byte channel;      // DMA channel, 0xFF for CPU
+			public UInt32 length;     // DMA size, 1 for CPU
+			public UInt32 pc;         // CPU write PC
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
 		public struct InteropWramLogEntry
 		{
 			public UInt64 id;
@@ -492,6 +508,10 @@ namespace Mesen.Interop
 		[DllImport(DllPath, EntryPoint = "snes_set_vram_log_enabled")] public static extern void SnesSetVramLogEnabled([MarshalAs(UnmanagedType.I1)] bool enabled);
 		[DllImport(DllPath, EntryPoint = "snes_get_vram_log_count")] public static extern UInt32 SnesGetVramLogCount();
 		[DllImport(DllPath, EntryPoint = "snes_get_vram_log")] public static extern UInt32 SnesGetVramLog([Out] InteropVramLogEntry[] entries, UInt32 start, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_set_enabled")] public static extern void SnesMapLoadLogSetEnabled([MarshalAs(UnmanagedType.I1)] bool enabled);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_is_enabled")] public static extern bool SnesMapLoadLogIsEnabled();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_get_count")] public static extern UInt32 SnesMapLoadLogGetCount();
+		[DllImport(DllPath, EntryPoint = "snes_get_map_load_log")] public static extern UInt32 SnesGetMapLoadLog([Out] InteropMapLoadEntry[] entries, UInt32 start, UInt32 count);
 		[DllImport(DllPath, EntryPoint = "snes_set_wram_log_config")] public static extern void SnesSetWramLogConfig([MarshalAs(UnmanagedType.I1)] bool enabled, UInt32 start, UInt32 end, UInt16 minLen, Int32 memType);
 		[DllImport(DllPath, EntryPoint = "snes_get_wram_log_count")] public static extern UInt32 SnesGetWramLogCount();
 		[DllImport(DllPath, EntryPoint = "snes_get_wram_log")] public static extern UInt32 SnesGetWramLog([Out] InteropWramLogEntry[] entries, UInt32 start, UInt32 count);

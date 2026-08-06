@@ -182,6 +182,136 @@ public:
 	}
 };
 
+// R3.2: Map-load source tracing - captures every VRAM/CGRAM write (CPU or DMA)
+// together with the ROM/WRAM address the data was read from, so a map change can
+// be traced back to the exact ROM address that provides tilemap/tiles/palette.
+// sourceType: 0 = DMA (sourceAddr = SrcBank:SrcAddr), 1 = CPU (sourceAddr = last ROM/WRAM read).
+class SnesMapLoadLog
+{
+public:
+	static constexpr int LogSize = 1 << 16;
+	static constexpr uint8_t Cpu = 1;
+	static constexpr uint8_t Dma = 0;
+
+	struct Entry
+	{
+		uint64_t frame;
+		int32_t cycle;
+		uint8_t sourceType;   // 0=DMA, 1=CPU
+		uint8_t targetType;   // 0=VRAM, 1=CGRAM
+		uint32_t targetAddr;  // VRAM word address / CGRAM index
+		uint8_t value;
+		uint32_t sourceAddr;  // DMA: SrcBank<<16|SrcAddr; CPU: last ROM/WRAM read
+		uint8_t sourceMem;    // CPU: MemoryType of source read; DMA: 0
+		uint8_t channel;      // DMA channel, 0xFF for CPU
+		uint32_t length;      // DMA transfer size, 1 for CPU
+		uint32_t pc;          // CPU write PC
+	};
+
+	static Entry Log[LogSize];
+	static uint32_t Head;
+	static uint32_t Count;
+	static bool Enabled;
+	static uint32_t LastRomRead;
+	static uint32_t LastWramRead;
+
+	static void SetEnabled(bool enabled)
+	{
+		if(enabled && !Enabled) {
+			Head = 0;
+			Count = 0;
+		}
+		Enabled = enabled;
+	}
+
+	static uint32_t GetCount() { return Count; }
+	static bool IsEnabled() { return Enabled; }
+
+	//Remember the last ROM/WRAM address the CPU read, so a following VRAM/CGRAM
+	//write can be attributed to the data source.
+	static void TrackRead(MemoryType memType, uint32_t addr24)
+	{
+		if(memType == MemoryType::SnesPrgRom) {
+			LastRomRead = addr24;
+		} else if(memType == MemoryType::SnesWorkRam || memType == MemoryType::SnesSaveRam) {
+			LastWramRead = addr24;
+		}
+	}
+
+	static void AppendCpuWrite(uint32_t frame, int32_t cycle, uint8_t targetType, uint32_t targetAddr, uint8_t value, uint32_t pc)
+	{
+		if(!Enabled) {
+			return;
+		}
+
+		uint8_t sourceMem = 0;
+		uint32_t sourceAddr = 0;
+		if(LastRomRead != 0xFFFFFFFF) {
+			sourceAddr = LastRomRead;
+			sourceMem = (uint8_t)MemoryType::SnesPrgRom;
+		} else if(LastWramRead != 0xFFFFFFFF) {
+			sourceAddr = LastWramRead;
+			sourceMem = (uint8_t)MemoryType::SnesWorkRam;
+		}
+
+		Entry& e = Log[Head];
+		e.frame = frame;
+		e.cycle = cycle;
+		e.sourceType = Cpu;
+		e.targetType = targetType;
+		e.targetAddr = targetAddr;
+		e.value = value;
+		e.sourceAddr = sourceAddr;
+		e.sourceMem = sourceMem;
+		e.channel = 0xFF;
+		e.length = 1;
+		e.pc = pc;
+
+		Head = (Head + 1) % LogSize;
+		if(Count < LogSize) {
+			Count++;
+		}
+	}
+
+	static void AppendDma(uint32_t frame, int32_t cycle, uint8_t targetType, uint32_t targetAddr, uint32_t srcBank, uint32_t srcAddr, uint32_t length, uint8_t channel)
+	{
+		if(!Enabled) {
+			return;
+		}
+
+		Entry& e = Log[Head];
+		e.frame = frame;
+		e.cycle = cycle;
+		e.sourceType = Dma;
+		e.targetType = targetType;
+		e.targetAddr = targetAddr;
+		e.value = 0;
+		e.sourceAddr = (srcBank << 16) | (srcAddr & 0xFFFF);
+		e.sourceMem = 0;
+		e.channel = channel;
+		e.length = length;
+		e.pc = 0;
+
+		Head = (Head + 1) % LogSize;
+		if(Count < LogSize) {
+			Count++;
+		}
+	}
+
+	static uint32_t Get(Entry* entries, uint32_t start, uint32_t count)
+	{
+		if(start >= Count || count == 0) {
+			return 0;
+		}
+
+		uint32_t n = std::min(count, Count - start);
+		uint32_t oldest = Count < LogSize ? 0 : Head;
+		for(uint32_t i = 0; i < n; i++) {
+			entries[i] = Log[(oldest + start + i) % LogSize];
+		}
+		return n;
+	}
+};
 
 // R3.1: WRAM/register write history (CPU writes with PC, address filter + minLen coalescing)
 // Similar to the DMA log / events-history, but for arbitrary memory domains (default WRAM).

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="LiveApiUi">
@@ -208,6 +208,11 @@ Plugin.register({
       <Control ID="btnSaveState">État de sauvegarde</Control>
       <Control ID="lblSlot">Slot</Control>
       <Control ID="btnLoadState">Charger l'état</Control>
+      <Control ID="mapLoadArmed">Prêt - changer de carte, puis Rapport</Control>
+      <Control ID="btnMapLoadReport">Rapport</Control>
+      <Control ID="btnMapLoadArm">Chargement carte : tracer</Control>
+      <Control ID="mapLoadError">Erreur</Control>
+      <Control ID="mapLoadNoData">Aucune donnée de chargement de carte</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

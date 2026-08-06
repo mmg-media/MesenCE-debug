@@ -828,6 +828,147 @@ namespace Mesen.LiveApi
 		}
 
 		/// <summary>
+		/// R3.2: Map-load source trace. Arms the capture of every VRAM/CGRAM write
+		/// (CPU or DMA) together with the ROM/WRAM address the data was read from.
+		/// After a map change, GetMapLoadReport() groups the sources into
+		/// tilemap / tiles / palette with their exact ROM addresses.
+		/// </summary>
+		public static JsonNode? MapLoadArm()
+		{
+			return RunExclusive(() => {
+				try {
+					DebugApi.InitializeDebugger();
+					DebugApi.SnesMapLoadLogSetEnabled(true);
+					return new JsonObject() { ["ok"] = true };
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		public static JsonNode? MapLoadStatus()
+		{
+			return RunExclusive(() => {
+				try {
+					return new JsonObject() { ["enabled"] = DebugApi.SnesMapLoadLogIsEnabled(), ["count"] = DebugApi.SnesMapLoadLogGetCount() };
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		public static JsonNode? MapLoadDisarm()
+		{
+			return RunExclusive(() => {
+				try {
+					DebugApi.SnesMapLoadLogSetEnabled(false);
+					return new JsonObject() { ["ok"] = true };
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		public static JsonNode? GetMapLoadReport()
+		{
+			return RunExclusive(() => {
+				try {
+					SnesPpuState state = DebugApi.GetPpuState<SnesPpuState>(CpuType.Snes);
+					UInt32 total = DebugApi.SnesMapLoadLogGetCount();
+					JsonArray tilemap = new JsonArray();
+					JsonArray tiles = new JsonArray();
+					JsonArray palette = new JsonArray();
+
+					if(total > 0) {
+						UInt32 n = Math.Min(total, 65536u);
+						DebugApi.InteropMapLoadEntry[] entries = new DebugApi.InteropMapLoadEntry[n];
+						UInt32 got = DebugApi.SnesGetMapLoadLog(entries, 0, n);
+
+						//Tilemap VRAM word-address ranges (layer.TilemapAddress is a byte address; the
+						//VRAM log stores word addresses). A 32x32 tilemap spans 0x800 bytes = 0x400 words.
+						List<(UInt32 Start, UInt32 End)> tilemapRanges = new();
+						for(int i = 0; i < 4; i++) {
+							if(state.Layers[i].TilemapAddress == 0) {
+								continue;
+							}
+							UInt32 baseWord = (UInt32)(state.Layers[i].TilemapAddress >> 1);
+							tilemapRanges.Add((baseWord, baseWord + 0x400));
+						}
+
+						void Accumulate(JsonArray dest, string sourceHex, string via, UInt32 target, UInt32 length)
+						{
+							JsonObject? found = null;
+							foreach(JsonNode? node in dest) {
+								if(node?["source"]?.GetValue<string>() == sourceHex && node?["via"]?.GetValue<string>() == via) {
+									found = (JsonObject?)node;
+									break;
+								}
+							}
+							if(found == null) {
+								found = new JsonObject() {
+									["source"] = sourceHex,
+									["via"] = via,
+									["length"] = JsonValue.Create(length),
+									["writes"] = 1,
+									["targets"] = new JsonArray() { (JsonNode)JsonValue.Create(target) }
+								};
+								dest.Add((JsonNode)found);
+							} else {
+								found["writes"] = found["writes"]!.GetValue<int>() + 1;
+								found["length"] = JsonValue.Create(found["length"]!.GetValue<UInt32>() + length);
+								((JsonArray)found["targets"]!).Add((JsonNode)JsonValue.Create(target));
+							}
+						}
+
+						for(int i = 0; i < (int)got; i++) {
+							DebugApi.InteropMapLoadEntry e = entries[i];
+							if(e.sourceType == 1 && e.sourceAddr == 0) {
+								continue;  //no source captured for this CPU write
+							}
+							string sourceHex = "$" + e.sourceAddr.ToString("X6");
+							string via = e.sourceType == 0
+								? "dma ch" + e.channel
+								: (e.sourceMem == (byte)MemoryType.SnesWorkRam ? "cpu wram" : "cpu rom");
+
+							if(e.targetType == 1) {
+								Accumulate(palette, sourceHex, via, e.targetAddr, e.length);
+							} else {
+								bool isTilemap = false;
+								foreach((UInt32 Start, UInt32 End) r in tilemapRanges) {
+									if(e.targetAddr >= r.Start && e.targetAddr < r.End) {
+										isTilemap = true;
+										break;
+									}
+								}
+								Accumulate(isTilemap ? tilemap : tiles, sourceHex, via, e.targetAddr, e.length);
+							}
+						}
+					}
+
+					JsonArray layerInfo = new JsonArray();
+					for(int i = 0; i < 4; i++) {
+						layerInfo.Add((JsonNode)(new JsonObject() {
+							["layer"] = i + 1,
+							["tilemapAddress"] = state.Layers[i].TilemapAddress,
+							["chrAddress"] = state.Layers[i].ChrAddress
+						}));
+					}
+
+					return new JsonObject() {
+						["count"] = total,
+						["enabled"] = DebugApi.SnesMapLoadLogIsEnabled(),
+						["layers"] = layerInfo,
+						["tilemap"] = tilemap,
+						["tiles"] = tiles,
+						["palette"] = palette
+					};
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		/// <summary>
 		/// R3.1: WRAM/register write log (CPU writes with PC + target address).
 		/// Address filter (start/end, 16-bit offsets) + minLen (run length) against flooding.
 		/// </summary>
