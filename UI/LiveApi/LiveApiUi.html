@@ -607,6 +607,8 @@ async function refreshStatus(){
 		$("statusRomHash").textContent=s.romHash||"-";
 		$("statusText").textContent=s.paused?t("statePaused"):(s.romLoaded?t("stateRunning"):t("stateNoRom"));
 		$("statusText").style.color=s.paused?"var(--warn)":(s.romLoaded?"var(--ok)":"var(--err)");
+		$("btnPause").classList.toggle("primary",s.paused);
+		$("btnResume").classList.remove("primary");
 		if(s.language && !localStorage.getItem("liveapi_lang") && s.language!==lastServerLang){
 			const m={English:"en",German:"de",French:"fr",Chinese:"zh",Japanese:"ja"};
 			const l=m[s.language]||"en";
