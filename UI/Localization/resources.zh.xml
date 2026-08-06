@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="LiveApiUi">
@@ -138,7 +138,7 @@
       <Control ID="plWav">正在录制WAV </Control>
       <Control ID="pySnip4"># 备选：直接从Live API获取每个屏幕。</Control>
       <Control ID="lblEntries">条</Control>
-      <Control ID="plHint">插件是&amp;lt;b&amp;gt;LiveApiPlugins&amp;lt;/b&amp;gt;文件夹中Mesen.exe旁的JS文件。它们拥有完整API访问权限：&amp;lt;b&amp;gt;rpc()&amp;lt;/b&amp;gt;（所有JSON-RPC方法）、&amp;lt;b&amp;gt;fetch()&amp;lt;/b&amp;gt;（所有端点）、&amp;lt;b&amp;gt;download()&amp;lt;/b&amp;gt;、&amp;lt;b&amp;gt;exportFile()&amp;lt;/b&amp;gt;（向服务器写入日志/截图）、&amp;lt;b&amp;gt;log()&amp;lt;/b&amp;gt;、&amp;lt;b&amp;gt;onEvent()&amp;lt;/b&amp;gt;（WS事件）和&amp;lt;b&amp;gt;panel&amp;lt;/b&amp;gt;（自己的UI）。</Control>
+      <Control ID="plHint">插件是&lt;b&gt;LiveApiPlugins&lt;/b&gt;文件夹中Mesen.exe旁的JS文件。它们拥有完整API访问权限：&lt;b&gt;rpc()&lt;/b&gt;（所有JSON-RPC方法）、&lt;b&gt;fetch()&lt;/b&gt;（所有端点）、&lt;b&gt;download()&lt;/b&gt;、&lt;b&gt;exportFile()&lt;/b&gt;（向服务器写入日志/截图）、&lt;b&gt;log()&lt;/b&gt;、&lt;b&gt;onEvent()&lt;/b&gt;（WS事件）和&lt;b&gt;panel&lt;/b&gt;（自己的UI）。</Control>
       <Control ID="tblOp">操作</Control>
       <Control ID="lblCols">列数</Control>
       <Control ID="tblFr">帧</Control>
@@ -150,7 +150,7 @@
       <Control ID="stTriggered">已触发</Control>
       <Control ID="tblCond">条件</Control>
       <Control ID="wramTitle">WRAM/寄存器写入（R3.1，PC+运行）</Control>
-      <Control ID="gfxHint">&amp;lt;b&amp;gt;实时主+子&amp;lt;/b&amp;gt;：真实渲染帧，含色彩运算、云/叠加、透明、背景色。&amp;lt;b&amp;gt;屏幕（原始图层）&amp;lt;/b&amp;gt;：手动图层合成（主在前，子在上，无效果）。</Control>
+      <Control ID="gfxHint">&lt;b&gt;实时主+子&lt;/b&gt;：真实渲染帧，含色彩运算、云/叠加、透明、背景色。&lt;b&gt;屏幕（原始图层）&lt;/b&gt;：手动图层合成（主在前，子在上，无效果）。</Control>
       <Control ID="tblId">ID</Control>
       <Control ID="tblType">类型</Control>
       <Control ID="palHint">调色板（点击=选择）：</Control>
@@ -180,7 +180,7 @@
       <Control ID="plWavDone">WAV完成</Control>
       <Control ID="pyTitle">Terranigma地图导出（MesenCE Live API）</Control>
       <Control ID="pyGrid">走过的屏幕网格</Control>
-      <Control ID="pyBg">Transparent =&amp;gt; 自由，否则Black/White/Magenta</Control>
+      <Control ID="pyBg">Transparent =&gt; 自由，否则Black/White/Magenta</Control>
       <Control ID="plErrInit">初始化错误：</Control>
       <Control ID="plStarted">插件'{name}'已启动。</Control>
       <Control ID="plErrNoRegister">插件未调用Plugin.register({name, init})。</Control>
@@ -2782,7 +2782,7 @@ Plugin.register({
     <Message ID="ViewInAction">在 {0} 中查看</Message>
     <Message ID="PromptSaveChanges">保存更改？</Message>
     <Message ID="SaveToFile">保存到文件...</Message>
-    <Message ID="EmptyState">&amp;lt;空&amp;gt;</Message>
+    <Message ID="EmptyState">&lt;空&gt;</Message>
     <Message ID="LoadFromFile">从文件载入...</Message>
     <Message ID="MovieSaveError">保存录像文件时出错。</Message>
     <Message ID="ConfirmPowerCycle">确定要断电重启吗？</Message>

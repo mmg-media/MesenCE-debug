@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="MainMenuView">
@@ -212,7 +212,7 @@
       <Control ID="plWavSuffix"> s läuft …</Control>
       <Control ID="pySnip2"># 2) Frames: mit +1 Frame / Bewegung durch die Karte schreiten und je Position speichern.</Control>
       <Control ID="lblCols">Spalten</Control>
-      <Control ID="plHint">Plugins sind JS-Dateien im Ordner &amp;lt;b&amp;gt;LiveApiPlugins&amp;lt;/b&amp;gt; neben Mesen.exe. Sie haben vollen Zugriff auf die API: &amp;lt;b&amp;gt;rpc()&amp;lt;/b&amp;gt; (alle JSON-RPC-Methoden), &amp;lt;b&amp;gt;fetch()&amp;lt;/b&amp;gt; (alle Endpoints), &amp;lt;b&amp;gt;download()&amp;lt;/b&amp;gt;, &amp;lt;b&amp;gt;exportFile()&amp;lt;/b&amp;gt; (schreibt Logs/Screenshots auf den Server), &amp;lt;b&amp;gt;log()&amp;lt;/b&amp;gt;, &amp;lt;b&amp;gt;onEvent()&amp;lt;/b&amp;gt; (WS-Events) und &amp;lt;b&amp;gt;panel&amp;lt;/b&amp;gt; (eigene UI).</Control>
+      <Control ID="plHint">Plugins sind JS-Dateien im Ordner &lt;b&gt;LiveApiPlugins&lt;/b&gt; neben Mesen.exe. Sie haben vollen Zugriff auf die API: &lt;b&gt;rpc()&lt;/b&gt; (alle JSON-RPC-Methoden), &lt;b&gt;fetch()&lt;/b&gt; (alle Endpoints), &lt;b&gt;download()&lt;/b&gt;, &lt;b&gt;exportFile()&lt;/b&gt; (schreibt Logs/Screenshots auf den Server), &lt;b&gt;log()&lt;/b&gt;, &lt;b&gt;onEvent()&lt;/b&gt; (WS-Events) und &lt;b&gt;panel&lt;/b&gt; (eigene UI).</Control>
       <Control ID="noEntries">keine Einträge</Control>
       <Control ID="tblSrc">Quelle</Control>
       <Control ID="wramTitle">WRAM/Register-Writes (R3.1, PC + Run)</Control>
@@ -238,9 +238,9 @@
       <Control ID="tblMem">Mem</Control>
       <Control ID="vramLoading">VRAM-Writes laden …</Control>
       <Control ID="lblEntries">Einträge</Control>
-      <Control ID="gfxHint">&amp;lt;b&amp;gt;Live Main+Sub&amp;lt;/b&amp;gt;: echter gerenderter Frame inkl. Color Math, Wolken/Overlays, Transparenz, Backdrop-Farbe. &amp;lt;b&amp;gt;Screen (Raw-Layer)&amp;lt;/b&amp;gt;: manuelle Ebene-Ebenen-Komposition (Main zuerst, Sub darüber, ohne Effekte).</Control>
+      <Control ID="gfxHint">&lt;b&gt;Live Main+Sub&lt;/b&gt;: echter gerenderter Frame inkl. Color Math, Wolken/Overlays, Transparenz, Backdrop-Farbe. &lt;b&gt;Screen (Raw-Layer)&lt;/b&gt;: manuelle Ebene-Ebenen-Komposition (Main zuerst, Sub darüber, ohne Effekte).</Control>
       <Control ID="pySnip3"># 3) Die PNGs stitchen (hier Beispiel mit Pillow):</Control>
-      <Control ID="spcHint">Der SPC-Snapshot enthält APU-RAM (64 KB), DSP-Register (128) und CPU-Register des gerade geladenen Musikstücks/Sound-Sets. In einem SPC-Player (z.&amp;amp;nbsp;B. foobar2000+plugin, Winamp, Audiosurf) abspielen und nach WAV/MP3 konvertieren. Für jedes Stück: im Spiel das Stück anspielen, pausieren, hier "SPC laden" → fertig.</Control>
+      <Control ID="spcHint">Der SPC-Snapshot enthält APU-RAM (64 KB), DSP-Register (128) und CPU-Register des gerade geladenen Musikstücks/Sound-Sets. In einem SPC-Player (z.&#160;B. foobar2000+plugin, Winamp, Audiosurf) abspielen und nach WAV/MP3 konvertieren. Für jedes Stück: im Spiel das Stück anspielen, pausieren, hier "SPC laden" → fertig.</Control>
       <Control ID="tblDst">Ziel</Control>
       <Control ID="evLoading">Event-Historie laden …</Control>
       <Control ID="trkLoading">Tracker starten …</Control>
@@ -275,7 +275,7 @@
       <Control ID="plWavDone">WAV fertig</Control>
       <Control ID="pyTitle">Terranigma Karten-Export (MesenCE Live API)</Control>
       <Control ID="pyGrid">Raster der durchlaufenen Screens</Control>
-      <Control ID="pyBg">Transparent =&amp;gt; frei, sonst Black/White/Magenta</Control>
+      <Control ID="pyBg">Transparent =&gt; frei, sonst Black/White/Magenta</Control>
       <Control ID="plErrInit">init-Fehler: </Control>
       <Control ID="plStarted">Plugin '{name}' gestartet.</Control>
       <Control ID="plErrNoRegister">Plugin hat Plugin.register({name, init}) nicht aufgerufen.</Control>
@@ -556,7 +556,7 @@ Plugin.register({
       <Control ID="chkDisableGameGenieBusConflicts">Game-Genie-Buskonflikt-Emulation deaktivieren</Control>
       <Control ID="lblRamPowerOnState">Standard-RAM-Zustand beim Einschalten: </Control>
       <Control ID="grpGeneral">Allgemein</Control>
-      <Control ID="chkEnableDmcSampleDuplicationGlitch">DMC-Sample-Duplikations-Glitch aktivieren (late-G- &amp;amp; H-CPU-Verhalten)</Control>
+      <Control ID="chkEnableDmcSampleDuplicationGlitch">DMC-Sample-Duplikations-Glitch aktivieren (late-G- &amp; H-CPU-Verhalten)</Control>
       <Control ID="lblMs">ms</Control>
       <Control ID="tpgVideo">Video</Control>
       <Control ID="chkDisableOamAddrBug">PPU-Frame-Start-OAM-Korruption deaktivieren (2C02D und früher)</Control>
@@ -1135,7 +1135,7 @@ Plugin.register({
       <Control ID="lblCodeVerifiedDataColor">Verifizierte Daten</Control>
       <Control ID="tabIntegration">Integration</Control>
       <Control ID="lblImportFiltersHint">Folgende Labeltypen importieren:</Control>
-      <Control ID="tabFonts">Schriften &amp;amp; Farben</Control>
+      <Control ID="tabFonts">Schriften &amp; Farben</Control>
       <Control ID="lblCodeActiveMidInstructionColor">Aktive Anweisung (mitten in Befehl)</Control>
       <Control ID="chkAutoResetCdl">CDL bei ROM-Wechsel zurücksetzen</Control>
       <Control ID="lblFontSettings">Schrift-Einstellungen</Control>
@@ -2793,7 +2793,7 @@ Plugin.register({
     <Message ID="btnYes">Ja</Message>
     <Message ID="SetKeyHint">Drücken Sie eine beliebige Taste auf Ihrer Tastatur, um eine neue Belegung zu setzen.</Message>
     <Message ID="FirmwareMismatch">Die ausgewählte Datei entspricht nicht der benötigten Firmware für: {0}`n`nFirmware-SHA-256:`n{1}`n`nSHA-256 der ausgewählten Datei:`n{2}`n`nMöchten Sie diese Datei trotzdem verwenden?</Message>
-    <Message ID="EmptyState">&amp;lt;leer&amp;gt;</Message>
+    <Message ID="EmptyState">&lt;leer&gt;</Message>
     <Message ID="InvalidArgument">Ungültiges Argument: {0}</Message>
     <Message ID="OverwriteFirmware">Die folgende Datei existiert bereits und wird überschrieben. Dies kann nicht rückgängig gemacht werden. Sind Sie sicher?`n`n{0}</Message>
     <Message ID="PromptKeepChanges">Änderungen behalten?</Message>

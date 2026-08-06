@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="LiveApiUi">
@@ -133,7 +133,7 @@
       <Control ID="plActive">Actif : </Control>
       <Control ID="lblEntries">entrées</Control>
       <Control ID="evLoading">Chargement de l'historique …</Control>
-      <Control ID="gfxHint">&amp;lt;b&amp;gt;Live Main+Sub&amp;lt;/b&amp;gt; : frame réelle rendue incl. color math, nuages/overlays, transparence, couleur d'arrière-plan. &amp;lt;b&amp;gt;Screen (calques bruts)&amp;lt;/b&amp;gt; : composition manuelle des calques (main d'abord, sub par-dessus, sans effets).</Control>
+      <Control ID="gfxHint">&lt;b&gt;Live Main+Sub&lt;/b&gt; : frame réelle rendue incl. color math, nuages/overlays, transparence, couleur d'arrière-plan. &lt;b&gt;Screen (calques bruts)&lt;/b&gt; : composition manuelle des calques (main d'abord, sub par-dessus, sans effets).</Control>
       <Control ID="tblSrc">Source</Control>
       <Control ID="tblCycle">Cycle</Control>
       <Control ID="tblCpu">CPU</Control>
@@ -141,7 +141,7 @@
       <Control ID="tblMem">Mém</Control>
       <Control ID="evHistTitle">Historique d'événements (R2.1, cumulatif)</Control>
       <Control ID="dmaStatusLoading">Chargement du statut DMA …</Control>
-      <Control ID="plHint">Les plugins sont des fichiers JS dans le dossier &amp;lt;b&amp;gt;LiveApiPlugins&amp;lt;/b&amp;gt; à côté de Mesen.exe. Ils ont un accès complet à l'API : &amp;lt;b&amp;gt;rpc()&amp;lt;/b&amp;gt; (toutes les méthodes JSON-RPC), &amp;lt;b&amp;gt;fetch()&amp;lt;/b&amp;gt; (tous les endpoints), &amp;lt;b&amp;gt;download()&amp;lt;/b&amp;gt;, &amp;lt;b&amp;gt;exportFile()&amp;lt;/b&amp;gt; (écrit des journaux/captures sur le serveur), &amp;lt;b&amp;gt;log()&amp;lt;/b&amp;gt;, &amp;lt;b&amp;gt;onEvent()&amp;lt;/b&amp;gt; (événements WS) et &amp;lt;b&amp;gt;panel&amp;lt;/b&amp;gt; (UI propre).</Control>
+      <Control ID="plHint">Les plugins sont des fichiers JS dans le dossier &lt;b&gt;LiveApiPlugins&lt;/b&gt; à côté de Mesen.exe. Ils ont un accès complet à l'API : &lt;b&gt;rpc()&lt;/b&gt; (toutes les méthodes JSON-RPC), &lt;b&gt;fetch()&lt;/b&gt; (tous les endpoints), &lt;b&gt;download()&lt;/b&gt;, &lt;b&gt;exportFile()&lt;/b&gt; (écrit des journaux/captures sur le serveur), &lt;b&gt;log()&lt;/b&gt;, &lt;b&gt;onEvent()&lt;/b&gt; (événements WS) et &lt;b&gt;panel&lt;/b&gt; (UI propre).</Control>
       <Control ID="stOff">off</Control>
       <Control ID="dmaActive">ACTIF</Control>
       <Control ID="tblAddr">Adr</Control>
@@ -180,7 +180,7 @@
       <Control ID="plWavDone">WAV terminé</Control>
       <Control ID="pyTitle">Export de carte Terranigma (MesenCE Live API)</Control>
       <Control ID="pyGrid">Grille des écrans parcourus</Control>
-      <Control ID="pyBg">Transparent =&amp;gt; libre, sinon Black/White/Magenta</Control>
+      <Control ID="pyBg">Transparent =&gt; libre, sinon Black/White/Magenta</Control>
       <Control ID="plErrInit">Erreur init : </Control>
       <Control ID="plStarted">Plugin « {name} » démarré.</Control>
       <Control ID="plErrNoRegister">Le plugin n'a pas appelé Plugin.register({name, init}).</Control>
@@ -2756,7 +2756,7 @@ Plugin.register({
     <Message ID="ConfirmExit">Voulez-vous vraiment quitter ?</Message>
     <Message ID="FirmwareFileWrongSize">Le fichier sélectionné ne correspond pas à la taille requise ({0} octets) et ne peut pas être utilisé.</Message>
     <Message ID="FileNotFound">Fichier introuvable : {0}</Message>
-    <Message ID="EmptyState">&amp;lt;vide&amp;gt;</Message>
+    <Message ID="EmptyState">&lt;vide&gt;</Message>
     <Message ID="MouseModeEnabled">Souris activée - pause pour libérer le curseur</Message>
     <Message ID="InvalidLabel">Le label ne respecte pas les règles de nommage.</Message>
     <Message ID="InstallHdPackConfirmOverwrite">Le dossier de destination ({0}) existe déjà - voulez-vous vraiment l'écraser ?</Message>

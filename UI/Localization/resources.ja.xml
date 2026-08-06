@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="LiveApiUi">
@@ -122,11 +122,11 @@
       <Control ID="tblCpu">CPU</Control>
       <Control ID="trkLoading">トラッカー開始…</Control>
       <Control ID="lblFormat">形式</Control>
-      <Control ID="gfxHint">&amp;lt;b&amp;gt;ライブ主+副&amp;lt;/b&amp;gt;：カラーマス、雲/オーバーレイ、透明度、背景色を含む実際のレンダリングフレーム。&amp;lt;b&amp;gt;画面（生レイヤー）&amp;lt;/b&amp;gt;：手動レイヤー合成（主が先、副が上、効果なし）。</Control>
+      <Control ID="gfxHint">&lt;b&gt;ライブ主+副&lt;/b&gt;：カラーマス、雲/オーバーレイ、透明度、背景色を含む実際のレンダリングフレーム。&lt;b&gt;画面（生レイヤー）&lt;/b&gt;：手動レイヤー合成（主が先、副が上、効果なし）。</Control>
       <Control ID="tblCycle">サイクル</Control>
       <Control ID="tblType">種別</Control>
       <Control ID="lblPalette">パレット（クリック＝選択）：</Control>
-      <Control ID="plHint">プラグインはMesen.exeの隣の&amp;lt;b&amp;gt;LiveApiPlugins&amp;lt;/b&amp;gt;フォルダーにあるJSファイルです。APIへの完全なアクセス権があります：&amp;lt;b&amp;gt;rpc()&amp;lt;/b&amp;gt;（すべてのJSON-RPCメソッド）、&amp;lt;b&amp;gt;fetch()&amp;lt;/b&amp;gt;（すべてのエンドポイント）、&amp;lt;b&amp;gt;download()&amp;lt;/b&amp;gt;、&amp;lt;b&amp;gt;exportFile()&amp;lt;/b&amp;gt;（ログ/スクリーンショットをサーバーに書き込み）、&amp;lt;b&amp;gt;log()&amp;lt;/b&amp;gt;、&amp;lt;b&amp;gt;onEvent()&amp;lt;/b&amp;gt;（WSイベント）、&amp;lt;b&amp;gt;panel&amp;lt;/b&amp;gt;（独自UI）。</Control>
+      <Control ID="plHint">プラグインはMesen.exeの隣の&lt;b&gt;LiveApiPlugins&lt;/b&gt;フォルダーにあるJSファイルです。APIへの完全なアクセス権があります：&lt;b&gt;rpc()&lt;/b&gt;（すべてのJSON-RPCメソッド）、&lt;b&gt;fetch()&lt;/b&gt;（すべてのエンドポイント）、&lt;b&gt;download()&lt;/b&gt;、&lt;b&gt;exportFile()&lt;/b&gt;（ログ/スクリーンショットをサーバーに書き込み）、&lt;b&gt;log()&lt;/b&gt;、&lt;b&gt;onEvent()&lt;/b&gt;（WSイベント）、&lt;b&gt;panel&lt;/b&gt;（独自UI）。</Control>
       <Control ID="wramTitle">WRAM/レジスタ書き込み（R3.1、PC＋実行）</Control>
       <Control ID="tblLen">長さ</Control>
       <Control ID="lblMinLen">minLen</Control>
@@ -180,7 +180,7 @@
       <Control ID="plWavDone">WAV完了</Control>
       <Control ID="pyTitle">Terranigmaマップエクスポート（MesenCE Live API）</Control>
       <Control ID="pyGrid">移動した画面のグリッド</Control>
-      <Control ID="pyBg">Transparent =&amp;gt; 自由、それ以外はBlack/White/Magenta</Control>
+      <Control ID="pyBg">Transparent =&gt; 自由、それ以外はBlack/White/Magenta</Control>
       <Control ID="plErrInit">initエラー：</Control>
       <Control ID="plStarted">プラグイン'{name}'を起動しました。</Control>
       <Control ID="plErrNoRegister">プラグインがPlugin.register({name, init})を呼び出していません。</Control>
@@ -2773,7 +2773,7 @@ Plugin.register({
     <Message ID="LastSession">前回のセッション</Message>
     <Message ID="VideoLayerDisabled">{0} を無効化しました。</Message>
     <Message ID="InvalidArgument">無効な引数：{0}</Message>
-    <Message ID="EmptyState">&amp;lt;空&amp;gt;</Message>
+    <Message ID="EmptyState">&lt;空&gt;</Message>
     <Message ID="UpdateDownloadFailed">ダウンロードに失敗しました - ファイルが破損しているようです。Mesenのウェブサイトで最新版を手動でダウンロードしてください。</Message>
     <Message ID="Player">プレイヤー</Message>
     <Message ID="HexEditor_Location">位置：${0}</Message>
