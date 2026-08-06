@@ -204,6 +204,10 @@ Plugin.register({
 		return { dispose(){ api.log("停止しました"); } };
 	}
 });</Control>
+      <Control ID="chkScrollOverlay">スクロールオーバーレイ</Control>
+      <Control ID="btnSaveState">ステート保存</Control>
+      <Control ID="lblSlot">スロット</Control>
+      <Control ID="btnLoadState">ステート読込</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

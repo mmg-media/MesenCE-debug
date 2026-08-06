@@ -305,6 +305,12 @@ namespace Mesen.LiveApi
 					case "/api/gfx/tilemap":
 						await WritePng(context, GfxService.GetTilemapPng(Query(context, "cpu", "Snes"), Query(context, "layer", "0"), Query(context, "bg", "Black")));
 						return;
+					case "/api/gfx/overlay/mode7":
+						result = GfxService.GetOverlayMode7Json(Query(context, "cpu", "Snes"));
+						break;
+					case "/api/gfx/overlay":
+						await WritePng(context, GfxService.GetOverlayPng(Query(context, "cpu", "Snes"), Query(context, "layer", "0"), Query(context, "bg", "Black")));
+						return;
 					case "/api/gfx/screen":
 						await WritePng(context, GfxService.GetScreenPng(Query(context, "cpu", "Snes"), Query(context, "layers", "all"), Query(context, "sprites", "1") == "1", Query(context, "bg", "Black")));
 						return;
@@ -849,6 +855,9 @@ namespace Mesen.LiveApi
 				"POST /api/load {path}",
 				"GET  /api/gfx/state?cpu=Snes",
 				"GET  /api/gfx/tilemap?cpu=Snes&layer=0&bg=Black",
+				"GET  /api/gfx/overlay?cpu=Snes&layer=0&bg=Black  (Scroll-Overlay: Screen-Ausschnitt auf der Tilemap)",
+				"GET  /api/gfx/overlay/mode7?cpu=Snes  (4 projizierte Eckpunkte + Mode7-Register)",
+				"GET  /api/gfx/live?cpu=Snes  (echter gerenderter Frame)",
 				"GET  /api/gfx/screen?cpu=Snes&layers=all&sprites=1&bg=Black",
 				"GET  /api/gfx/sprites?cpu=Snes",
 				"GET  /api/gfx/sprites.json?cpu=Snes",

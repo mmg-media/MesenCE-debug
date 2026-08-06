@@ -164,6 +164,12 @@ input[type=text],input[type=number],select{min-width:0;}
 				<tr><th>SHA1</th><td id="statusRomHash" style="font-size:11px;">-</td></tr>
 			</table>
 			<div class="row" style="margin-top:6px;"><label data-i18n="lblLoad">Load ROM</label><input type="text" id="loadPath" style="flex:1;" placeholder="C:\pfad\zum\rom.sfc"><button id="btnLoad" data-i18n="btnLoad">Load</button></div>
+			<div class="row" style="margin-top:6px;">
+				<label data-i18n="lblSlot">Slot</label>
+				<input type="text" id="stateSlot" value="1" class="w40">
+				<button id="btnSaveState" data-i18n="btnSaveState">Save State</button>
+				<button id="btnLoadState" data-i18n="btnLoadState">Load State</button>
+			</div>
 		</div>
 	</div>
 
@@ -358,6 +364,7 @@ input[type=text],input[type=number],select{min-width:0;}
 					<option value="main" data-i18n="gfxScreenMain">Screen Main</option>
 					<option value="sub" data-i18n="gfxScreenSub">Screen Sub</option>
 				</select>
+				<label style="min-width:0;"><input type="checkbox" id="gfxOverlay" checked> <span data-i18n="chkScrollOverlay">Scroll-Overlay</span></label>
 			</div>
 			<div class="row" id="gfxTilesOpts" style="display:none;">
 				<label data-i18n="lblFormat">Format</label>
@@ -395,6 +402,7 @@ input[type=text],input[type=number],select{min-width:0;}
 					<img id="gfxImage" alt="Graphics" style="display:none; image-rendering:pixelated; background:repeating-conic-gradient(#1d2430 0% 25%, #151a24 0% 50%) 0 0/16px 16px;">
 				</div>
 				<div id="gfxInfo" class="empty" data-i18n="gfxInfoEmpty">Kein Bild geladen.</div>
+				<div id="gfxOverlayInfo" class="empty" style="display:none;"></div>
 			</div>
 			<div class="panel" style="background:var(--panel2); margin-bottom:0;">
 				<h2 data-i18n="lblPython">Python-Export (Stitching)</h2>
@@ -1176,7 +1184,11 @@ function gfxUrl(){
 		return "/api/gfx/screen?cpu=Snes&layers="+encodeURIComponent(gfxScreenLayers())+"&sprites="+($("gfxSprites").checked?1:0)+"&bg="+encodeURIComponent(bg);
 	}
 	if(view==="map"){
-		return "/api/gfx/tilemap?cpu=Snes&layer="+encodeURIComponent($("gfxMapLayer").value)+"&bg="+encodeURIComponent(bg);
+		const layer=$("gfxMapLayer").value;
+		if($("gfxOverlay").checked){
+			return "/api/gfx/overlay?cpu=Snes&layer="+encodeURIComponent(layer)+"&bg="+encodeURIComponent(bg);
+		}
+		return "/api/gfx/tilemap?cpu=Snes&layer="+encodeURIComponent(layer)+"&bg="+encodeURIComponent(bg);
 	}
 	if(view==="sprites"){
 		return "/api/gfx/sprites?cpu=Snes";
@@ -1213,7 +1225,30 @@ async function refreshGfx(){
 		$("gfxImage").style.display="block";
 		$("gfxInfo").textContent=url;
 		if(gfxView==="tiles") refreshPalette();
+		refreshGfxOverlayInfo();
 	}catch(e){}
+}
+
+async function refreshGfxOverlayInfo(){
+	const info=$("gfxOverlayInfo");
+	try{
+		if(gfxView!=="map" || !$("gfxOverlay").checked){
+			info.style.display="none";
+			return;
+		}
+		const d=await fetch("api/gfx/overlay/mode7?cpu=Snes").then(r=>r.json());
+		if(!d) return;
+		if(d.bgMode===7){
+			const c=(d.corners||[]).map(p=>"("+Math.round(p.x)+","+Math.round(p.y)+")").join(" ");
+			info.textContent="Mode7 hScroll="+d.hScroll+" vScroll="+d.vScroll+" center=("+d.centerX+","+d.centerY+") matrix=["+d.matrix.join(",")+"] corners: "+c;
+			info.style.display="block";
+		} else {
+			info.textContent="Mode7 (bgMode="+d.bgMode+") - nicht aktiv";
+			info.style.display="block";
+		}
+	}catch(e){
+		info.style.display="none";
+	}
 }
 
 function downloadGfx(){
@@ -1377,6 +1412,15 @@ function bindControls(){
 	$("btnPower").onclick=()=>rpc("control",{action:"powerCycle"});
 	$("btnReload").onclick=()=>rpc("control",{action:"reload"});
 	$("btnLoad").onclick=async ()=>{ try{ const ok=await rpc("load",{path:$("loadPath").value.trim()}); if(ok){ setTimeout(refreshAll,1500); } }catch(e){} };
+	$("btnSaveState").onclick=async ()=>{
+		const slot=parseInt($("stateSlot").value,10)||1;
+		await fetch("api/savestate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"save",slot:slot})});
+	};
+	$("btnLoadState").onclick=async ()=>{
+		const slot=parseInt($("stateSlot").value,10)||1;
+		await fetch("api/savestate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"load",slot:slot})});
+		refreshAll();
+	};
 	$("btnEval").onclick=async ()=>{
 		try{
 			const r=await rpc("expression",{expr:$("exprInput").value,cpu:"Snes"});

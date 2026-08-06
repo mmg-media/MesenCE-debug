@@ -1967,6 +1967,10 @@ Plugin.register({
 		return { dispose(){ api.log("stopped"); } };
 	}
 });</Control>
+			<Control ID="chkScrollOverlay">Scroll overlay</Control>
+			<Control ID="btnSaveState">Save State</Control>
+			<Control ID="btnLoadState">Load State</Control>
+			<Control ID="lblSlot">Slot</Control>
 		</Form>
 	</Forms>
 	<Messages>

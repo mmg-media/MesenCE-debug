@@ -204,6 +204,10 @@ Plugin.register({
 		return { dispose(){ api.log("已停止"); } };
 	}
 });</Control>
+      <Control ID="chkScrollOverlay">滚动叠加</Control>
+      <Control ID="btnSaveState">保存存档</Control>
+      <Control ID="lblSlot">槽位</Control>
+      <Control ID="btnLoadState">载入存档</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

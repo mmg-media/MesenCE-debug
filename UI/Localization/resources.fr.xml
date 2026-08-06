@@ -204,6 +204,10 @@ Plugin.register({
 		return { dispose(){ api.log("arrêté"); } };
 	}
 });</Control>
+      <Control ID="chkScrollOverlay">Superposition de défilement</Control>
+      <Control ID="btnSaveState">État de sauvegarde</Control>
+      <Control ID="lblSlot">Slot</Control>
+      <Control ID="btnLoadState">Charger l'état</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

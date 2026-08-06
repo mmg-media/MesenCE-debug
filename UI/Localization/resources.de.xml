@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="MainMenuView">
@@ -299,6 +299,10 @@ Plugin.register({
 		return { dispose(){ api.log("gestoppt"); } };
 	}
 });</Control>
+      <Control ID="chkScrollOverlay">Scroll-Overlay</Control>
+      <Control ID="btnSaveState">Speicherstand</Control>
+      <Control ID="lblSlot">Slot</Control>
+      <Control ID="btnLoadState">Laden</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

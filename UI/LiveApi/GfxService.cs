@@ -261,6 +261,178 @@ namespace Mesen.LiveApi
 			});
 		}
 
+		public static byte[]? GetOverlayPng(string cpuType, string layer, string bg)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+
+			int layerIndex;
+			switch(layer.Trim().ToLowerInvariant()) {
+				case "main": layerIndex = 4; break;
+				case "sub": layerIndex = 5; break;
+				default:
+					if(!int.TryParse(layer, out layerIndex) || layerIndex < 0 || layerIndex > 3) {
+						return null;
+					}
+					break;
+			}
+
+			TilemapBackground background = ParseEnum(QueryString(bg, "Black"), TilemapBackground.Black);
+
+			return RunExclusive(() => {
+				try {
+					SnesGfxData data = PrepareData(cpu.Value);
+					GetTilemapOptions options = new GetTilemapOptions() {
+						Layer = (byte)layerIndex,
+						Background = background
+					};
+
+					FrameInfo size = DebugApi.GetTilemapSize(cpu.Value, options, data.PpuState);
+					if(size.Width == 0 || size.Height == 0) {
+						return null;
+					}
+
+					int byteCount = (int)(size.Width * size.Height * 4);
+					IntPtr buffer = Marshal.AllocHGlobal(byteCount);
+					try {
+						DebugTilemapInfo tilemapInfo = DebugApi.GetTilemap(cpu.Value, options, data.PpuState, data.PpuToolsState, data.Vram, data.Palette, buffer);
+						byte[] outBytes = new byte[byteCount];
+						Marshal.Copy(buffer, outBytes, 0, byteCount);
+						byte[] overlay = DrawScreenOverlay(outBytes, (int)size.Width, (int)size.Height, data.PpuState, (SnesPpuToolsState)data.PpuToolsState, tilemapInfo, layerIndex);
+						return EncodePngBytes((int)size.Width, (int)size.Height, overlay);
+					} finally {
+						Marshal.FreeHGlobal(buffer);
+					}
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		public static JsonNode? GetOverlayMode7Json(string cpuType)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					SnesPpuState state = DebugApi.GetPpuState<SnesPpuState>(cpu.Value);
+					SnesPpuToolsState tools = DebugApi.GetPpuToolsState<SnesPpuToolsState>(cpu.Value);
+					(float X, float Y)[] corners = GetMode7ScreenCorners(tools);
+
+					GetTilemapOptions options = new GetTilemapOptions() {
+						Layer = 0,
+						Background = TilemapBackground.Black
+					};
+					FrameInfo tilemapSize = DebugApi.GetTilemapSize(cpu.Value, options, state);
+
+					return new JsonObject() {
+						["bgMode"] = state.BgMode,
+						["tilemapSize"] = new JsonObject() { ["w"] = tilemapSize.Width, ["h"] = tilemapSize.Height },
+						["screenSize"] = new JsonObject() { ["w"] = 256, ["h"] = 224 },
+						["corners"] = new JsonArray(
+							new JsonObject() { ["x"] = corners[0].X, ["y"] = corners[0].Y },
+							new JsonObject() { ["x"] = corners[1].X, ["y"] = corners[1].Y },
+							new JsonObject() { ["x"] = corners[2].X, ["y"] = corners[2].Y },
+							new JsonObject() { ["x"] = corners[3].X, ["y"] = corners[3].Y }),
+						["hScroll"] = state.Mode7.HScroll,
+						["vScroll"] = state.Mode7.VScroll,
+						["centerX"] = state.Mode7.CenterX,
+						["centerY"] = state.Mode7.CenterY,
+						["largeMap"] = state.Mode7.LargeMap,
+						["horizontalMirroring"] = state.Mode7.HorizontalMirroring,
+						["verticalMirroring"] = state.Mode7.VerticalMirroring,
+						["matrix"] = new JsonArray(
+							JsonValue.Create(state.Mode7.Matrix[0]),
+							JsonValue.Create(state.Mode7.Matrix[1]),
+							JsonValue.Create(state.Mode7.Matrix[2]),
+							JsonValue.Create(state.Mode7.Matrix[3]))
+					};
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		private static (float X, float Y)[] GetMode7ScreenCorners(SnesPpuToolsState tools)
+		{
+			//The core records the fixed-point map coordinate at the left and right edge of every
+			//rendered scanline (Mode7Start/End). Derive the 4 screen corners from the first and
+			//last scanline that actually rendered mode7 data.
+			int first = 0;
+			while(first < 239 && tools.Mode7StartX[first] == 0 && tools.Mode7EndX[first] == 0) {
+				first++;
+			}
+			int last = 238;
+			while(last > first && tools.Mode7StartX[last] == 0 && tools.Mode7EndX[last] == 0) {
+				last--;
+			}
+			if(first >= last) {
+				first = 0;
+				last = 238;
+			}
+
+			return new[] {
+				((float)(tools.Mode7StartX[first] >> 8), (float)(tools.Mode7StartY[first] >> 8)),
+				((float)(tools.Mode7EndX[first] >> 8), (float)(tools.Mode7EndY[first] >> 8)),
+				((float)(tools.Mode7EndX[last] >> 8), (float)(tools.Mode7EndY[last] >> 8)),
+				((float)(tools.Mode7StartX[last] >> 8), (float)(tools.Mode7StartY[last] >> 8))
+			};
+		}
+
+		private static byte[] DrawScreenOverlay(byte[] bgra, int width, int height, SnesPpuState state, SnesPpuToolsState tools, DebugTilemapInfo tilemapInfo, int layerIndex)
+		{
+			//Draws the current screen viewport on the tilemap:
+			//- mode7: the 4 projected screen corners (top-left/right, bottom-left/right) as a
+			//  closed quad - the exact map area covered by the rendered screen.
+			//- regular layers: the scroll rectangle reported by the core.
+			List<(float X1, float Y1, float X2, float Y2)> segments = new();
+
+			if(state.BgMode == 7 && layerIndex < 4) {
+				(float X, float Y)[] corners = GetMode7ScreenCorners(tools);
+				if(corners.Length >= 4) {
+					segments.Add((corners[0].X, corners[0].Y, corners[1].X, corners[1].Y));
+					segments.Add((corners[1].X, corners[1].Y, corners[2].X, corners[2].Y));
+					segments.Add((corners[2].X, corners[2].Y, corners[3].X, corners[3].Y));
+					segments.Add((corners[3].X, corners[3].Y, corners[0].X, corners[0].Y));
+				}
+			} else if(layerIndex < 4) {
+				float sx = tilemapInfo.ScrollX % (uint)width;
+				float sy = tilemapInfo.ScrollY % (uint)height;
+				float sw = tilemapInfo.ScrollWidth;
+				float sh = tilemapInfo.ScrollHeight;
+				segments.Add((sx, sy, sx + sw, sy));
+				segments.Add((sx + sw, sy, sx + sw, sy + sh));
+				segments.Add((sx + sw, sy + sh, sx, sy + sh));
+				segments.Add((sx, sy + sh, sx, sy));
+			}
+
+			if(segments.Count == 0) {
+				return bgra;
+			}
+
+			using SKBitmap bitmap = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+			Marshal.Copy(bgra, 0, bitmap.GetPixels(), bgra.Length);
+			using SKCanvas canvas = new SKCanvas(bitmap);
+			using SKPaint paint = new SKPaint() {
+				Color = SKColors.Red,
+				Style = SKPaintStyle.Stroke,
+				StrokeWidth = 2,
+				IsAntialias = false
+			};
+			foreach((float X1, float Y1, float X2, float Y2) seg in segments) {
+				canvas.DrawLine(seg.X1, seg.Y1, seg.X2, seg.Y2, paint);
+			}
+			canvas.Flush();
+
+			byte[] outBytes = new byte[bgra.Length];
+			Marshal.Copy(bitmap.GetPixels(), outBytes, 0, outBytes.Length);
+			return outBytes;
+		}
+
 		public static byte[]? GetScreenPng(string cpuType, string layers, bool includeSprites, string bg)
 		{
 			CpuType? cpu = ParseCpuType(cpuType);
