@@ -385,34 +385,25 @@ namespace Mesen.LiveApi
 
 		private static byte[] DrawScreenOverlay(byte[] bgra, int width, int height, SnesPpuState state, SnesPpuToolsState tools, DebugTilemapInfo tilemapInfo, int layerIndex)
 		{
-			//Draws the current screen viewport on the tilemap:
-			//- mode7: the 4 projected screen corners (top-left/right, bottom-left/right) as a
-			//  closed quad - the exact map area covered by the rendered screen.
-			//- regular layers: the scroll rectangle reported by the core.
-			List<(float X1, float Y1, float X2, float Y2)> segments = new();
-
-			if(state.BgMode == 7 && layerIndex < 4) {
-				(float X, float Y)[] corners = GetMode7ScreenCorners(tools);
-				if(corners.Length >= 4) {
-					segments.Add((corners[0].X, corners[0].Y, corners[1].X, corners[1].Y));
-					segments.Add((corners[1].X, corners[1].Y, corners[2].X, corners[2].Y));
-					segments.Add((corners[2].X, corners[2].Y, corners[3].X, corners[3].Y));
-					segments.Add((corners[3].X, corners[3].Y, corners[0].X, corners[0].Y));
-				}
-			} else if(layerIndex < 4) {
-				float sx = tilemapInfo.ScrollX % (uint)width;
-				float sy = tilemapInfo.ScrollY % (uint)height;
-				float sw = tilemapInfo.ScrollWidth;
-				float sh = tilemapInfo.ScrollHeight;
-				segments.Add((sx, sy, sx + sw, sy));
-				segments.Add((sx + sw, sy, sx + sw, sy + sh));
-				segments.Add((sx + sw, sy + sh, sx, sy + sh));
-				segments.Add((sx, sy + sh, sx, sy));
-			}
-
-			if(segments.Count == 0) {
+			//Draws the same screen viewport rect as the built-in tilemap viewer
+			//("BG Scroll Position"): a rectangle at (ScrollX, ScrollY) with the
+			//screen dimensions, taken directly from the core's DebugTilemapInfo.
+			//For mode7, ScrollX/ScrollY are the mode7 hScroll/vScroll registers.
+			if(layerIndex >= 4) {
 				return bgra;
 			}
+
+			float sx = tilemapInfo.ScrollX % (uint)width;
+			float sy = tilemapInfo.ScrollY % (uint)height;
+			float sw = tilemapInfo.ScrollWidth;
+			float sh = tilemapInfo.ScrollHeight;
+
+			List<(float X1, float Y1, float X2, float Y2)> segments = new() {
+				(sx, sy, sx + sw, sy),
+				(sx + sw, sy, sx + sw, sy + sh),
+				(sx + sw, sy + sh, sx, sy + sh),
+				(sx, sy + sh, sx, sy)
+			};
 
 			using SKBitmap bitmap = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
 			Marshal.Copy(bgra, 0, bitmap.GetPixels(), bgra.Length);
