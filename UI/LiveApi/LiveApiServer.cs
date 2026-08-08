@@ -296,6 +296,63 @@ namespace Mesen.LiveApi
 					case "/api/gfx/state":
 						result = GfxService.GetGfxState(Query(context, "cpu", "Snes"));
 						break;
+					case "/api/gfx/palettes":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", null, null);
+						break;
+					case "/api/gfx/palettes/bg":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "bg", null);
+						break;
+					case "/api/gfx/palettes/sprite":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "sprite", null);
+						break;
+					case "/api/gfx/palettes/bg0":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "bg", 0);
+						break;
+					case "/api/gfx/palettes/bg1":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "bg", 1);
+						break;
+					case "/api/gfx/palettes/bg2":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "bg", 2);
+						break;
+					case "/api/gfx/palettes/bg3":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "bg", 3);
+						break;
+					case "/api/gfx/palettes/bg4":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "bg", 4);
+						break;
+					case "/api/gfx/palettes/bg5":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "bg", 5);
+						break;
+					case "/api/gfx/palettes/bg6":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "bg", 6);
+						break;
+					case "/api/gfx/palettes/bg7":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "bg", 7);
+						break;
+					case "/api/gfx/palettes/sprite0":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "sprite", 0);
+						break;
+					case "/api/gfx/palettes/sprite1":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "sprite", 1);
+						break;
+					case "/api/gfx/palettes/sprite2":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "sprite", 2);
+						break;
+					case "/api/gfx/palettes/sprite3":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "sprite", 3);
+						break;
+					case "/api/gfx/palettes/sprite4":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "sprite", 4);
+						break;
+					case "/api/gfx/palettes/sprite5":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "sprite", 5);
+						break;
+					case "/api/gfx/palettes/sprite6":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "sprite", 6);
+						break;
+					case "/api/gfx/palettes/sprite7":
+						result = GfxService.GetPalettesJson(Query(context, "cpu", "Snes"), Query(context, "live", "0") == "1", "sprite", 7);
+						break;
 					case "/api/gfx/sprites.json":
 						result = GfxService.GetSpritesJson(Query(context, "cpu", "Snes"));
 						break;
@@ -330,6 +387,48 @@ namespace Mesen.LiveApi
 						break;
 					case "/api/gfx/mapload/report":
 						result = LiveDataService.GetMapLoadReport(Query(context, "compact", "0") == "1");
+						break;
+					case "/api/gfx/mapload/verify":
+						result = LiveDataService.MapLoadVerify(Query(context, "addr", ""));
+						break;
+					case "/api/gfx/mapload/raw":
+						result = LiveDataService.MapLoadRaw((Int32)ParseUInt(Query(context, "count", "200")));
+						break;
+					case "/api/gfx/mapload/wramchain":
+						result = LiveDataService.MapLoadWramChain(Query(context, "addr", "0x10600"));
+						break;
+					case "/api/gfx/mapload/cpucgram":
+						result = LiveDataService.MapLoadCpuCgram();
+						break;
+					case "/api/gfx/mapload/probe":
+						result = LiveDataService.MapLoadProbe(Query(context, "addrs", "0x33EED4,0x349100,0x1FC1E6,0x2B9000,0x2DC4CC,0x32D29B,0x2BBAFB,0x348FF6,0x33E987"));
+						break;
+					case "/api/gfx/mapload/autocapture":
+						result = LiveDataService.MapLoadAutoCapture();
+						break;
+					case "/api/gfx/mapload/autocapture-status":
+						result = LiveDataService.MapLoadAutoCaptureStatus();
+						break;
+					case "/api/gfx/mapload/rawburst":
+						result = LiveDataService.MapLoadRawBurst();
+						break;
+					case "/api/gfx/mapload/dmasrc":
+						result = LiveDataService.MapLoadDmaSrc();
+						break;
+					case "/api/gfx/mapload/wramwrite":
+						result = LiveDataService.MapLoadWramWrite(Query(context, "lo", "0x10600"), Query(context, "hi", "0x10800"));
+						break;
+					case "/api/gfx/mapload/targetrom":
+						result = LiveDataService.MapLoadTargetRom(Query(context, "target", "cgram"), Query(context, "addr", "0x0"), Query(context, "words", "0x100"));
+						break;
+					case "/api/gfx/mapload/palettematch":
+						result = LiveDataService.MapLoadPaletteMatch();
+						break;
+					case "/api/gfx/mapload/wramsource":
+						result = LiveDataService.MapLoadWramSource(Query(context, "frame", "0"));
+						break;
+					case "/api/gfx/mapload/wrammap":
+						result = LiveDataService.MapLoadWramMap();
 						break;
 					case "/api/gfx/screen":
 						await WritePng(context, GfxService.GetScreenPng(Query(context, "cpu", "Snes"), Query(context, "layers", "all"), Query(context, "sprites", "1") == "1", Query(context, "bg", "Black")));

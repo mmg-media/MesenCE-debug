@@ -21,6 +21,46 @@ uint32_t SnesMapLoadLog::Count = 0;
 bool SnesMapLoadLog::Enabled = false;
 uint32_t SnesMapLoadLog::LastRomRead = 0xFFFFFFFF;
 uint32_t SnesMapLoadLog::LastWramRead = 0xFFFFFFFF;
+uint32_t SnesMapLoadLog::LastVramFrame = 0;
+uint32_t SnesMapLoadLog::VramBurst = 0;
+bool SnesMapLoadLog::AutoStopped = false;
+bool SnesMapLoadLog::AutoCapture = false;
+uint64_t SnesMapLoadLog::AutoCaptureBurstStartFrame = 0;
+uint32_t SnesMapLoadLog::AutoCaptureBurstVram = 0;
+uint64_t SnesMapLoadLog::AutoCaptureLastBurstStartFrame = 0;
+uint64_t SnesMapLoadLog::AutoCaptureLastBurstEndFrame = 0;
+bool SnesMapLoadLog::AutoCaptureHasBurst = false;
+bool SnesMapLoadLog::LiveTracking = false;
+uint32_t SnesMapLoadLog::WramRomByte[0x20000] = {};
+SnesMapLoadLog::RomReadBlock SnesMapLoadLog::RomReadLog[SnesMapLoadLog::RomReadLogSize] = {};
+uint32_t SnesMapLoadLog::RomReadHead = 0;
+uint32_t SnesMapLoadLog::RomReadCount = 0;
+uint32_t SnesMapLoadLog::RomReadPendingAddr = 0;
+uint32_t SnesMapLoadLog::RomReadPendingLen = 0;
+uint8_t SnesMapLoadLog::RomReadPendingTarget = 0;
+uint32_t SnesMapLoadLog::RomReadPendingFrame = 0;
+uint8_t SnesMapLoadLog::RomReadBitmap[SnesMapLoadLog::RomReadBitmapSize] = {};
+uint8_t SnesMapLoadLog::RomTargetBitmap[SnesMapLoadLog::RomTargetBitmapSize] = {};
+SnesMapLoadLog::DmaSrcEntry SnesMapLoadLog::DmaSrcLog[SnesMapLoadLog::DmaSrcLogSize] = {};
+uint32_t SnesMapLoadLog::DmaSrcHead = 0;
+uint32_t SnesMapLoadLog::DmaSrcCount = 0;
+SnesMapLoadLog::WramWriteEntry SnesMapLoadLog::WramWriteLog[SnesMapLoadLog::WramWriteLogSize] = {};
+uint32_t SnesMapLoadLog::WramWriteHead = 0;
+uint32_t SnesMapLoadLog::WramWriteCount = 0;
+uint32_t SnesMapLoadLog::VramRomWord[0x8000] = {};
+uint32_t SnesMapLoadLog::CgramRomWord[0x100] = {};
+int8_t SnesMapLoadLog::WramRomVote[0x20000] = {};
+SnesMapLoadLog::RomReadRingEntry SnesMapLoadLog::RomReadRing[SnesMapLoadLog::RomReadRingSize] = {};
+uint32_t SnesMapLoadLog::RomReadRingHead = 0;
+uint32_t SnesMapLoadLog::RomReadRingCount = 0;
+uint8_t SnesMapLoadLog::PendingTargetType = 0;
+uint32_t SnesMapLoadLog::PendingTargetAddr = 0;
+uint32_t SnesMapLoadLog::PendingSourceAddr = 0;
+uint8_t SnesMapLoadLog::PendingSourceMem = 0;
+uint32_t SnesMapLoadLog::PendingLen = 0;
+uint32_t SnesMapLoadLog::PendingPc = 0;
+uint32_t SnesMapLoadLog::PendingFrame = 0;
+int32_t SnesMapLoadLog::PendingCycle = 0;
 
 
 // R3.1: WRAM/register write log - ring-buffer storage + run-coalescing state
@@ -374,4 +414,13 @@ void SnesTracker::AppendInterrupt(uint8_t type, uint32_t frame, int32_t cycle, u
 	}
 	Append(type, frame, cycle, pc, 0, 0, 0, 0);
 }
+
+
+
+
+
+
+
+
+
 

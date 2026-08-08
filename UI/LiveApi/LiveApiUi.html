@@ -21,7 +21,7 @@ h2{font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--dim
 .topbar{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:10px;}
 .topbar .title{font-size:15px; font-weight:bold;}
 .topbar .controls{display:flex; gap:6px; flex-wrap:wrap; margin-left:auto;}
-.grid{display:grid; grid-template-columns:300px minmax(360px,1fr) minmax(420px,1.2fr); gap:10px; align-items:start;}
+.grid{display:grid; grid-template-columns:380px minmax(360px,1fr) minmax(420px,1.2fr); gap:10px; align-items:start;}
 @media(max-width:1100px){ .grid{grid-template-columns:1fr;} }
 .panel{background:var(--panel); border:1px solid var(--border); border-radius:5px; padding:10px; margin-bottom:10px;}
 .row{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:6px;}
@@ -55,7 +55,7 @@ th{color:var(--dim); font-weight:normal;}
 #statusText{font-weight:bold;}
 .empty{color:var(--dim); font-style:italic;}
 input[type=text],input[type=number],select{min-width:0;}
-.w50{width:70px;} .w90{width:100px;}
+.w50{width:70px;} .w90{width:100px;} .w110{width:125px;}
 .ipad{width:38px;height:32px;padding:0;font-size:12px;margin:1px;border-radius:6px;user-select:none;}
 .ipad:active{background:var(--accent); color:#000;}
 
@@ -119,12 +119,20 @@ input[type=text],input[type=number],select{min-width:0;}
 		</div>
 		<div class="panel" id="ppuPanel">
 			<h2 data-i18n="panelPpu">PPU</h2>
-			<div class="gridrow"><label data-i18n="lblScanline">Scanline</label><span id="ppuScanline">-</span><label data-i18n="lblCycle">Cycle</label><span id="ppuCycle">-</span></div>
-			<div class="gridrow"><label data-i18n="lblFrame">Frame</label><span id="ppuFrame">-</span><label data-i18n="lblForcedBlank">ForcedBlank</label><span id="ppuForcedBlank">-</span></div>
-			<div class="gridrow"><label data-i18n="lblBgMode">BG Mode</label><span id="ppuBgMode">-</span><label data-i18n="lblBright">Bright</label><span id="ppuBrightness">-</span></div>
-			<div class="gridrow"><label data-i18n="lblLayers">Layers M/S</label><span id="ppuMainLayers">-</span><span id="ppuSubLayers">-</span></div>
-			<div class="gridrow"><label data-i18n="lblVramAddr">VRAM Addr</label><span id="ppuVramAddr">-</span><label data-i18n="lblOamAddr">OAM Addr</label><span id="ppuOamAddr">-</span></div>
-			<div class="gridrow"><label data-i18n="lblCgramAddr">CG RAM Addr</label><span id="ppuCgramAddr">-</span><label data-i18n="lblMode7">Mode7</label><span id="ppuMode7">-</span></div>
+			<table class="kv">
+				<tr><th data-i18n="lblBgMode">BG Mode</th><td id="ppuBgMode">-</td></tr>
+				<tr><th data-i18n="lblScanline">Scanline</th><td id="ppuScanline">-</td></tr>
+				<tr><th data-i18n="lblCycle">Cycle</th><td id="ppuCycle">-</td></tr>
+				<tr><th data-i18n="lblFrame">Frame</th><td id="ppuFrame">-</td></tr>
+				<tr><th data-i18n="lblForcedBlank">ForcedBlank</th><td id="ppuForcedBlank">-</td></tr>
+				<tr><th data-i18n="lblBright">Bright</th><td id="ppuBrightness">-</td></tr>
+				<tr><th data-i18n="lblMainLayers">Main Layers</th><td id="ppuMainLayers">-</td></tr>
+				<tr><th data-i18n="lblSubLayers">Sub Layers</th><td id="ppuSubLayers">-</td></tr>
+				<tr><th data-i18n="lblVramAddr">VRAM Addr</th><td id="ppuVramAddr">-</td></tr>
+				<tr><th data-i18n="lblOamAddr">OAM Addr</th><td id="ppuOamAddr">-</td></tr>
+				<tr><th data-i18n="lblCgramAddr">CG RAM Addr</th><td id="ppuCgramAddr">-</td></tr>
+				<tr><th data-i18n="lblMode7">Mode7</th><td id="ppuMode7">-</td></tr>
+			</table>
 		</div>
 		<div class="panel" id="inputPanel">
 			<h2 data-i18n="panelInput">Input (Fernsteuerung)</h2>
@@ -181,7 +189,7 @@ input[type=text],input[type=number],select{min-width:0;}
 				<select id="memType"></select>
 				<label data-i18n="lblStart">Start</label><input type="text" id="memStart" value="0" class="w50">
 				<label data-i18n="lblLen">Len</label><input type="text" id="memLen" value="0x100" class="w50">
-				<label data-i18n="lblCpu">CPU</label><select id="memCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option><option>NecDsp</option><option>Cx4</option><option>St018</option></select>
+				<label data-i18n="lblCpu">CPU</label><select id="memCpu"><option value="Snes" selected>SNES</option><option value="Spc">SPC</option><option value="Sa1">SA1</option><option value="Gsu">GSU</option><option value="NecDsp">NEC DSP</option><option value="Cx4">CX4</option><option value="St018">ST018</option></select>
 				<button id="btnMemRead" data-i18n="btnRead">Read</button>
 				<label style="min-width:0;"><input type="checkbox" id="memLive"> <span data-i18n="lblLive">live</span></label>
 			</div>
@@ -196,7 +204,7 @@ input[type=text],input[type=number],select{min-width:0;}
 		<div class="panel" id="bpPanel">
 			<h2 data-i18n="panelBp">Breakpoints</h2>
 			<div class="row">
-				<label data-i18n="lblCpu">CPU</label><select id="bpCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option><option>NecDsp</option><option>Cx4</option><option>St018</option></select>
+				<label data-i18n="lblCpu">CPU</label><select id="bpCpu"><option value="Snes" selected>SNES</option><option value="Spc">SPC</option><option value="Sa1">SA1</option><option value="Gsu">GSU</option><option value="NecDsp">NEC DSP</option><option value="Cx4">CX4</option><option value="St018">ST018</option></select>
 				<label data-i18n="lblMem">Mem</label><select id="bpMemType"></select>
 			</div>
 			<div class="row">
@@ -225,7 +233,7 @@ input[type=text],input[type=number],select{min-width:0;}
 
 		<div class="panel tabpanel active" id="tab-trace">
 			<div class="row">
-				<label data-i18n="lblCpu">CPU</label><select id="traceCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
+				<label data-i18n="lblCpu">CPU</label><select id="traceCpu"><option value="Snes" selected>SNES</option><option value="Spc">SPC</option><option value="Sa1">SA1</option><option value="Gsu">GSU</option></select>
 				<label data-i18n="lblCount">Zeilenzahl</label><input type="text" id="traceCount" value="200" class="w50">
 				<label><input type="checkbox" id="traceEnable"> <span data-i18n="lblTraceEnable">Trace aktivieren</span></label>
 				<label><input type="checkbox" id="traceAuto" checked> <span data-i18n="lblAutoScroll">auto-scroll</span></label>
@@ -235,7 +243,7 @@ input[type=text],input[type=number],select{min-width:0;}
 
 		<div class="panel tabpanel" id="tab-disasm">
 			<div class="row">
-				<label data-i18n="lblCpu">CPU</label><select id="disasmCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
+				<label data-i18n="lblCpu">CPU</label><select id="disasmCpu"><option value="Snes" selected>SNES</option><option value="Spc">SPC</option><option value="Sa1">SA1</option><option value="Gsu">GSU</option></select>
 				<label data-i18n="lblAddr">Addr</label><input type="text" id="disasmAddr" value="0x8000" class="w90">
 				<label data-i18n="lblCount">Zahl</label><input type="text" id="disasmCount" value="24" class="w50">
 				<button id="btnDisasmPrev">&lt;</button><button id="btnDisasmRead" data-i18n="btnRead">Read</button><button id="btnDisasmNext">&gt;</button>
@@ -246,7 +254,7 @@ input[type=text],input[type=number],select{min-width:0;}
 
 		<div class="panel tabpanel" id="tab-events">
 			<div class="row">
-				<label data-i18n="lblCpu">CPU</label><select id="eventsCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select>
+				<label data-i18n="lblCpu">CPU</label><select id="eventsCpu"><option value="Snes" selected>SNES</option><option value="Spc">SPC</option><option value="Sa1">SA1</option><option value="Gsu">GSU</option></select>
 				<label><input type="checkbox" id="eventsAuto" checked> <span data-i18n="lblAutoRefresh">auto-refresh</span></label>
 			</div>
 			<div class="log" id="eventsView"></div>
@@ -267,7 +275,7 @@ input[type=text],input[type=number],select{min-width:0;}
 			<div class="log" id="vramLogView" style="height:180px;overflow:auto;"><span class="empty" data-i18n="vramLoading">VRAM-Writes laden …</span></div>
 			<h2 style="margin-top:8px;" data-i18n="wramTitle">WRAM/Register-Writes (R3.1, PC + Run)</h2>
 			<div class="row">
-				<label data-i18n="lblMem">Mem</label><select id="wramLogMem" class="w50"><option selected>SnesWorkRam</option><option>SnesRegister</option><option>SnesSaveRam</option><option>SnesVideoRam</option></select>
+				<label data-i18n="lblMem">Mem</label><select id="wramLogMem" class="w110"><option value="SnesWorkRam" selected>SNESWorkRam</option><option value="SnesRegister">SNESRegister</option><option value="SnesSaveRam">SNESSaveRam</option><option value="SnesVideoRam">SNESVideoRam</option></select>
 				<label data-i18n="lblStart">start</label><input type="text" id="wramLogStart" value="0x4000" class="w50">
 				<label data-i18n="lblEnd">end</label><input type="text" id="wramLogEnd" value="0x40FF" class="w50">
 				<label data-i18n="lblMinLen">minLen</label><input type="text" id="wramLogMinLen" value="1" class="w50">
@@ -290,14 +298,14 @@ input[type=text],input[type=number],select{min-width:0;}
 		</div>
 
 		<div class="panel tabpanel" id="tab-callstack">
-			<div class="row"><label data-i18n="lblCpu">CPU</label><select id="csCpu"><option>Snes</option><option>Spc</option><option>Sa1</option><option>Gsu</option></select><button id="btnCsRefresh" data-i18n="btnRefresh">Refresh</button></div>
+			<div class="row"><label data-i18n="lblCpu">CPU</label><select id="csCpu"><option value="Snes" selected>SNES</option><option value="Spc">SPC</option><option value="Sa1">SA1</option><option value="Gsu">GSU</option></select><button id="btnCsRefresh" data-i18n="btnRefresh">Refresh</button></div>
 			<div class="log" id="csView"></div>
 		</div>
 
 		<div class="panel tabpanel" id="tab-tracker">
 			<h2 data-i18n="trkTitle">Universal-Tracker (Trigger → Ablauf-Log)</h2>
 			<div class="row">
-				<label data-i18n="lblMem">Mem</label><select id="trkMem" class="w50"><option selected>SnesWorkRam</option><option>SnesRegister</option><option>SnesVideoRam</option><option>SnesSaveRam</option><option>SnesPrgRom</option></select>
+				<label data-i18n="lblMem">Mem</label><select id="trkMem" class="w110"><option value="SnesWorkRam" selected>SNESWorkRam</option><option value="SnesRegister">SNESRegister</option><option value="SnesVideoRam">SNESVideoRam</option><option value="SnesSaveRam">SNESSaveRam</option><option value="SnesPrgRom">SNESPrgRom</option></select>
 				<label data-i18n="lblStart">start</label><input type="text" id="trkStart" value="0x4000" class="w50">
 				<label data-i18n="lblEnd">end</label><input type="text" id="trkEnd" value="0x40FF" class="w50">
 				<label data-i18n="lblValue">Wert</label><input type="text" id="trkValue" value="" class="w50" data-i18n-ph="trkValuePh" placeholder="leer = egal">
@@ -405,11 +413,51 @@ input[type=text],input[type=number],select{min-width:0;}
 				<div id="gfxOverlayInfo" class="empty" style="display:none;"></div>
 				<div class="row" style="margin-top:6px;">
 					<button id="btnMapLoadArm" data-i18n="btnMapLoadArm">Map-Load: Erfassen</button>
+					<button id="btnMapLoadAuto" class="primary" data-i18n="btnMapLoadAuto">Map-Load: Auto</button>
 					<button id="btnMapLoadReport" data-i18n="btnMapLoadReport">Report</button>
+					<button id="btnMapLoadVerify" data-i18n="btnMapLoadVerify">Verifizieren</button>
+					<input type="text" id="mapLoadVerifyAddrs" value="0x33EED4,0x2BBAFB,0x1FC1E6" style="flex:1; min-width:220px;" data-i18n-ph="mapLoadVerifyPh" placeholder="0x-Adressen, kommagetrennt">
 					<label style="min-width:0;"><input type="checkbox" id="mapLoadCompact" checked> <span data-i18n="mapLoadCompact">Kompakt</span></label>
 					<span id="mapLoadStatus" class="empty"></span>
 				</div>
+				<div class="row">
+					<button id="btnMapLoadPalette" title="CGRAM-Inhalt mit ROM-Kandidaten vergleichen">Palette-Match</button>
+					<button id="btnPalettes" title="CGRAM-Paletten grafisch anzeigen">Paletten anzeigen</button>
+					<button id="btnPalettesRefresh" title="Animierte Paletten automatisch aktualisieren" style="display:none;">Refresh: aus</button>
+					<button id="btnMapLoadReverse" title="Reverse-Lookup: Ziel-Bereich -> ROM-Quelle">Reverse-Lookup</button>
+					<button id="btnMapLoadAutoStatus" title="Auto-Capture-Status anzeigen">Auto-Status</button>
+					<select id="mapLoadReverseTarget" style="width:110px;">
+						<option value="cgram">CGRAM (Palette)</option>
+						<option value="vram0">VRAM 0x0000</option>
+						<option value="vram1f">VRAM 0x1F00</option>
+						<option value="vram38">VRAM 0x3800</option>
+						<option value="vram40">VRAM 0x4000</option>
+						<option value="vram50">VRAM 0x5000</option>
+					</select>
+					<span id="mapLoadSubStatus" class="empty"></span>
+				</div>
 				<pre id="mapLoadReport" style="font-size:11px; white-space:pre-wrap; color:var(--dim); display:none;"></pre>
+				<div id="palettesPanel" style="display:none; margin-top:8px; overflow:auto; max-height:600px;">
+					<div class="row"><label style="min-width:0;"><input type="checkbox" id="palettesLive" checked> <span title="ROM-Quellen der Paletten dauerhaft verfolgen (kein Report nötig)">Quellen live</span></label><span id="palettesInfo" class="empty"></span></div>
+					<div id="palettesGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px,1fr)); gap:8px;"></div>
+					<div id="palettesSummary" style="margin-top:12px; border-top:1px solid var(--border); padding-top:8px;">
+						<h2 style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); margin-bottom:6px;">Paletten-Zusammenfassung (ROM-Bereiche)</h2>
+						<table style="width:100%; font-size:11px;">
+							<thead><tr><th style="text-align:left;">Palette</th><th style="text-align:left;">CGRAM</th><th style="text-align:left;">ROM-Quelle</th></tr></thead>
+							<tbody id="palettesSummaryBody"></tbody>
+						</table>
+						<div style="margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+							<div style="background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:6px;">
+								<b style="color:var(--text); font-size:11px;">BG 0-7 gesamt</b>
+								<div id="palettesSummaryBg" style="color:var(--dim); font-size:11px; margin-top:2px;"></div>
+							</div>
+							<div style="background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:6px;">
+								<b style="color:var(--text); font-size:11px;">Sprite 0-7 gesamt</b>
+								<div id="palettesSummarySprite" style="color:var(--dim); font-size:11px; margin-top:2px;"></div>
+							</div>
+						</div>
+					</div>
+				</div>
 			</div>
 			<div class="panel" style="background:var(--panel2); margin-bottom:0;">
 				<h2 data-i18n="lblPython">Python-Export (Stitching)</h2>
@@ -649,7 +697,8 @@ function renderCpu(c){
 		["A",fmtHex(c.a,4)],["X",fmtHex(c.x,4)],["Y",fmtHex(c.y,4)],
 		["S",fmtHex(c.sp,4)],["D",fmtHex(c.d,4)],["PS",fmtHex(c.ps,2)]
 	];
-	let h="<tr>"+rows.map(r=>`<td>${r[0]}</td><td>${r[1]}</td>`).join("")+"</tr>";
+	//Tabelle: eine Register-Zeile je Zeile, Name|Wert (tabellarisch)
+	let h=rows.map(r=>`<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join("");
 	$("cpuRegs").innerHTML=h;
 	const bits={N:0x80,V:0x40,M:0x20,X:0x10,D:0x08,I:0x04,Z:0x02,C:0x01};
 	document.querySelectorAll("#cpuPanel .flag").forEach(f=>{
@@ -666,18 +715,22 @@ function renderPpu(p){
 	$("ppuForcedBlank").textContent=p.forcedBlank?"ja":"nein";
 	$("ppuBgMode").textContent=p.bgMode;
 	$("ppuBrightness").textContent=p.screenBrightness;
-	$("ppuMainLayers").textContent="M:"+layerStr(p.mainScreenLayers)+"  S:"+layerStr(p.subScreenLayers);
+	$("ppuMainLayers").textContent=layerStr(p.mainScreenLayers);
+	$("ppuSubLayers").textContent=layerStr(p.subScreenLayers);
 	$("ppuVramAddr").textContent="$"+fmtHex(p.vramAddress,4);
 	$("ppuOamAddr").textContent="$"+fmtHex(p.oamRamAddress,4);
 	$("ppuCgramAddr").textContent="$"+fmtHex(p.cgramAddress,2);
-	$("ppuMode7").textContent=p.mode7?"$"+fmtHex(p.mode7.hScroll,4)+"/"+fmtHex(p.mode7.vScroll,4):"-";
+	//Mode7-Felder nur anzeigen, wenn der BG-Mode tatsächlich 7 ist
+	const m7=(p.bgMode===7)&&p.mode7;
+	$("ppuMode7").textContent=m7?"$"+fmtHex(p.mode7.hScroll,4)+"/"+fmtHex(p.mode7.vScroll,4):"-";
 }
 function layerStr(bits){ const names=["1","2","3","4","O"]; let s=""; for(let i=0;i<5;i++){ s+=names[i]+":"+((bits&(1<<i))?"1":"0")+" "; } return s.trim(); }
 
 /* ---- Memory ---- */
+function memTypeLabel(t){ return t.replace(/^Snes/,"SNES").replace(/^Spc/,"SPC").replace(/^Sa1/,"SA1").replace(/^Gsu/,"GSU"); }
 function populateSelects(){
-	$("memType").innerHTML=MEM_TYPES.map(t=>`<option>${t}</option>`).join("");
-	$("bpMemType").innerHTML=MEM_TYPES.map(t=>`<option>${t}</option>`).join("");
+	$("memType").innerHTML=MEM_TYPES.map(t=>`<option value="${t}">${memTypeLabel(t)}</option>`).join("");
+	$("bpMemType").innerHTML=MEM_TYPES.map(t=>`<option value="${t}">${memTypeLabel(t)}</option>`).join("");
 }
 function memParams(){ return {type:$("memType").value,start:parseInt($("memStart").value,16)||0,length:parseInt($("memLen").value,16)||0x100}; }
 
@@ -1208,34 +1261,47 @@ function gfxUrl(){
 
 function formatMapLoadReport(d){
 	if(d.compact){
+		//Compact: nur die Adress-Listen, bündig
 		let out="";
-		const cat=(arr,label)=>{ if((arr||[]).length){ out+=label+":\n"+arr.map(a=>"  "+a).join("\n")+"\n\n"; } };
-		cat(d.tilemap, d.bgMode===7 ? "Tilemap (Mode7 - ganze Karte)" : "Tilemap");
-		cat(d.tiles,"Tiles");
-		cat(d.palette,"Palette");
+		const lines=(arr,label)=>{ if((arr||[]).length){ out+=label+": "+arr.join(" ")+"\n"; } };
+		if(d.bgMode===7) out+="Mode7\n";
+		lines(d.palette,"P");
+		lines(d.tilemap,"T");
+		lines(d.tiles,"G");
+		if((d.romReads||[]).length){
+			out+="ROM: "+(d.romReads).map(b=>b.start).join(" ")+"\n";
+		}
 		return out.trim()||t("mapLoadNoData");
 	}
+	//Normal: Detail-Ansicht pro Quelle (source, via, len, writes, VRAM-Zielbereich)
 	let out="";
+	if(d.bgMode===7) out+=t("mapLoadBgMode")+"\n\n";
 	const rows=(arr,label)=>{
-		let s="";
-		(arr||[]).forEach(g=>{
-			const targets=(g.targets||[]);
-			const n=targets.length;
+		if(!(arr||[]).length) return;
+		out+=label+":\n";
+		arr.forEach(g=>{
 			const hex=v=>"$"+v.toString(16).toUpperCase();
 			let trg="";
 			if(g.targetMin!==undefined && g.targetMax!==undefined && g.targetMin!==g.targetMax){
 				trg="  vram="+hex(g.targetMin)+"-"+hex(g.targetMax);
-			} else if(n){
-				trg="  vram="+hex(Math.min(...targets));
+			} else if(g.targetMin!==undefined){
+				trg="  vram="+hex(g.targetMin);
 			}
-			s+=label+"  "+g.source+"  ["+g.via+", len="+g.length+", "+n+"x]"+trg+"\n";
+			out+="  "+g.source+(g.via?(" ["+g.via+"]"):"")+"  [len="+g.length+", "+(g.writes||0)+"x]"+trg+"\n";
 		});
-		return s;
+		out+="\n";
 	};
-	if((d.tilemap||[]).length) out+="Tilemap (Mode7: ganze Karte):\n"+rows(d.tilemap,"  ")+"\n";
-	if((d.tiles||[]).length) out+="Tiles:\n"+rows(d.tiles,"  ")+"\n";
-	if((d.palette||[]).length) out+="Palette:\n"+rows(d.palette,"  ")+"\n";
+	rows(d.tilemap, t("mapLoadTilemap"));
+	rows(d.tiles, t("mapLoadTiles"));
+	rows(d.palette, t("mapLoadPalette"));
+	if((d.romReads||[]).length){
+		out+="ROM-Offset-Blöcke (direkt aus dem ROM-File extrahieren):\n";
+		const blk=(d.romReads||[]).slice().sort((a,b)=>b.length-a.length);
+		blk.forEach(b=>{ out+="  "+b.start+" - "+b.end+"  ["+b.length+" B]\n"; });
+		out+="\n";
+	}
 	if(!out) out=t("mapLoadNoData");
+	out+=t("mapLoadVerifyNote")+"\n";
 	return out;
 }
 
@@ -1283,7 +1349,7 @@ async function refreshGfxOverlayInfo(){
 			info.textContent="Mode7 hScroll="+d.hScroll+" vScroll="+d.vScroll+" center=("+d.centerX+","+d.centerY+") matrix=["+d.matrix.join(",")+"] corners: "+c;
 			info.style.display="block";
 		} else {
-			info.textContent="Mode7 (bgMode="+d.bgMode+") - nicht aktiv";
+			info.textContent=t("mode7Inactive").replace("{bgMode}",d.bgMode);
 			info.style.display="block";
 		}
 	}catch(e){
@@ -1382,12 +1448,202 @@ function bindGfx(){
 		$("mapLoadStatus").textContent=d&&d.ok?t("mapLoadArmed"):t("mapLoadError");
 		$("mapLoadReport").style.display="none";
 	};
+	$("btnMapLoadAuto").onclick=async ()=>{
+		const r=await fetch("api/gfx/mapload/autocapture",{method:"POST"});
+		const d=await r.json();
+		$("mapLoadStatus").textContent=d&&d.ok?(t("mapLoadAutoOn")):t("mapLoadError");
+		$("mapLoadReport").style.display="none";
+	};
+	$("btnMapLoadPalette").onclick=async ()=>{
+		const d=await fetch("api/gfx/mapload/palettematch").then(r=>r.json());
+		if(!d||d.error){ $("mapLoadReport").textContent=t("mapLoadError"); $("mapLoadReport").style.display="block"; return; }
+		let out="Palette-Match: CGRAM-Inhalt vs. ROM-Kandidaten\n";
+		out+="CGRAM (32B): "+d.cgramBytes+"\n\n";
+		if(!d.candidates||!d.candidates.length){ out+="(keine Kandidaten)"; }
+		else{ (d.candidates||[]).forEach(c=>{ out+="  "+c.cand+"  [match="+c.matchBytes+"/32, ratio="+c.matchRatio+"]\n"; }); }
+		$("mapLoadReport").textContent=out;
+		$("mapLoadReport").style.display="block";
+	};
+	let palettesTimer=null;
+	let palettesCells=[];  //[index] -> DOM element (color tile)
+	let prevPaletteRgb=[];  //last seen color per index - webui detects animation locally
+	let animatedPaletteOnce={};  //index -> true once a color was seen changing
+	let paletteBusy=false;
+	function paletteIndex(p,c,cpp){ return p*cpp+c; }
+	async function renderPalettes(){
+		if(paletteBusy) return;  //skip if the previous request is still running (no pile-up at 60fps)
+		paletteBusy=true;
+		try{
+		const d=await fetch("api/gfx/palettes?live="+($("palettesLive").checked?1:0)).then(r=>r.json());
+		const panel=$("palettesPanel"), grid=$("palettesGrid");
+		if(!d||!d.palettes){ return; }
+		$("palettesInfo").textContent="CGRAM: "+d.colorCount+" Farben / "+d.paletteCount+" Paletten à "+d.colorsPerPalette+" ("+d.bgPaletteCount+" BG + "+(d.paletteCount-d.bgPaletteCount)+" Sprites)";
+		//build the flat color list + detect animation by comparing to the previous poll
+		const cpp=d.colorsPerPalette;
+		const curRgb=[];
+		const anim=[];
+		(d.palettes||[]).forEach(p=>{
+			(p.colors||[]).forEach((c,ci)=>{
+				const idx=paletteIndex(p.index,ci,cpp);
+				curRgb[idx]=c.hex;
+				if(prevPaletteRgb.length && prevPaletteRgb[idx]!==undefined && prevPaletteRgb[idx]!==c.hex){ animatedPaletteOnce[idx]=true; }
+				anim[idx]=!!animatedPaletteOnce[idx];
+			});
+		});
+		if(!grid.childNodes.length){
+				(d.palettes||[]).forEach(p=>{
+					const box=document.createElement("div");
+					box.style.cssText="background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:6px;";
+					const head=document.createElement("div");
+					head.style.cssText="color:var(--dim); font-size:11px; margin-bottom:4px; display:flex; justify-content:space-between;";
+					const nameEl=document.createElement("b");
+					nameEl.style.color="var(--text)";
+					nameEl.style.cursor="help";
+					const isAnimP=p.hasMultipleSources||p.animated;
+					nameEl.textContent=(p.type==="bg"?"BG ":"Sprite ")+p.slot+(isAnimP?" ⚡":"");
+					if(isAnimP){ nameEl.style.color="var(--flash)"; }
+					const srcText=(p.sources&&p.sources.length)?p.sources.join(", "):"(Quelle nicht erfasst - Kartenwechsel nötig)";
+					nameEl.title="Palette "+p.type+" "+p.slot+"\nCGRAM "+(p.cgram||"0x"+((p.index*16*2)>>>0).toString(16).toUpperCase().padStart(4,"0"))+" bis 0x"+((p.index*16*2+30)>>>0).toString(16).toUpperCase().padStart(4,"0")+"\n\nROM-Quelle(n):\n"+srcText+(isAnimP?"\n\n⚡ Animierte Palette: mehrere Quellen (Basis + Effekt-Animation)":"")+"\n\n(Die Quelle wird beim Kartenwechsel über die WRAM/CPU/PPU-Kette ermittelt)";
+					const cgEl=document.createElement("span");
+					cgEl.textContent="CGRAM "+(p.cgram||"0x"+((p.index*16*2)>>>0).toString(16).toUpperCase().padStart(4,"0"));
+					head.appendChild(nameEl);
+					head.appendChild(cgEl);
+					box.appendChild(head);
+					const row=document.createElement("div");
+					row.style.cssText="display:flex; gap:2px;";
+					(p.colors||[]).forEach((c,ci)=>{
+						const cell=document.createElement("div");
+						cell.style.cssText="width:22px; height:22px; background:"+c.hex+"; border-radius:2px; cursor:pointer; border:1px solid #000;";
+						const idx=paletteIndex(p.index,ci,cpp);
+						const addr=0x0000+idx*2;
+						cell.title="CGRAM $"+addr.toString(16).toUpperCase().padStart(4,"0")+" (Wort "+idx+")  "+c.hex+"\nPalette #"+p.index+" "+p.type+" Slot "+p.slot+" Farbe "+ci;
+						if(anim[idx]){ cell.style.outline="2px solid var(--flash)"; cell.style.outlineOffset="-1px"; }
+						palettesCells[idx]=cell;
+						row.appendChild(cell);
+					});
+					box.appendChild(row);
+					grid.appendChild(box);
+				});
+		} else {
+			//update only the tile backgrounds (animated palettes change live)
+			(d.palettes||[]).forEach(p=>{
+				(p.colors||[]).forEach((c,ci)=>{
+					const idx=paletteIndex(p.index,ci,cpp);
+					const cell=palettesCells[idx];
+					if(cell){ cell.style.background=c.hex; cell.title="CGRAM $"+(idx*2).toString(16).toUpperCase().padStart(4,"0")+" (Wort "+idx+")  "+c.hex+"\nPalette #"+p.index+" "+p.type+" Slot "+p.slot+" Farbe "+ci; cell.style.outline=(anim[idx]?"2px solid var(--flash)":""); cell.style.outlineOffset=(anim[idx]?"-1px":""); }
+				});
+			});
+		}
+		//--- Zusammenfassung: ROM-Bereiche pro Palette + BG/Sprite-Gesamt ---
+		try{
+			const tbody=$("palettesSummaryBody");
+			tbody.innerHTML="";
+			const bgRanges=[], spriteRanges=[];
+			(d.palettes||[]).forEach(p=>{
+				const tr=document.createElement("tr");
+				const tdName=document.createElement("td");
+				tdName.textContent=(p.type==="bg"?"BG ":"Sprite ")+p.slot;
+				tdName.style.color="var(--text)";
+				const isAnim=p.hasMultipleSources||p.animated;
+				if(isAnim){ tr.style.background="rgba(240,208,80,0.08)"; tdName.style.color="var(--flash)"; tdName.textContent+="  ⚡"; }
+				const tdCg=document.createElement("td");
+				tdCg.textContent=p.cgram||("0x"+((p.index*16*2)>>>0).toString(16).toUpperCase().padStart(4,"0"));
+				tdCg.style.color="var(--dim)";
+				const tdSrc=document.createElement("td");
+				tdSrc.textContent=(p.sources&&p.sources.length)?p.sources.join(", "):"-";
+				tdSrc.style.color=(p.sources&&p.sources.length)?((isAnim)?"var(--flash)":"var(--ok)"):"var(--dim)";
+				if(isAnim){ tdSrc.title="Animierte Palette: mehrere Quellen (Basis + Effekt)"; }
+				tr.appendChild(tdName); tr.appendChild(tdCg); tr.appendChild(tdSrc);
+				tbody.appendChild(tr);
+				const target=p.type==="bg"?bgRanges:spriteRanges;
+				(p.sources||[]).forEach(s=>{
+					const m=s.match(/0x([0-9A-Fa-f]{6})/);
+					if(m) target.push(parseInt(m[1],16));
+				});
+			});
+			//Gesamtbereiche: min-max der Quellen + animierte Paletten zählen
+			const fmtRange=arr=>{
+				if(!arr.length) return "(keine Quellen)";
+				let min=Math.min.apply(null,arr), max=Math.max.apply(null,arr);
+				return "0x"+min.toString(16).toUpperCase().padStart(6,"0")+" - 0x"+max.toString(16).toUpperCase().padStart(6,"0");
+			};
+			const countAnim=type=>{
+				let n=0;
+				(d.palettes||[]).forEach(p=>{ if(p.type===type && (p.hasMultipleSources||p.animated)) n++; });
+				return n;
+			};
+			const bgAnim=countAnim("bg"), spAnim=countAnim("sprite");
+			$("palettesSummaryBg").textContent=fmtRange(bgRanges)+(bgAnim?("   ("+bgAnim+" animiert ⚡)"):"");
+			$("palettesSummarySprite").textContent=fmtRange(spriteRanges)+(spAnim?("   ("+spAnim+" animiert ⚡)"):"");
+		}catch(e){}
+		prevPaletteRgb=curRgb;
+		let animCount=0; for(let k in animatedPaletteOnce){ if(animatedPaletteOnce[k]) animCount++; }
+		panel.style.display="block";
+		$("mapLoadReport").style.display="none";
+		if(animCount){ $("palettesInfo").textContent+="   [Animated: "+animCount+" Farben - gelb markiert]"; }
+		}catch(e){}
+		paletteBusy=false;
+	}
+	async function togglePalettesRefresh(){
+		if(palettesTimer){ clearInterval(palettesTimer); palettesTimer=null; $("btnPalettesRefresh").textContent="Refresh: aus"; return; }
+		palettesTimer=setInterval(renderPalettes, 16);  //~60fps - same as the emulator, animation is smooth
+		$("btnPalettesRefresh").textContent="Refresh: an";
+	}
+	$("btnPalettes").onclick=async ()=>{
+		palettesCells=[];
+		$("palettesGrid").innerHTML="";
+		await renderPalettes();
+		$("btnPalettesRefresh").style.display="";
+		if(!palettesTimer){ togglePalettesRefresh(); }  //auto-start live refresh
+	};
+	$("btnPalettesRefresh").onclick=togglePalettesRefresh;
+	$("btnMapLoadReverse").onclick=async ()=>{
+		const t=$("mapLoadReverseTarget").value;
+		let target="cgram", addr=0, words=0x100;
+		if(t==="vram0"){ target="vram"; addr=0x0; words=0x100; }
+		else if(t==="vram1f"){ target="vram"; addr=0x1F00; words=0x100; }
+		else if(t==="vram38"){ target="vram"; addr=0x3800; words=0x400; }
+		else if(t==="vram40"){ target="vram"; addr=0x4000; words=0x1000; }
+		else if(t==="vram50"){ target="vram"; addr=0x5000; words=0x1000; }
+		const url="api/gfx/mapload/targetrom?target="+target+"&addr=0x"+addr.toString(16)+"&words=0x"+words.toString(16);
+		const d=await fetch(url).then(r=>r.json());
+		if(!d){ $("mapLoadReport").textContent=t("mapLoadError"); $("mapLoadReport").style.display="block"; return; }
+		let out="Reverse-Lookup: "+t+" 0x"+addr.toString(16).toUpperCase()+" ("+words+" Wörter)\n\n";
+		if(!d.entries||!d.entries.length){ out+="(leer - kein Load in diesem Bereich)"; }
+		else{ (d.entries||[]).forEach(e=>{ out+="  "+e.rom+"  ["+e.bytes+" B]"+(e.isPalette?"  Palette!":"")+"\n"; }); }
+		$("mapLoadReport").textContent=out;
+		$("mapLoadReport").style.display="block";
+	};
+	$("btnMapLoadAutoStatus").onclick=async ()=>{
+		const d=await fetch("api/gfx/mapload/autocapture-status").then(r=>r.json());
+		if(!d){ $("mapLoadReport").textContent=t("mapLoadError"); $("mapLoadReport").style.display="block"; return; }
+		let out="Auto-Capture-Status:\n";
+		out+="  enabled="+d.enabled+"  autoCapture="+d.autoCapture+"  autoStopped="+d.autoStopped+"\n";
+		out+="  hasBurst="+d.hasBurst+"  burst="+d.burstFrame+"-"+d.burstEnd+"\n";
+		out+="  count="+d.count+"\n";
+		$("mapLoadReport").textContent=out;
+		$("mapLoadReport").style.display="block";
+	};
 	$("btnMapLoadReport").onclick=async ()=>{
 		const compact=$("mapLoadCompact").checked;
 		const d=await fetch("api/gfx/mapload/report?compact="+(compact?1:0)).then(r=>r.json());
 		if(!d){ $("mapLoadReport").textContent=t("mapLoadError"); $("mapLoadReport").style.display="block"; return; }
-		$("mapLoadStatus").textContent=d.count+" "+t("lblEntries");
+		$("mapLoadStatus").textContent=d.count+" "+t("lblEntries")+(d.autoBurst?(" ("+t("mapLoadAutoBurst")+")"):"")+(d.autoStopped?(" ("+t("mapLoadAutoStopped")+")"):"");
 		$("mapLoadReport").textContent=formatMapLoadReport(d);
+		$("mapLoadReport").style.display="block";
+	};
+	$("btnMapLoadVerify").onclick=async ()=>{
+		const addrs=encodeURIComponent($("mapLoadVerifyAddrs").value.trim());
+		const d=await fetch("api/gfx/mapload/verify?addr="+addrs).then(r=>r.json());
+		if(!d){ $("mapLoadReport").textContent=t("mapLoadError"); $("mapLoadReport").style.display="block"; return; }
+		let out=t("mapLoadVerifyTitle")+"\n\n";
+		(d.results||[]).forEach(r=>{
+			out+="  "+r.addr+" : "+(r.read?t("mapLoadRead"):t("mapLoadNotRead"))+"\n";
+			if(r.range) out+="      "+t("mapLoadReadRange")+" "+r.range+"\n";
+		});
+		if(!(d.results||[]).length) out+="  "+t("mapLoadVerifyEmpty")+"\n";
+		$("mapLoadStatus").textContent="";
+		$("mapLoadReport").textContent=out;
 		$("mapLoadReport").style.display="block";
 	};
 	document.querySelectorAll("#gfxViewTabs button").forEach(b=>{
@@ -1411,37 +1667,51 @@ function bindGfx(){
 }
 
 let lastPaletteSig="";
+let paletteSwatchCells=[];  //[palette*16+color] -> DOM button
 
 async function refreshPalette(){
 	try{
 		const st=await fetch("api/gfx/state?cpu=Snes&_="+Date.now()).then(r=>r.json());
 		if(!st || !st.palette || !st.palette.colors || st.palette.colors.length===0) return;
 		const sig=st.palette.colors.join(",");
-		if(sig===lastPaletteSig) return; // palette unchanged
+		if(sig===lastPaletteSig) return; // palette unchanged - no DOM churn
 		lastPaletteSig=sig;
 		renderPaletteSwatches(st.palette.colors, st.palette.colorsPerPalette||16);
 	}catch(e){}
 }
 
 function renderPaletteSwatches(colors, cpp){
-	const rows=Math.min(Math.floor(colors.length/cpp), 8);
+	const rows=Math.min(Math.floor(colors.length/cpp), 16);  //16 Paletten (8 BG + 8 Sprites) wie im Emulator
 	const box=$("gfxPaletteRow");
-	box.innerHTML='<span class="empty" style="font-size:11px;">Paletten (Klick = auswählen):</span>';
-	for(let p=0;p<rows;p++){
-		const row=document.createElement("div");
-		row.style.cssText="display:flex;align-items:center;gap:2px;";
-		const lbl=document.createElement("span");
-		lbl.textContent="P"+p;
-		lbl.style.cssText="color:var(--dim);width:22px;font-size:10px;";
-		row.appendChild(lbl);
-		for(let c=0;c<cpp;c++){
-			const sw=document.createElement("button");
-			sw.style.cssText="width:14px;height:14px;background:"+colors[p*cpp+c]+";border:1px solid var(--border);cursor:pointer;padding:0;";
-			sw.title="Palette "+p+" · Farbe "+c;
-			sw.onclick=()=>setGfxPalette(p);
-			row.appendChild(sw);
+	if(!paletteSwatchCells.length){
+		//first time: build the DOM once, keep references for cheap color-only updates
+		box.innerHTML='<span class="empty" style="font-size:11px;">Paletten (Klick = auswählen):</span>';
+		for(let p=0;p<rows;p++){
+			const row=document.createElement("div");
+			row.style.cssText="display:flex;align-items:center;gap:2px;";
+			const lbl=document.createElement("span");
+			lbl.textContent="P"+p;
+			lbl.style.cssText="color:var(--dim);width:22px;font-size:10px;";
+			row.appendChild(lbl);
+			for(let c=0;c<cpp;c++){
+				const sw=document.createElement("button");
+				sw.style.cssText="width:14px;height:14px;background:"+colors[p*cpp+c]+";border:1px solid var(--border);cursor:pointer;padding:0;";
+				sw.title="Palette "+p+" · Farbe "+c;
+				sw.onclick=()=>setGfxPalette(p);
+				paletteSwatchCells[p*cpp+c]=sw;
+				row.appendChild(sw);
+			}
+			box.appendChild(row);
 		}
-		box.appendChild(row);
+	} else {
+		//palette changed: update only the button backgrounds - no DOM rebuild, no flicker
+		for(let p=0;p<rows;p++){
+			for(let c=0;c<cpp;c++){
+				const idx=p*cpp+c;
+				const sw=paletteSwatchCells[idx];
+				if(sw) sw.style.background=colors[idx];
+			}
+		}
 	}
 }
 

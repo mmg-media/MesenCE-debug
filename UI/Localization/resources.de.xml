@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="MainMenuView">
@@ -124,7 +124,8 @@
       <Control ID="lblForcedBlank">ForcedBlank</Control>
       <Control ID="lblBgMode">BG-Modus</Control>
       <Control ID="lblBright">Helligkeit</Control>
-      <Control ID="lblLayers">Ebenen M/S</Control>
+      <Control ID="lblLayers">Ebenen M/S</Control><Control ID="lblMainLayers">Haupt-Ebenen</Control>
+      <Control ID="lblSubLayers">Unter-Ebenen</Control>
       <Control ID="lblVramAddr">VRAM-Adr</Control>
       <Control ID="lblOamAddr">OAM-Adr</Control>
       <Control ID="lblCgramAddr">CG-RAM-Adr</Control>
@@ -304,11 +305,24 @@ Plugin.register({
       <Control ID="lblSlot">Slot</Control>
       <Control ID="btnLoadState">Laden</Control>
       <Control ID="mapLoadArmed">Bereit - Kartenwechsel machen, dann Report</Control>
-      <Control ID="btnMapLoadReport">Report</Control>
+      <Control ID="btnMapLoadReport">Report</Control><Control ID="btnMapLoadVerify">Verifizieren</Control>
+      
       <Control ID="btnMapLoadArm">Map-Load: Erfassen</Control>
       <Control ID="mapLoadError">Fehler</Control>
       <Control ID="mapLoadNoData">Keine Map-Load-Daten erfasst</Control>
       <Control ID="mapLoadCompact">Kompakt</Control>
+      <Control ID="mapLoadAutoStopped">auto-gestoppt nach Load</Control><Control ID="btnMapLoadAuto">Map-Load: Auto</Control><Control ID="mapLoadAutoOn">Auto-Erfassung an - Karte wechseln, dann Report</Control><Control ID="mapLoadAutoBurst">Auto-Burst</Control>
+      <Control ID="mapLoadBgMode">BG-Modus: Mode-7</Control>
+      <Control ID="mapLoadPalette">Palette (nach CGRAM geladen)</Control>
+      <Control ID="mapLoadTilemap">Tilemap (nach VRAM-Tilemap-Bereich geladen)</Control>
+      <Control ID="mapLoadTiles">Tiles (nach VRAM-Grafikbereich geladen)</Control>
+      <Control ID="mapLoadVerifyNote">Verifikation: Kategorien basieren auf dem Ziel im Emulator (CGRAM = Palette, VRAM-Tilemap-Bereich = Tilemap, VRAM-Grafik = Tiles).</Control>
+      <Control ID="mapLoadVerifyTitle">Verifizierte ROM-Adressen (wurden sie in dieser Erfassung gelesen?):</Control>
+      <Control ID="mapLoadRead">GELESEN</Control>
+      <Control ID="mapLoadNotRead">nicht gelesen</Control>
+      <Control ID="mapLoadReadRange">gelesener Bereich:</Control>
+      <Control ID="mode7Inactive">Mode7 (bgMode={bgMode}) - nicht aktiv</Control>
+      <Control ID="mapLoadVerifyEmpty">(leer - Adressen im Format 0x... eingeben, kommagetrennt)</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

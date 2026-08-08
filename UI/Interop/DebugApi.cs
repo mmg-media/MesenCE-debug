@@ -468,6 +468,39 @@ namespace Mesen.Interop
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
+		public struct InteropDmaSrcEntry
+		{
+			public UInt64 frame;
+			public UInt32 srcBus;    // SrcBank<<16 | SrcAddress (raw register value)
+			public byte destAddr;    // DestAddress
+			public byte channel;
+			public byte pad0;
+			public byte pad1;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct InteropWramWriteEntry
+		{
+			public UInt64 frame;
+			public UInt32 wramAddr;
+			public UInt32 romRead;
+			public byte memType;
+			public byte pad0;
+			public byte pad1;
+			public byte pad2;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct InteropRomReadBlock
+		{
+			public UInt64 frame;
+			public UInt32 startAddr;
+			public UInt32 length;
+			public byte targetType;
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
+			public byte[] pad;
+		}
+		[StructLayout(LayoutKind.Sequential)]
 		public struct InteropWramLogEntry
 		{
 			public UInt64 id;
@@ -510,8 +543,37 @@ namespace Mesen.Interop
 		[DllImport(DllPath, EntryPoint = "snes_get_vram_log")] public static extern UInt32 SnesGetVramLog([Out] InteropVramLogEntry[] entries, UInt32 start, UInt32 count);
 		[DllImport(DllPath, EntryPoint = "snes_map_load_log_set_enabled")] public static extern void SnesMapLoadLogSetEnabled([MarshalAs(UnmanagedType.I1)] bool enabled);
 		[DllImport(DllPath, EntryPoint = "snes_map_load_log_is_enabled")] public static extern bool SnesMapLoadLogIsEnabled();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_is_auto_stopped")] public static extern bool SnesMapLoadLogIsAutoStopped();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_set_auto_capture")] public static extern void SnesMapLoadLogSetAutoCapture(bool enabled);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_set_live_tracking")] public static extern void SnesMapLoadLogSetLiveTracking(bool enabled);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_is_live_tracking")] public static extern bool SnesMapLoadLogIsLiveTracking();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_is_auto_capture")] public static extern bool SnesMapLoadLogIsAutoCapture();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_has_auto_burst")] public static extern bool SnesMapLoadLogHasAutoBurst();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_get_auto_burst_frame")] public static extern ulong SnesMapLoadLogGetAutoBurstFrame();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_get_auto_burst_end_frame")] public static extern ulong SnesMapLoadLogGetAutoBurstEndFrame();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_log_clear_auto_burst")] public static extern void SnesMapLoadLogClearAutoBurst();
+		[DllImport(DllPath, EntryPoint = "snes_get_map_load_log_from_frame")] public static extern UInt32 SnesGetMapLoadLogFromFrame(InteropMapLoadEntry[] entries, UInt64 startFrame, UInt64 endFrame, UInt32 maxCount);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_src_count")] public static extern UInt32 SnesMapLoadDmaSrcCount();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_src_first")] public static extern UInt32 SnesMapLoadDmaSrcFirst();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_src")] public static extern UInt32 SnesMapLoadDmaSrc(InteropDmaSrcEntry[] entries, UInt32 start, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_wram_write_count")] public static extern UInt32 SnesMapLoadWramWriteCount();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_wram_write")] public static extern UInt32 SnesMapLoadWramWrite(InteropWramWriteEntry[] entries, UInt32 start, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_target_rom_sources")] public static extern UInt32 SnesMapLoadTargetRomSources(byte targetType, UInt32 targetStart, UInt32 wordCount, UInt32[] outStart, UInt32[] outWords, UInt32 maxResults);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_vram_rom_word")] public static extern UInt32 SnesMapLoadVramRomWord(UInt32 wordAddr);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_cgram_rom_word")] public static extern UInt32 SnesMapLoadCgramRomWord(UInt32 wordIdx);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_read_ring_count")] public static extern UInt32 SnesMapLoadRomReadRingCount();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_reads_in_frames")] public static extern UInt32 SnesMapLoadRomReadsInFrames(UInt64 fromFrame, UInt64 toFrame, UInt32[] outStart, UInt32[] outLen, UInt32 maxResults);
 		[DllImport(DllPath, EntryPoint = "snes_map_load_log_get_count")] public static extern UInt32 SnesMapLoadLogGetCount();
 		[DllImport(DllPath, EntryPoint = "snes_get_map_load_log")] public static extern UInt32 SnesGetMapLoadLog([Out] InteropMapLoadEntry[] entries, UInt32 start, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_get_rom_read_log")] public static extern UInt32 SnesGetRomReadLog([Out] InteropRomReadBlock[] blocks, UInt32 start, UInt32 count);
+		[DllImport(DllPath, EntryPoint = "snes_get_rom_read_count")] public static extern UInt32 SnesGetRomReadCount();
+		[DllImport(DllPath, EntryPoint = "snes_rom_was_read")] public static extern bool SnesRomWasRead(UInt32 romOffset);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_has_source")] public static extern bool SnesMapLoadDmaHasSource(UInt32 romOffset);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_wram_chain_target")] public static extern bool SnesMapLoadWramChainTarget(UInt32 romOffset);
+		[DllImport(DllPath, EntryPoint = "snes_get_rom_read_range")] public static extern void SnesGetRomReadRange(UInt32 romOffset, UInt32 gapBytes, out UInt32 outStart, out UInt32 outEnd);
+		[DllImport(DllPath, EntryPoint = "snes_get_rom_read_blocks")] public static extern UInt32 SnesGetRomReadBlocks([Out] UInt32[] outStart, [Out] UInt32[] outLength, UInt32 maxBlocks, UInt32 gapBytes);
+		[DllImport(DllPath, EntryPoint = "snes_get_wram_rom_source")] public static extern UInt32 SnesGetWramRomSource(UInt32 wramAddr);
+		[DllImport(DllPath, EntryPoint = "snes_get_rom_target_blocks")] public static extern UInt32 SnesGetRomTargetBlocks([Out] UInt32[] outStart, [Out] UInt32[] outLength, UInt32 maxBlocks, UInt32 gapBytes);
 		[DllImport(DllPath, EntryPoint = "snes_set_wram_log_config")] public static extern void SnesSetWramLogConfig([MarshalAs(UnmanagedType.I1)] bool enabled, UInt32 start, UInt32 end, UInt16 minLen, Int32 memType);
 		[DllImport(DllPath, EntryPoint = "snes_get_wram_log_count")] public static extern UInt32 SnesGetWramLogCount();
 		[DllImport(DllPath, EntryPoint = "snes_get_wram_log")] public static extern UInt32 SnesGetWramLog([Out] InteropWramLogEntry[] entries, UInt32 start, UInt32 count);

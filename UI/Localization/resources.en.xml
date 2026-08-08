@@ -1792,7 +1792,8 @@
 			<Control ID="lblForcedBlank">ForcedBlank</Control>
 			<Control ID="lblBgMode">BG Mode</Control>
 			<Control ID="lblBright">Brightness</Control>
-			<Control ID="lblLayers">Layers M/S</Control>
+			<Control ID="lblLayers">Layers M/S</Control><Control ID="lblMainLayers">Main Layers</Control>
+      <Control ID="lblSubLayers">Sub Layers</Control>
 			<Control ID="lblVramAddr">VRAM Addr</Control>
 			<Control ID="lblOamAddr">OAM Addr</Control>
 			<Control ID="lblCgramAddr">CG RAM Addr</Control>
@@ -1972,11 +1973,24 @@ Plugin.register({
 			<Control ID="btnLoadState">Load State</Control>
 			<Control ID="lblSlot">Slot</Control>
 			<Control ID="btnMapLoadArm">Map-Load: Trace</Control>
-			<Control ID="btnMapLoadReport">Report</Control>
+			<Control ID="btnMapLoadReport">Report</Control><Control ID="btnMapLoadVerify">Verify</Control>
+      
 			<Control ID="mapLoadArmed">Armed - do the map change, then Report</Control>
 			<Control ID="mapLoadError">Error</Control>
 			<Control ID="mapLoadNoData">No map-load data captured</Control>
 			<Control ID="mapLoadCompact">Compact</Control>
+			<Control ID="mapLoadAutoStopped">auto-stopped after load</Control><Control ID="btnMapLoadAuto">Map-Load: Auto</Control><Control ID="mapLoadAutoOn">Auto-capture on - change the map, then Report</Control><Control ID="mapLoadAutoBurst">auto-burst</Control>
+			<Control ID="mapLoadBgMode">BG-Mode: Mode-7</Control>
+			<Control ID="mapLoadPalette">Palette (loaded to CGRAM)</Control>
+			<Control ID="mapLoadTilemap">Tilemap (loaded to VRAM tilemap area)</Control>
+			<Control ID="mapLoadTiles">Tiles (loaded to VRAM graphics area)</Control>
+			<Control ID="mapLoadVerifyNote">Verification: categories are based on the target in the emulator (CGRAM = palette, VRAM tilemap area = tilemap, VRAM graphics = tiles).</Control>
+			<Control ID="mapLoadVerifyTitle">Verified ROM addresses (were they read in this capture?):</Control>
+			<Control ID="mapLoadRead">READ</Control>
+			<Control ID="mapLoadNotRead">not read</Control>
+			<Control ID="mapLoadReadRange">read range:</Control>
+			<Control ID="mode7Inactive">Mode7 (bgMode={bgMode}) - not active</Control>
+			<Control ID="mapLoadVerifyEmpty">(empty - enter addresses as 0x..., comma-separated)</Control>
 		</Form>
 	</Forms>
 	<Messages>

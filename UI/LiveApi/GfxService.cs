@@ -12,6 +12,7 @@ namespace Mesen.LiveApi
 	public static class GfxService
 	{
 		private static SemaphoreSlim _gate = new SemaphoreSlim(1, 1);
+		private static bool _liveTrackingInit;
 
 		private static T RunExclusive<T>(Func<T> action)
 		{
@@ -210,6 +211,145 @@ namespace Mesen.LiveApi
 				}
 			}
 			return 0;
+		}
+
+		/// <summary>
+		/// R3.2: Return the CGRAM palettes as structured JSON - 16 palettes of 16 colors
+		/// each (first 8 = background, last 8 = sprites), with CSS hex colors per entry.
+		/// Shows how many palettes are loaded in CGRAM at the moment. Colors that changed
+		/// since the previous call are flagged "animated" - this reveals HDMA/mid-frame
+		/// palette animation (same CGRAM address, different color during the frame).
+		/// </summary>
+		private static bool HasAnimatedColor(bool[] animated, int paletteIndex, int colorsPerPalette)
+		{
+			int start = paletteIndex * colorsPerPalette;
+			for(int i = start; i < start + colorsPerPalette && i < animated.Length; i++) {
+				if(animated[i]) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		public static JsonNode? GetPalettesJson(string cpuType, bool live = false, string? filterType = null, int? filterSlot = null)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					if(live && !_liveTrackingInit) {
+						//R3.2: live tracking - keep the reverse-lookup tables current so the
+						//palette viewer shows ROM sources continuously. NOTE: no
+						//InitializeDebugger() here - it is not thread-safe when called from
+						//the webui poll thread while the emulator runs, and it is already
+						//initialized by the LiveApi server / debugger setup.
+						_liveTrackingInit = true;
+						DebugApi.SnesMapLoadLogSetEnabled(true);
+						DebugApi.SnesMapLoadLogSetAutoCapture(true);
+						DebugApi.SnesMapLoadLogSetLiveTracking(true);
+					}
+					DebugPaletteInfo paletteInfo = DebugApi.GetPaletteInfo(cpu.Value);
+					UInt32[] rgb = paletteInfo.GetRgbPalette();
+					int colorCount = Math.Min((int)rgb.Length, (int)paletteInfo.ColorCount);
+					int colorsPerPalette = Math.Max(1, (int)paletteInfo.ColorsPerPalette);
+					int paletteCount = colorCount / colorsPerPalette;
+					int bgPalettes = Math.Min(paletteCount, (int)(paletteInfo.BgColorCount / colorsPerPalette));
+					int spriteOffset = (int)(paletteInfo.SpritePaletteOffset / colorsPerPalette);
+
+					//R3.2: the webui compares colors between polls to mark animated palettes -
+					//the backend just returns the current colors fast (no sleeps, no blinking).
+					bool[] animated = new bool[colorCount];
+
+					JsonArray palettes = new JsonArray();
+					for(int p = 0; p < paletteCount; p++) {
+						string pType = p < bgPalettes ? "bg" : "sprite";
+						int pSlot = p < bgPalettes ? p : (p - bgPalettes);
+						//filter: requested type/slot - skip non-matching palettes
+						if(filterType != null && !pType.Equals(filterType, StringComparison.OrdinalIgnoreCase)) {
+							continue;
+						}
+						if(filterSlot != null && pSlot != filterSlot.Value) {
+							continue;
+						}
+						JsonArray colors = new JsonArray();
+						for(int c = 0; c < colorsPerPalette; c++) {
+							int idx = p * colorsPerPalette + c;
+							if(idx >= rgb.Length) {
+								break;
+							}
+							UInt32 col = rgb[idx];
+							byte r = (byte)((col >> 16) & 0xFF);
+							byte g = (byte)((col >> 8) & 0xFF);
+							byte b = (byte)(col & 0xFF);
+							colors.Add((JsonNode)new JsonObject() {
+								["hex"] = "#" + r.ToString("X2") + g.ToString("X2") + b.ToString("X2"),
+								["animated"] = animated[idx]
+							});
+						}
+						//R3.2: SOURCE of this palette - pure WRAM->ROM chain (NO byte-matching:
+						//that only works for uncompressed data). The CGRAM palette buffer lives
+						//in WRAM around 0x10600; each palette block is resolved through the
+						//WramRomByte chain to its exact ROM source. Positions whose chain was
+						//clobbered by a fade (e.g. BG0 -> 0x04A957) are skipped, and a dominant
+						//contiguous ROM run is reported.
+						JsonArray srcList = new JsonArray();
+						List<UInt32> wramSources = new List<UInt32>();
+						for(int c = 0; c < colorsPerPalette && p * colorsPerPalette + c < 0x100; c++) {
+							UInt32 wramAddr = 0x10600 + (UInt32)(p * colorsPerPalette + c);
+							UInt32 direct = DebugApi.SnesGetWramRomSource(wramAddr);
+							if(direct == 0xFFFFFFFF || direct == 0 || direct == 0x04A957 || direct == 0x06EAA9) {
+								continue;
+							}
+							wramSources.Add(direct);
+						}
+						wramSources.Sort();
+						int wi = 0;
+						while(wi < wramSources.Count) {
+							UInt32 start = wramSources[wi];
+							UInt32 end = start;
+							int wj = wi + 1;
+							while(wj < wramSources.Count && wramSources[wj] == end + 1) {
+								end = wramSources[wj];
+								wj++;
+							}
+							string label = start == end ? "0x" + start.ToString("X6") : "0x" + start.ToString("X6") + "-0x" + end.ToString("X6");
+							srcList.Add((JsonNode)JsonValue.Create(label));
+							wi = wj;
+						}
+						palettes.Add((JsonNode)new JsonObject() {
+							["index"] = p,
+							["type"] = pType,
+							["slot"] = pSlot,
+							["cgram"] = "0x" + (p * colorsPerPalette * 2).ToString("X4"),
+							["sources"] = srcList,
+							["sourceCount"] = srcList.Count,
+							["hasMultipleSources"] = srcList.Count > 1,
+							["animated"] = HasAnimatedColor(animated, p, colorsPerPalette),
+							["colors"] = colors
+						});
+					}
+					int animCount = 0;
+					for(int i = 0; i < animated.Length; i++) {
+						if(animated[i]) {
+							animCount++;
+						}
+					}
+					return new JsonObject() {
+						["colorCount"] = colorCount,
+						["colorsPerPalette"] = colorsPerPalette,
+						["paletteCount"] = paletteCount,
+						["bgPaletteCount"] = bgPalettes,
+						["spritePaletteCount"] = paletteCount - bgPalettes,
+						["spritePaletteOffset"] = spriteOffset,
+						["animatedColorCount"] = animCount,
+						["palettes"] = palettes
+					};
+				} catch {
+					return null;
+				}
+			});
 		}
 
 		public static byte[]? GetTilemapPng(string cpuType, string layer, string bg)

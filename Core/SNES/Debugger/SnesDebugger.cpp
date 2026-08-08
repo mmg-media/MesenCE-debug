@@ -233,7 +233,12 @@ void SnesDebugger::ProcessRead(uint32_t addr, uint8_t value, MemoryOperationType
 		SnesTracker::CheckMemoryOp(1, _debugger->GetProgramCounter(CpuType::Snes, true), _emu->GetFrameCount(), _memoryManager->GetHClock(), addr, value, addressInfo.Type);
 		//R3.2: remember the last ROM/WRAM read so a following VRAM/CGRAM write
 		//can be attributed to the ROM address that provides the map/tile/palette data.
-		SnesMapLoadLog::TrackRead(addressInfo.Type, addr);
+		//IMPORTANT: only actual data reads (not opcode/operand fetches) - otherwise the
+		//last read is the executing code itself, not the copied data source. addressInfo.Address
+		//is the LINEAR address (ROM file offset / WRAM offset), not the SNES bus address.
+		if(type == MemoryOperationType::Read && addressInfo.Address >= 0) {
+			SnesMapLoadLog::TrackRead(addressInfo.Type, (uint32_t)addressInfo.Address, _memoryManager->GetEmu()->GetFrameCount());
+		}
 	}
 
 	if(IsRegister(addr)) {
@@ -315,6 +320,17 @@ void SnesDebugger::ProcessWrite(uint32_t addr, uint8_t value, MemoryOperationTyp
 			addr,
 			value,
 			addressInfo.Type);
+		//R3.2: remember which ROM address was read before this WRAM write, so a later
+		//DMA from this WRAM address can be resolved back to the real ROM source.
+		//addressInfo.Address is the linear WRAM offset (0x00000-0x1FFFF).
+		if(addressInfo.Address >= 0 && (addressInfo.Type == MemoryType::SnesWorkRam || addressInfo.Type == MemoryType::SnesSaveRam)) {
+			if(SnesMapLoadLog::LastRomRead != 0xFFFFFFFF) {
+				SnesMapLoadLog::TrackWramWrite((uint32_t)addressInfo.Address, SnesMapLoadLog::LastRomRead);
+			} else if(SnesMapLoadLog::LastWramRead != 0xFFFFFFFF) {
+				//WRAM->WRAM copy (decompression): propagate the source WRAM's ROM origin.
+				SnesMapLoadLog::TrackWramWriteFromWram((uint32_t)addressInfo.Address, SnesMapLoadLog::LastWramRead);
+			}
+		}
 		SnesTracker::Append(SnesTracker::MemW, _emu->GetFrameCount(), _memoryManager->GetHClock(), pc, addr, value, 0, 0);
 	}
 
@@ -426,6 +442,9 @@ void SnesDebugger::ProcessInterrupt(uint32_t originalPc, uint32_t currentPc, boo
 		evt.DmaChannel = -1;
 		SnesEventLog::Append(evt, _emu->GetFrameCount());
 		SnesTracker::AppendInterrupt(forNmi ? SnesTracker::Nmi : SnesTracker::Irq, _emu->GetFrameCount(), _memoryManager->GetHClock(), _debugger->GetProgramCounter(CpuType::Snes, true));
+		//R3.2: an interrupt breaks the data-copy chain - the reads of the interrupt handler
+		//(e.g. NMI vector) are NOT the data source for a following VRAM/CGRAM write.
+		SnesMapLoadLog::OnInterrupt();
 	}
 
 	AddressInfo ret = _memoryMappings->GetAbsoluteAddress(originalPc);
@@ -681,3 +700,4 @@ void SnesDebugger::ProcessInputOverrides(DebugControllerState inputOverrides[8])
 	}
 	controlManager->RefreshHubState();
 }
+

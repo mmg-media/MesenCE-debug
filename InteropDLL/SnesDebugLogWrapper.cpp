@@ -109,6 +109,106 @@ extern "C" {
 		return SnesMapLoadLog::IsEnabled();
 	}
 
+	DllExport bool __stdcall snes_map_load_log_is_auto_stopped()
+	{
+		return SnesMapLoadLog::IsAutoStopped();
+	}
+
+	DllExport void __stdcall snes_map_load_log_set_auto_capture(bool enabled)
+	{
+		SnesMapLoadLog::SetAutoCapture(enabled);
+	}
+
+	DllExport void __stdcall snes_map_load_log_set_live_tracking(bool enabled)
+	{
+		SnesMapLoadLog::SetLiveTracking(enabled);
+	}
+
+	DllExport bool __stdcall snes_map_load_log_is_live_tracking()
+	{
+		return SnesMapLoadLog::IsLiveTracking();
+	}
+
+	DllExport bool __stdcall snes_map_load_log_is_auto_capture()
+	{
+		return SnesMapLoadLog::IsAutoCapture();
+	}
+
+	DllExport bool __stdcall snes_map_load_log_has_auto_burst()
+	{
+		return SnesMapLoadLog::HasAutoBurst();
+	}
+
+	DllExport uint64_t __stdcall snes_map_load_log_get_auto_burst_frame()
+	{
+		return SnesMapLoadLog::GetAutoBurstStartFrame();
+	}
+
+	DllExport uint64_t __stdcall snes_map_load_log_get_auto_burst_end_frame()
+	{
+		return SnesMapLoadLog::GetAutoBurstEndFrame();
+	}
+
+	DllExport void __stdcall snes_map_load_log_clear_auto_burst()
+	{
+		SnesMapLoadLog::ConsumeAutoBurst();
+	}
+
+	DllExport uint32_t __stdcall snes_get_map_load_log_from_frame(SnesMapLoadLog::Entry* entries, uint64_t startFrame, uint64_t endFrame, uint32_t maxCount)
+	{
+		return SnesMapLoadLog::GetFrameRange(entries, startFrame, endFrame, maxCount);
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_dma_src_count()
+	{
+		return SnesMapLoadLog::GetDmaSrcCount();
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_dma_src_first()
+	{
+		return SnesMapLoadLog::DebugDmaSrcFirst();
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_dma_src(SnesMapLoadLog::DmaSrcInterop* entries, uint32_t start, uint32_t count)
+	{
+		return SnesMapLoadLog::GetDmaSrc(entries, start, count);
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_wram_write_count()
+	{
+		return SnesMapLoadLog::GetWramWriteCount();
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_wram_write(SnesMapLoadLog::WramWriteInterop* entries, uint32_t start, uint32_t count)
+	{
+		return SnesMapLoadLog::GetWramWrite(entries, start, count);
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_target_rom_sources(uint8_t targetType, uint32_t targetStart, uint32_t wordCount, uint32_t* outStart, uint32_t* outWords, uint32_t maxResults)
+	{
+		return SnesMapLoadLog::GetTargetRomSources(targetType, targetStart, wordCount, outStart, outWords, maxResults);
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_vram_rom_word(uint32_t wordAddr)
+	{
+		return SnesMapLoadLog::GetVramRomWord(wordAddr);
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_cgram_rom_word(uint32_t wordIdx)
+	{
+		return SnesMapLoadLog::GetCgramRomWord(wordIdx);
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_rom_read_ring_count()
+	{
+		return SnesMapLoadLog::GetRomReadRingCount();
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_rom_reads_in_frames(uint64_t fromFrame, uint64_t toFrame, uint32_t* outStart, uint32_t* outLen, uint32_t maxResults)
+	{
+		return SnesMapLoadLog::GetRomReadsInFrames(fromFrame, toFrame, outStart, outLen, maxResults);
+	}
+
 	DllExport uint32_t __stdcall snes_map_load_log_get_count()
 	{
 		return SnesMapLoadLog::GetCount();
@@ -117,5 +217,50 @@ extern "C" {
 	DllExport uint32_t __stdcall snes_get_map_load_log(SnesMapLoadLog::Entry* entries, uint32_t start, uint32_t count)
 	{
 		return SnesMapLoadLog::Get(entries, start, count);
+	}
+
+	DllExport uint32_t __stdcall snes_get_rom_read_log(SnesMapLoadLog::RomReadBlock* blocks, uint32_t start, uint32_t count)
+	{
+		return SnesMapLoadLog::GetRomReadLog(blocks, start, count);
+	}
+
+	DllExport uint32_t __stdcall snes_get_rom_read_count()
+	{
+		return SnesMapLoadLog::GetRomReadCount();
+	}
+
+	DllExport bool __stdcall snes_rom_was_read(uint32_t romOffset)
+	{
+		return SnesMapLoadLog::WasRomRead(romOffset);
+	}
+
+	DllExport bool __stdcall snes_map_load_dma_has_source(uint32_t romOffset)
+	{
+		return SnesMapLoadLog::DmaHasSource(romOffset);
+	}
+
+	DllExport bool __stdcall snes_map_load_wram_chain_target(uint32_t romOffset)
+	{
+		return SnesMapLoadLog::WramChainTarget(romOffset);
+	}
+
+	DllExport void __stdcall snes_get_rom_read_range(uint32_t romOffset, uint32_t gapBytes, uint32_t* outStart, uint32_t* outEnd)
+	{
+		SnesMapLoadLog::GetRomReadRangeAround(romOffset, gapBytes, outStart, outEnd);
+	}
+
+	DllExport uint32_t __stdcall snes_get_rom_read_blocks(uint32_t* outStart, uint32_t* outLength, uint32_t maxBlocks, uint32_t gapBytes)
+	{
+		return SnesMapLoadLog::GetRomReadBlocks(outStart, outLength, maxBlocks, gapBytes);
+	}
+
+	DllExport uint32_t __stdcall snes_get_wram_rom_source(uint32_t wramAddr)
+	{
+		return SnesMapLoadLog::GetWramRomSource(wramAddr);
+	}
+
+	DllExport uint32_t __stdcall snes_get_rom_target_blocks(uint32_t* outStart, uint32_t* outLength, uint32_t maxBlocks, uint32_t gapBytes)
+	{
+		return SnesMapLoadLog::GetRomTargetBlocks(outStart, outLength, maxBlocks, gapBytes);
 	}
 }

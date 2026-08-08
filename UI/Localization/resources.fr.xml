@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="LiveApiUi">
@@ -29,7 +29,8 @@
       <Control ID="lblForcedBlank">Blanc forcé</Control>
       <Control ID="lblBgMode">Mode BG</Control>
       <Control ID="lblBright">Luminosité</Control>
-      <Control ID="lblLayers">Couches M/S</Control>
+      <Control ID="lblLayers">Couches M/S</Control><Control ID="lblMainLayers">Couches principales</Control>
+      <Control ID="lblSubLayers">Couches secondaires</Control>
       <Control ID="lblVramAddr">Adr VRAM</Control>
       <Control ID="lblOamAddr">Adr OAM</Control>
       <Control ID="lblCgramAddr">Adr CG RAM</Control>
@@ -209,11 +210,24 @@ Plugin.register({
       <Control ID="lblSlot">Slot</Control>
       <Control ID="btnLoadState">Charger l'état</Control>
       <Control ID="mapLoadArmed">Prêt - changer de carte, puis Rapport</Control>
-      <Control ID="btnMapLoadReport">Rapport</Control>
+      <Control ID="btnMapLoadReport">Rapport</Control><Control ID="btnMapLoadVerify">Vérifier</Control>
+      
       <Control ID="btnMapLoadArm">Chargement carte : tracer</Control>
       <Control ID="mapLoadError">Erreur</Control>
       <Control ID="mapLoadNoData">Aucune donnée de chargement de carte</Control>
       <Control ID="mapLoadCompact">Compact</Control>
+      <Control ID="mapLoadAutoStopped">auto-stoppé après le chargement</Control><Control ID="btnMapLoadAuto">Map-Load: Auto</Control><Control ID="mapLoadAutoOn">Capture auto activée - changez de carte, puis Report</Control><Control ID="mapLoadAutoBurst">auto-burst</Control>
+      <Control ID="mapLoadBgMode">Mode BG : Mode-7</Control>
+      <Control ID="mapLoadPalette">Palette (chargée vers CGRAM)</Control>
+      <Control ID="mapLoadTilemap">Tilemap (chargée vers zone VRAM tilemap)</Control>
+      <Control ID="mapLoadTiles">Tiles (chargées vers zone graphique VRAM)</Control>
+      <Control ID="mapLoadVerifyNote">Vérification : catégories basées sur la cible dans l'émulateur (CGRAM = palette, zone VRAM tilemap = tilemap, graphiques VRAM = tiles).</Control>
+      <Control ID="mapLoadVerifyTitle">Adresses ROM vérifiées (lues dans cette capture ?) :</Control>
+      <Control ID="mapLoadRead">LU</Control>
+      <Control ID="mapLoadNotRead">non lu</Control>
+      <Control ID="mapLoadReadRange">plage lue :</Control>
+      <Control ID="mode7Inactive">Mode7 (bgMode={bgMode}) - inactif</Control>
+      <Control ID="mapLoadVerifyEmpty">(vide - saisir les adresses au format 0x..., séparées par des virgules)</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>
@@ -2811,3 +2825,4 @@ Plugin.register({
     <Message ID="SlotNumber">Emplacement #{0}</Message>
   </Messages>
 </Resources>
+

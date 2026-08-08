@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="LiveApiUi">
@@ -29,7 +29,8 @@
       <Control ID="lblForcedBlank">強制ブランク</Control>
       <Control ID="lblBgMode">BGモード</Control>
       <Control ID="lblBright">輝度</Control>
-      <Control ID="lblLayers">レイヤー M/S</Control>
+      <Control ID="lblLayers">レイヤー M/S</Control><Control ID="lblMainLayers">メイン・レイヤー</Control>
+      <Control ID="lblSubLayers">サブ・レイヤー</Control>
       <Control ID="lblVramAddr">VRAM アドレス</Control>
       <Control ID="lblOamAddr">OAM アドレス</Control>
       <Control ID="lblCgramAddr">CG RAM アドレス</Control>
@@ -209,11 +210,24 @@ Plugin.register({
       <Control ID="lblSlot">スロット</Control>
       <Control ID="btnLoadState">ステート読込</Control>
       <Control ID="mapLoadArmed">準備完了 - マップを切り替えてからレポート</Control>
-      <Control ID="btnMapLoadReport">レポート</Control>
+      <Control ID="btnMapLoadReport">レポート</Control><Control ID="btnMapLoadVerify">確認</Control>
+      
       <Control ID="btnMapLoadArm">マップロード：追跡</Control>
       <Control ID="mapLoadError">エラー</Control>
       <Control ID="mapLoadNoData">マップロードデータなし</Control>
       <Control ID="mapLoadCompact">コンパクト</Control>
+      <Control ID="mapLoadAutoStopped">ロード後に自動停止</Control><Control ID="btnMapLoadAuto">マップロード：自動</Control><Control ID="mapLoadAutoOn">自動キャプチャ有効 - マップを切り替えてからレポート</Control><Control ID="mapLoadAutoBurst">自動バースト</Control>
+      <Control ID="mapLoadBgMode">BGモード：Mode-7</Control>
+      <Control ID="mapLoadPalette">パレット（CGRAMへロード）</Control>
+      <Control ID="mapLoadTilemap">タイルマップ（VRAMタイルマップ領域へロード）</Control>
+      <Control ID="mapLoadTiles">タイル（VRAMグラフィック領域へロード）</Control>
+      <Control ID="mapLoadVerifyNote">検証：カテゴリはエミュレータ内のターゲットに基づいています（CGRAM＝パレット、VRAMタイルマップ領域＝タイルマップ、VRAMグラフィック＝タイル）。</Control>
+      <Control ID="mapLoadVerifyTitle">検証済みROMアドレス（このキャプチャで読み取られましたか？）：</Control>
+      <Control ID="mapLoadRead">読み取り済み</Control>
+      <Control ID="mapLoadNotRead">未読み取り</Control>
+      <Control ID="mapLoadReadRange">読み取り範囲：</Control>
+      <Control ID="mode7Inactive">Mode7（bgMode={bgMode}）- 未アクティブ</Control>
+      <Control ID="mapLoadVerifyEmpty">（空 - アドレスを 0x... 形式でカンマ区切りで入力）</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>
@@ -2811,3 +2825,4 @@ Plugin.register({
     <Message ID="OverwriteFirmware">次のファイルは既に存在し、上書きされます。この操作は元に戻せません。よろしいですか？`n`n{0}</Message>
   </Messages>
 </Resources>
+

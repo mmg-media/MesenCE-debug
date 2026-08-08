@@ -1,5 +1,6 @@
 using Mesen.Interop;
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace Mesen.LiveApi
@@ -75,7 +76,15 @@ namespace Mesen.LiveApi
 		public UInt16 VramAddress { get; set; }
 		public UInt16 OamRamAddress { get; set; }
 		public byte CgramAddress { get; set; }
+		public List<LiveApiLayerState> Layers { get; set; } = new();
 		public LiveApiMode7State Mode7 { get; set; } = new();
+	}
+
+	public class LiveApiLayerState
+	{
+		public UInt16 TilemapAddress { get; set; }
+		public UInt16 ChrAddress { get; set; }
+		public bool LargeTiles { get; set; }
 	}
 
 	public class LiveApiMode7State

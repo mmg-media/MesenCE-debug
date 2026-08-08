@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Resources>
   <Forms>
     <Form ID="LiveApiUi">
@@ -29,7 +29,8 @@
       <Control ID="lblForcedBlank">强制消隐</Control>
       <Control ID="lblBgMode">BG模式</Control>
       <Control ID="lblBright">亮度</Control>
-      <Control ID="lblLayers">图层 M/S</Control>
+      <Control ID="lblLayers">图层 M/S</Control><Control ID="lblMainLayers">主图层</Control>
+      <Control ID="lblSubLayers">副图层</Control>
       <Control ID="lblVramAddr">VRAM 地址</Control>
       <Control ID="lblOamAddr">OAM 地址</Control>
       <Control ID="lblCgramAddr">CG RAM 地址</Control>
@@ -209,11 +210,24 @@ Plugin.register({
       <Control ID="lblSlot">槽位</Control>
       <Control ID="btnLoadState">载入存档</Control>
       <Control ID="mapLoadArmed">已就绪 - 切换地图，然后报告</Control>
-      <Control ID="btnMapLoadReport">报告</Control>
+      <Control ID="btnMapLoadReport">报告</Control><Control ID="btnMapLoadVerify">验证</Control>
+      
       <Control ID="btnMapLoadArm">地图加载：追踪</Control>
       <Control ID="mapLoadError">错误</Control>
       <Control ID="mapLoadNoData">未捕获地图加载数据</Control>
       <Control ID="mapLoadCompact">简洁</Control>
+      <Control ID="mapLoadAutoStopped">加载后自动停止</Control><Control ID="btnMapLoadAuto">地图加载：自动</Control><Control ID="mapLoadAutoOn">自动捕获已开启 - 切换地图，然后点击报告</Control><Control ID="mapLoadAutoBurst">自动突发</Control>
+      <Control ID="mapLoadBgMode">BG模式：Mode-7</Control>
+      <Control ID="mapLoadPalette">调色板（加载到 CGRAM）</Control>
+      <Control ID="mapLoadTilemap">地图（加载到 VRAM 地图区域）</Control>
+      <Control ID="mapLoadTiles">图块（加载到 VRAM 图形区域）</Control>
+      <Control ID="mapLoadVerifyNote">验证：分类基于模拟器中的目标（CGRAM = 调色板，VRAM 地图区域 = 地图，VRAM 图形 = 图块）。</Control>
+      <Control ID="mapLoadVerifyTitle">已验证的 ROM 地址（本次捕获中是否读取？）：</Control>
+      <Control ID="mapLoadRead">已读取</Control>
+      <Control ID="mapLoadNotRead">未读取</Control>
+      <Control ID="mapLoadReadRange">读取范围：</Control>
+      <Control ID="mode7Inactive">Mode7（bgMode={bgMode}）- 未激活</Control>
+      <Control ID="mapLoadVerifyEmpty">（空 - 以 0x... 格式输入地址，用逗号分隔）</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>
@@ -2811,3 +2825,4 @@ Plugin.register({
     <Message ID="InvalidFirmwareSize">此文件大小不符合要求。`n`n预期：{0} 字节`n当前：{1} 字节</Message>
   </Messages>
 </Resources>
+
