@@ -430,6 +430,9 @@ namespace Mesen.LiveApi
 					case "/api/gfx/mapload/wrammap":
 						result = LiveDataService.MapLoadWramMap();
 						break;
+					case "/api/gfx/mapload/vrammap":
+						result = LiveDataService.MapLoadVramMap(Query(context, "start", "0x3C00"), Query(context, "words", "0x400"));
+						break;
 					case "/api/gfx/screen":
 						await WritePng(context, GfxService.GetScreenPng(Query(context, "cpu", "Snes"), Query(context, "layers", "all"), Query(context, "sprites", "1") == "1", Query(context, "bg", "Black")));
 						return;
@@ -442,6 +445,45 @@ namespace Mesen.LiveApi
 					case "/api/gfx/tiles":
 						await WritePng(context, GfxService.GetTilesPng(Query(context, "cpu", "Snes"), Query(context, "format", "Bpp4"), Query(context, "mem", "SnesVideoRam"), (Int32)ParseUInt(Query(context, "cols", "16")), (Int32)ParseUInt(Query(context, "rows", "16")), (Int32)ParseUInt(Query(context, "palette", "0")), Query(context, "start", "0"), Query(context, "bg", "Black")));
 						return;
+					case "/api/gfx/tilesources":
+						result = GfxService.GetTileSourcesJson(Query(context, "cpu", "Snes"), Query(context, "mem", "SnesVideoRam"), (Int32)ParseUInt(Query(context, "cols", "16")), (Int32)ParseUInt(Query(context, "rows", "16")), Query(context, "start", "0"), Query(context, "format", "Bpp4"));
+						break;
+					case "/api/gfx/spritesources":
+						result = GfxService.GetSpriteSourcesJson(Query(context, "cpu", "Snes"));
+						break;
+					case "/api/gfx/mapsources":
+						result = GfxService.GetMapSourcesJson(Query(context, "cpu", "Snes"), Query(context, "layer", "0"));
+						break;
+					case "/api/gfx/mapdiag":
+						result = GfxService.GetMapDiagJson(Query(context, "cpu", "Snes"), Query(context, "layer", "0"));
+						break;
+					case "/api/gfx/mapload/ringclear":
+						LiveDataService.MapLoadRingClear();
+						result = SerializeJson(new JsonObject() { ["ok"] = true });
+						break;
+					case "/api/gfx/mapload/ringcount":
+						result = SerializeJson(new JsonObject() { ["count"] = LiveDataService.MapLoadRingCount() });
+						break;
+					case "/api/gfx/mapload/ringsize":
+						result = SerializeJson(LiveDataService.MapLoadRingResize(Query(context, "entries", "0")));
+						break;
+					case "/api/gfx/trace":
+						result = GfxService.GetTraceJson(Query(context, "cpu", "Snes"), Query(context, "mem", "3"), Query(context, "addr", "0x3800"));
+						break;
+					case "/api/gfx/transfers":
+						result = GfxService.GetVramTransfersJson(Query(context, "cpu", "Snes"), Query(context, "mem", "3"));
+						break;
+					case "/api/script/run":
+						// GENERISCHES natives Script-Modul: POST Body = externes JSON-Schema
+						// (spiel-spezifisch), wird im Emulator-Prozess nativ interpretiert
+						// (Table-Driven, AoT-sicher). Kein spielspezifischer Core-Code.
+						if(method == "POST") {
+							string body = await ReadBody(context);
+							result = LiveDataService.ExecuteNativeScript(body);
+						} else {
+							result = new JsonObject() { ["ok"] = false, ["error"] = "POST body = JSON-Schema" };
+						}
+						break;
 					case "/api/spc":
 						await WriteSpc(context, SpcService.ExportSpc(Query(context, "song", ""), Query(context, "game", ""), Query(context, "artist", "")));
 						return;
@@ -983,6 +1025,16 @@ namespace Mesen.LiveApi
 				"GET  /api/gfx/sprites.json?cpu=Snes",
 				"GET  /api/gfx/sprites_decoded?cpu=Snes  (dekodierte OAM-Liste)",
 				"GET  /api/gfx/tiles?cpu=Snes&format=Bpp4&mem=SnesVideoRam&cols=16&rows=16&palette=0&start=0&bg=Black",
+				"GET  /api/gfx/tilesources?cols=&rows=&start=&format=  (ROM-Quellen je Tile im Tile-Viewer)",
+				"GET  /api/gfx/palettes?live=1  | /bg | /sprite | /bg0-7 | /sprite0-7  (CGRAM-Paletten + ROM-Quellen)",
+				"POST /api/gfx/mapload/autocapture | GET /api/gfx/mapload/autocapture-status  (automatische Kartenwechsel-Erfassung)",
+				"GET  /api/gfx/mapload/verify?addr= | /probe?addrs= | /raw?count= | /wrammap | /wramchain | /targetrom | /wramsource  (Rückwärtssuche-Diagnose)",
+				"GET  /api/gfx/mapsources?layer=0  (Map-Quelle: Ring-Blöcke + VramRomWord-Fallback)",
+				"GET  /api/gfx/mapdiag?layer=0  (Diagnose: DMA-Log + VramRomWord + Ring-Blöcke)",
+				"POST /api/script/run  (GENERISCHES natives Script-Modul: POST body = JSON-Schema, wird im Emulator interpretiert - fuer spiel-spezifische Analyse-Scripts)",
+				"GET  /api/gfx/trace?mem=3&addr=0x3800  (Transfer-Fangschaltung: Rückwärts-Suche Ziel->ROM, mem 0=ROM 1=WRAM 3=VRAM 4=CGRAM)",
+				"GET  /api/gfx/transfers?mem=3&range=0x10000-0x10800  (neueste aufgezeichnete Transfers, Diagnose)",
+				"GET  /api/gfx/mapload/ringcount | POST /api/gfx/mapload/ringclear | GET /api/gfx/mapload/ringsize?entries=N  (ROM-Read-Ring: Zähler/Löschen/Größe)",
 				"GET  /api/spc?song=&game=&artist=  (.spc Snapshot, octet-stream)",
 				"GET  /api/spc/wav?seconds=30  (WAV-Aufnahme des laufenden Audio)",
 				"POST /api/spc/record  | GET /api/spc/record/status | POST /api/spc/record/stop | GET /api/spc/record/file",
@@ -1016,6 +1068,17 @@ namespace Mesen.LiveApi
 				return Convert.ToUInt32(text, 10);
 			} catch {
 				return 0;
+			}
+		}
+
+		private static async Task<string> ReadBody(HttpListenerContext context)
+		{
+			try {
+				using(StreamReader reader = new StreamReader(context.Request.InputStream, Encoding.UTF8)) {
+					return await reader.ReadToEndAsync();
+				}
+			} catch {
+				return "";
 			}
 		}
 

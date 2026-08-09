@@ -296,10 +296,29 @@ namespace Mesen.LiveApi
 						//contiguous ROM run is reported.
 						JsonArray srcList = new JsonArray();
 						List<UInt32> wramSources = new List<UInt32>();
+						//R3.2: GENERIC palette source - resolve each CGRAM color back through the
+						//TRANSFER capture ring (CGRAM -> WRAM -> ROM) instead of a game-specific
+						//WRAM palette-buffer offset. Works for any game: the trace returns the
+						//chain of transfers that produced the CGRAM word, ending at the ROM source.
 						for(int c = 0; c < colorsPerPalette && p * colorsPerPalette + c < 0x100; c++) {
-							UInt32 wramAddr = 0x10600 + (UInt32)(p * colorsPerPalette + c);
-							UInt32 direct = DebugApi.SnesGetWramRomSource(wramAddr);
-							if(direct == 0xFFFFFFFF || direct == 0 || direct == 0x04A957 || direct == 0x06EAA9) {
+							int cgramIdx = p * colorsPerPalette + c;
+							UInt32 direct = 0xFFFFFFFF;
+							const int maxT = 4;
+							DebugApi.TransferInterop[] tchain = new DebugApi.TransferInterop[maxT];
+							UInt32 tGot = DebugApi.SnesMapLoadTrace(4, (UInt32)cgramIdx, tchain, maxT);
+							//walk the chain to the LAST step - the ROM source (srcMem==0).
+							//If no ROM step, use the first (nearest) source.
+							direct = 0xFFFFFFFF;
+							for(int ti = (int)tGot - 1; ti >= 0; ti--) {
+								if(tchain[ti].srcMem == 0) {
+									direct = tchain[ti].srcAddr;
+									break;
+								}
+								if(direct == 0xFFFFFFFF) {
+									direct = tchain[ti].srcAddr;
+								}
+							}
+							if(direct == 0xFFFFFFFF || direct == 0 || IsCodeSource(direct)) {
 								continue;
 							}
 							wramSources.Add(direct);
@@ -959,6 +978,381 @@ namespace Mesen.LiveApi
 			});
 		}
 
+		/// <summary>
+		/// R3.2: SOURCES of the sprites on screen - for each sprite, the ROM offset that
+		/// filled its tile (via TileAddress -> VramRomWord) and its palette (via the WRAM
+		/// palette buffer chain). Same reverse-search method as palettes/tiles: we know where
+		/// the sprite data sits in VRAM/CGRAM, so we look up which ROM bytes produced it.
+		/// </summary>
+		public static JsonNode? GetSpriteSourcesJson(string cpuType)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					SnesGfxData data = PrepareData(cpu.Value);
+					GetSpritePreviewOptions options = new GetSpritePreviewOptions() { Background = SpriteBackground.Transparent };
+					DebugSpritePreviewInfo previewInfo = DebugApi.GetSpritePreviewInfo(cpu.Value, options, data.PpuState, data.PpuToolsState);
+					IntPtr screenPreview = Marshal.AllocHGlobal((int)(previewInfo.Width * previewInfo.Height) * 4);
+					try {
+						DebugSpriteInfo[] sprites = Array.Empty<DebugSpriteInfo>();
+						UInt32[] spritePreviews = Array.Empty<UInt32>();
+						DebugApi.GetSpriteList(ref sprites, ref spritePreviews, cpu.Value, options, data.PpuState, data.PpuToolsState, data.Vram, data.SpriteRam, data.Palette, screenPreview);
+
+						JsonArray arr = new JsonArray();
+						for(int i = 0; i < sprites.Length; i++) {
+							DebugSpriteInfo s = sprites[i];
+							//sprite tile VRAM source (bytes). TileAddress is a VRAM byte address.
+							UInt32 vramWord = (UInt32)(s.TileAddress / 2);
+							UInt32 tileRom = vramWord < 0x8000 ? DebugApi.SnesMapLoadVramRomWord(vramWord) : 0xFFFFFFFF;
+							string tileSrc = tileRom != 0xFFFFFFFF && tileRom != 0 ? "0x" + tileRom.ToString("X6") : "-";
+							//sprite palette source - sprites use the 8 sprite palettes at
+							//CGRAM words 0x80-0xFF (byte addr $0100-$01FF), palette index 0-7.
+							//Use the CgramRomWord reverse-lookup (same as /api/gfx/palettes).
+							UInt32 spritePalWord = (UInt32)(0x80 + (s.Palette & 7) * 16);
+							UInt32 palRom = DebugApi.SnesMapLoadCgramRomWord(spritePalWord);
+							string palSrc = palRom != 0xFFFFFFFF && palRom != 0 ? "0x" + palRom.ToString("X6") : "-";
+							arr.Add((JsonNode)new JsonObject() {
+								["index"] = s.SpriteIndex,
+								["x"] = s.X,
+								["y"] = s.Y,
+								["width"] = s.Width,
+								["height"] = s.Height,
+								["tileIndex"] = s.TileIndex,
+								["tileVram"] = "0x" + s.TileAddress.ToString("X4"),
+								["tileSource"] = tileSrc,
+								["palette"] = s.Palette,
+								["paletteSource"] = palSrc
+							});
+						}
+						return new JsonObject() {
+							["cpu"] = cpu.Value.ToString(),
+							["count"] = sprites.Length,
+							["sprites"] = arr
+						};
+					} finally {
+						Marshal.FreeHGlobal(screenPreview);
+					}
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		/// <summary>
+		/// R3.2: SOURCES of the tilemap/map - the VRAM tilemap area (per active layer) is
+		/// reverse-looked-up: which ROM offsets filled the tilemap word area. This reveals
+		/// where the current map data in VRAM comes from in the ROM file.
+		/// </summary>
+		public static JsonNode? GetMapSourcesJson(string cpuType, string layer)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					//R3.2: enable live tracking so VramRomWord stays current (the map sources
+					//are read from it; without live tracking the table may be stale/empty).
+					if(!_liveTrackingInit) {
+						_liveTrackingInit = true;
+						DebugApi.SnesMapLoadLogSetEnabled(true);
+						DebugApi.SnesMapLoadLogSetAutoCapture(true);
+						DebugApi.SnesMapLoadLogSetLiveTracking(true);
+					}
+					SnesPpuState state = DebugApi.GetPpuState<SnesPpuState>(cpu.Value);
+					int layerIdx = int.TryParse(layer, out int li) ? li : 0;
+					if(layerIdx < 0 || layerIdx > 3) {
+						layerIdx = 0;
+					}
+					LayerConfig lc = state.Layers[layerIdx];
+					UInt32 baseWord = lc.TilemapAddress;
+					UInt32 mapWords = lc.LargeTiles ? 0x1000u : 0x400u;
+					//Mode-7 world map is a 128x128 tile grid (0x4000 bytes = 0x2000 words for
+					//16-bit entries, or 1024x1024 = 0x1000 words for large maps). The DMA that
+					//fills it may start a bit after TilemapAddress - scan a wider window so we
+					//catch the real writes (observed at 0x6C00-0x6FE0 for a 0x6800 base).
+					if(state.BgMode == 7 || state.Mode7.LargeMap) {
+						mapWords = state.Mode7.LargeMap ? 0x2000u : 0x1000u;
+					}
+					UInt32 chrWord = lc.ChrAddress;
+					string tilemapLabel = "0x" + baseWord.ToString("X4");
+					string chrLabel = "0x" + chrWord.ToString("X4");
+					//Mode-7 detection: BgMode==7, OR a large mode-7 map config is active
+					//(Terranigma uses the mode-7 style world map with large tiles).
+					bool isMode7 = state.BgMode == 7 || state.Mode7.LargeMap;
+
+					//R3.2: resolve the tilemap source. PRIMARY: the VramRomWord reverse-lookup
+					//(decompressed VRAM words map back to their ROM source - this reflects the
+					//ACTUAL tilemap currently rendered, so it is always map-specific and works
+					//for normal BG and mode-7 maps alike; verified: world map -> 0x01F6xx,
+					//Crysta -> 0x1FC3xx). FALLBACK: the ROM-read ring's largest blocks (the
+					//decompression source reads) + DMA log.
+					UInt32 total = DebugApi.SnesMapLoadLogGetCount();
+					UInt32 n = Math.Min(total, 1u << 21);
+					DebugApi.InteropMapLoadEntry[] entries = new DebugApi.InteropMapLoadEntry[n];
+					UInt32 got = DebugApi.SnesGetMapLoadLog(entries, 0, n);
+
+					JsonArray srcList = new JsonArray();
+					{
+						//vram reverse-lookup coverage (majority). For a tilemap the entries are
+						//2 bytes apart in VRAM but the ROM source advances by one word per entry
+						//(0x04AACA, 0x04AACC... for normal, or the map base + entry*2). We collect
+						//all distinct sources and take the DOMINANT contiguous run as the map base.
+						Dictionary<UInt32, int> srcCoverage = new Dictionary<UInt32, int>();
+						for(UInt32 w = 0; w < mapWords && baseWord + w < 0x8000; w++) {
+							UInt32 rom = DebugApi.SnesMapLoadVramRomWord(baseWord + w);
+							if(IsCodeSource(rom)) {
+								continue;
+							}
+							//if the stored value is a WRAM address (0x00000-0x1FFFF), resolve it
+							//through the WramRomByte chain to the real ROM source (mode-7 tilemap
+							//is decompressed via WRAM).
+							if(rom < 0x20000) {
+								UInt32 rom2 = DebugApi.SnesGetWramRomSource(rom);
+								if(!IsCodeSource(rom2)) {
+									rom = rom2;
+								}
+							}
+							srcCoverage.TryGetValue(rom, out int c);
+							srcCoverage[rom] = c + 1;
+						}
+						//also count DMA-log entries into the tilemap range
+						for(int i = 0; i < (int)got; i++) {
+							DebugApi.InteropMapLoadEntry e = entries[i];
+							if(e.targetType != 0 || e.targetAddr < baseWord || e.targetAddr >= baseWord + mapWords) {
+								continue;
+							}
+							UInt32 rom = 0xFFFFFFFF;
+							if(e.sourceType == 0 && e.sourceMem == 0) {
+								rom = e.sourceAddr;
+							} else if(e.sourceType == 1 && e.sourceMem == (byte)MemoryType.SnesPrgRom) {
+								rom = e.sourceAddr;
+							}
+							if(IsCodeSource(rom)) {
+								continue;
+							}
+							srcCoverage.TryGetValue(rom, out int c);
+							srcCoverage[rom] = c + 1;
+						}
+						//dominant source by coverage - the real tilemap base. Report it plus its
+						//contiguous extent (entries 2 bytes apart = adjacent ROM words).
+						var top = srcCoverage.OrderByDescending(kv => kv.Value).FirstOrDefault();
+						if(top.Key != 0) {
+							UInt32 baseRom = top.Key;
+							//find the contiguous ROM run through consecutive entries
+							UInt32 runStart = baseRom, runEnd = baseRom;
+							bool grow = true;
+							while(grow) {
+								grow = false;
+								if(srcCoverage.ContainsKey(runStart - 2)) { runStart -= 2; grow = true; }
+								if(srcCoverage.ContainsKey(runEnd + 2)) { runEnd += 2; grow = true; }
+							}
+							//also grow by the +0x20 mode-7 map stride (VRAM word 0x10 -> ROM +0x20)
+							bool grow2 = true;
+							while(grow2) {
+								grow2 = false;
+								if(srcCoverage.ContainsKey(runStart - 0x20)) { runStart -= 0x20; grow2 = true; }
+								if(srcCoverage.ContainsKey(runEnd + 0x20)) { runEnd += 0x20; grow2 = true; }
+							}
+							srcList.Add((JsonNode)JsonValue.Create(runStart == runEnd ? "0x" + runStart.ToString("X6") : "0x" + runStart.ToString("X6") + "-0x" + runEnd.ToString("X6")));
+						}
+					}
+					if(srcList.Count == 0) {
+						//ring-based fallback: largest contiguous ROM-read blocks from the recent
+						//frame window (the decompression source reads). Require a decent size
+						//(>= 512 B) so per-palette/fade reads don't pollute the map source.
+						const int maxR = 16;
+						UInt32[] rStarts = new UInt32[maxR];
+						UInt32[] rLens = new UInt32[maxR];
+						UInt32 rGot = DebugApi.SnesMapLoadRomReadRingLargest(rStarts, rLens, maxR, 0xFFFFFFFF, 1800);
+						for(int i = 0; i < (int)rGot; i++) {
+							if(rLens[i] < 512 || rStarts[i] >= 0x400000) {
+								continue;
+							}
+							srcList.Add((JsonNode)JsonValue.Create("0x" + rStarts[i].ToString("X6") + "-0x" + (rStarts[i] + rLens[i] - 1).ToString("X6")));
+							if(srcList.Count >= 4) break;
+						}
+					}
+					//Mode-7 tileset source: the tileset is 8bpp (64 bytes/tile); report the
+					//ROM sources of the tileset area too. PRIMARY: the ring's largest blocks
+					//(the compressed package may hold tiles+map together). FALLBACK: a
+					//VramRomWord majority + DMA log.
+					JsonArray tilesetSrcList = new JsonArray();
+					if(isMode7) {
+						const int maxR2 = 8;
+						UInt32[] rStarts2 = new UInt32[maxR2];
+						UInt32[] rLens2 = new UInt32[maxR2];
+						UInt32 rGot2 = DebugApi.SnesMapLoadRomReadRingLargest(rStarts2, rLens2, maxR2, 0xFFFFFFFF, 1800);
+						for(int i = 0; i < (int)rGot2; i++) {
+							if(rLens2[i] < 512 || rStarts2[i] >= 0x400000) {
+								continue;
+							}
+							tilesetSrcList.Add((JsonNode)JsonValue.Create("0x" + rStarts2[i].ToString("X6") + "-0x" + (rStarts2[i] + rLens2[i] - 1).ToString("X6")));
+							if(tilesetSrcList.Count >= 4) break;
+						}
+					}
+					if(isMode7 && tilesetSrcList.Count == 0) {
+						Dictionary<UInt32, int> tsCoverage = new Dictionary<UInt32, int>();
+						for(UInt32 w = 0; w < 0x8000 && chrWord + w < 0x8000; w++) {
+							UInt32 rom = DebugApi.SnesMapLoadVramRomWord(chrWord + w);
+							if(IsCodeSource(rom)) {
+								continue;
+							}
+							tsCoverage.TryGetValue(rom, out int c);
+							tsCoverage[rom] = c + 1;
+						}
+						for(int i = 0; i < (int)got; i++) {
+							DebugApi.InteropMapLoadEntry e = entries[i];
+							if(e.targetType != 0) {
+								continue;
+							}
+							if(e.targetAddr < chrWord || e.targetAddr >= chrWord + 0x8000) {
+								continue;
+							}
+							UInt32 rom = (e.sourceType == 0 && e.sourceMem == 0) || (e.sourceType == 1 && e.sourceMem == (byte)MemoryType.SnesPrgRom) ? e.sourceAddr : 0xFFFFFFFF;
+							if(IsCodeSource(rom)) {
+								continue;
+							}
+							tsCoverage.TryGetValue(rom, out int c);
+							tsCoverage[rom] = c + 1;
+						}
+						var tsSorted = tsCoverage.OrderByDescending(kv => kv.Value).Take(40).Select(kv => kv.Key).Distinct().OrderBy(x => x).ToList();
+						int tsi = 0;
+						while(tsi < tsSorted.Count) {
+							UInt32 s = tsSorted[tsi];
+							UInt32 e = s;
+							int tsj = tsi + 1;
+							while(tsj < tsSorted.Count && tsSorted[tsj] == e + 2) {
+								e = tsSorted[tsj];
+								tsj++;
+							}
+							tilesetSrcList.Add((JsonNode)JsonValue.Create(s == e ? "0x" + s.ToString("X6") : "0x" + s.ToString("X6") + "-0x" + e.ToString("X6")));
+							tsi = tsj;
+						}
+					}
+					return new JsonObject() {
+						["layer"] = layerIdx,
+						["name"] = "BG" + (layerIdx + 1),
+						["mode7"] = isMode7,
+						["tilemapAddress"] = tilemapLabel,
+						["mapWords"] = mapWords,
+						["largeTiles"] = lc.LargeTiles,
+						["chrAddress"] = chrLabel,
+						["sourceCount"] = srcList.Count,
+						["sources"] = srcList,
+						["tilesetSourceCount"] = tilesetSrcList.Count,
+						["tilesetSources"] = tilesetSrcList
+					};
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		/// <summary>
+		/// R3.2: DIAGNOSTICS - show what the emulator actually recorded for the tilemap area
+		/// of a layer: the raw DMA/CPU log entries targeting that VRAM range (with their ROM
+		/// sources), the VramRomWord table, and the WRAM->ROM chain. This reveals the true
+		/// data flow (e.g. mode-7 map loaded via DMA, CPU copy, or through WRAM) so the
+		/// reverse-search can be corrected instead of guessed.
+		/// </summary>
+		public static JsonNode? GetMapDiagJson(string cpuType, string layer)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					if(!_liveTrackingInit) {
+						_liveTrackingInit = true;
+						DebugApi.SnesMapLoadLogSetEnabled(true);
+						DebugApi.SnesMapLoadLogSetAutoCapture(true);
+						DebugApi.SnesMapLoadLogSetLiveTracking(true);
+					}
+					SnesPpuState state = DebugApi.GetPpuState<SnesPpuState>(cpu.Value);
+					int layerIdx = int.TryParse(layer, out int li) ? li : 0;
+					if(layerIdx < 0 || layerIdx > 3) layerIdx = 0;
+					LayerConfig lc = state.Layers[layerIdx];
+					UInt32 baseWord = lc.TilemapAddress;
+					UInt32 mapWords = lc.LargeTiles ? 0x1000u : 0x400u;
+					bool isMode7 = state.BgMode == 7 || state.Mode7.LargeMap;
+
+					//raw log entries targeting the tilemap range
+					UInt32 total = DebugApi.SnesMapLoadLogGetCount();
+					UInt32 n = Math.Min(total, 1u << 21);
+					DebugApi.InteropMapLoadEntry[] entries = new DebugApi.InteropMapLoadEntry[n];
+					UInt32 got = DebugApi.SnesGetMapLoadLog(entries, 0, n);
+					JsonArray logArr = new JsonArray();
+					for(int i = 0; i < (int)got; i++) {
+						DebugApi.InteropMapLoadEntry e = entries[i];
+						if(e.targetType != 0 || e.targetAddr < baseWord || e.targetAddr >= baseWord + mapWords) {
+							continue;
+						}
+						string src = e.sourceMem == 0 ? "ROM 0x" + e.sourceAddr.ToString("X6") : "WRAM 0x" + (e.sourceAddr & 0x1FFFF).ToString("X5");
+						logArr.Add((JsonNode)new JsonObject() {
+							["frame"] = e.frame,
+							["via"] = e.sourceType == 0 ? "dma ch" + e.channel : "cpu",
+							["src"] = src,
+							["rawBus"] = "0x" + e.pc.ToString("X6"),
+							["taddr"] = e.targetAddr,
+							["len"] = e.length
+						});
+					}
+					//VramRomWord sample over the tilemap range (non-empty)
+					JsonArray vramArr = new JsonArray();
+					for(UInt32 w = 0; w < mapWords && baseWord + w < 0x8000; w += 0x10) {
+						UInt32 rom = DebugApi.SnesMapLoadVramRomWord(baseWord + w);
+						if(rom != 0xFFFFFFFF && rom != 0) {
+							vramArr.Add((JsonNode)new JsonObject() {
+								["vram"] = "0x" + (baseWord + w).ToString("X4"),
+								["rom"] = "0x" + rom.ToString("X6")
+							});
+						}
+					}
+					//ROM reads of the last map-load burst (the compressed tilemap source
+					//candidates) - the decompression reads these from the ROM. The ring
+					//always runs (1M entries), so we take the LARGEST contiguous blocks.
+					JsonArray ringArr = new JsonArray();
+					{
+						const int maxR = 64;
+						UInt32[] rStarts = new UInt32[maxR];
+						UInt32[] rLens = new UInt32[maxR];
+						UInt32 rGot = DebugApi.SnesMapLoadRomReadRingLargest(rStarts, rLens, maxR, 0xFFFFFFFF, 1800);
+						for(int i = 0; i < (int)rGot; i++) {
+							ringArr.Add((JsonNode)new JsonObject() {
+								["rom"] = "0x" + rStarts[i].ToString("X6") + "-0x" + (rStarts[i] + rLens[i] - 1).ToString("X6"),
+								["len"] = rLens[i]
+							});
+						}
+					}
+					return new JsonObject() {
+						["layer"] = layerIdx,
+						["name"] = "BG" + (layerIdx + 1),
+						["mode7"] = isMode7,
+						["tilemapAddress"] = "0x" + baseWord.ToString("X4"),
+						["mapWords"] = mapWords,
+						["chrAddress"] = "0x" + lc.ChrAddress.ToString("X4"),
+						["logCount"] = logArr.Count,
+						["log"] = logArr,
+						["vramNonEmpty"] = vramArr.Count,
+						["vram"] = vramArr,
+						["ringCount"] = ringArr.Count,
+						["ringReads"] = ringArr,
+						["dmaDebugBus"] = "0x" + DebugApi.SnesMapLoadDmaDebugBus().ToString("X6"),
+						["dmaDebugLinear"] = "0x" + DebugApi.SnesMapLoadDmaDebugLinear().ToString("X6"),
+						["dmaDebugIsRom"] = DebugApi.SnesMapLoadDmaDebugIsRom(),
+						["dmaDebugIsWram"] = DebugApi.SnesMapLoadDmaDebugIsWram()
+					};
+				} catch {
+					return null;
+				}
+			});
+		}
+
 		public static byte[]? GetTilesPng(string cpuType, string format, string memType, int columns, int rows, int paletteIndex, string startAddress, string bg)
 		{
 			CpuType? cpu = ParseCpuType(cpuType);
@@ -1014,6 +1408,81 @@ namespace Mesen.LiveApi
 			});
 		}
 
+		/// <summary>
+		/// R3.2: SOURCES of the tile set shown in the tile viewer - for each 8x8 tile in the
+		/// current viewer range (start address + cols*rows), report the ROM file offset that
+		/// filled that VRAM area (reverse-lookup through the VramRomWord chain). Same method
+		/// as the palette viewer: we know where the tiles sit in VRAM, so we look up which
+		/// ROM bytes produced them - no byte-matching, works for compressed tiles too.
+		/// </summary>
+		public static JsonNode? GetTileSourcesJson(string cpuType, string memType, int columns, int rows, string startAddress, string format)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					int colCount = Math.Max(columns, 1);
+					int rowCount = Math.Max(rows, 1);
+					UInt32 startAddr = ParseUInt(QueryString(startAddress, "0"));
+					//bytes per 8x8 tile depends on the format: Bpp2=16, Bpp4=32, Bpp8=64
+					int bytesPerTile = format switch {
+						"Bpp2" => 16,
+						"Bpp8" => 64,
+						_ => 32
+					};
+					int wordsPerTile = bytesPerTile / 2;  //VRAM word address space
+
+					//group the VRAM word range per tile and resolve each via VramRomWord
+					JsonArray tiles = new JsonArray();
+					UInt32 tileIndex = 0;
+					for(int r = 0; r < rowCount; r++) {
+						for(int c = 0; c < colCount; c++) {
+							UInt32 vramWordStart = startAddr / 2 + tileIndex * (UInt32)wordsPerTile;
+							HashSet<UInt32> srcSet = new HashSet<UInt32>();
+							for(int w = 0; w < wordsPerTile; w++) {
+								UInt32 rom = DebugApi.SnesMapLoadVramRomWord(vramWordStart + (UInt32)w);
+								if(rom != 0xFFFFFFFF && rom != 0) {
+									srcSet.Add(rom);
+								}
+							}
+							List<UInt32> sorted = srcSet.OrderBy(x => x).ToList();
+							JsonArray srcList = new JsonArray();
+							int si = 0;
+							while(si < sorted.Count) {
+								UInt32 s = sorted[si];
+								UInt32 e = s;
+								int sj = si + 1;
+								while(sj < sorted.Count && sorted[sj] == e + 2) {
+									e = sorted[sj];
+									sj++;
+								}
+								srcList.Add((JsonNode)JsonValue.Create(s == e ? "0x" + s.ToString("X6") : "0x" + s.ToString("X6") + "-0x" + e.ToString("X6")));
+								si = sj;
+							}
+							tiles.Add((JsonNode)new JsonObject() {
+								["tile"] = tileIndex,
+								["vram"] = "0x" + vramWordStart.ToString("X5"),
+								["sources"] = srcList,
+								["sourceCount"] = srcList.Count,
+								["hasMultipleSources"] = srcList.Count > 1
+							});
+							tileIndex++;
+						}
+					}
+					return new JsonObject() {
+						["tileCount"] = tileIndex,
+						["bytesPerTile"] = bytesPerTile,
+						["start"] = "0x" + startAddr.ToString("X4"),
+						["tiles"] = tiles
+					};
+				} catch {
+					return null;
+				}
+			});
+		}
+
 		private static List<int> ParseLayerList(string layers)
 		{
 			List<int> result = new List<int>();
@@ -1052,6 +1521,22 @@ namespace Mesen.LiveApi
 			}
 		}
 
+		//R3.2: GENERIC - is this ROM offset a CODE address (per the Code-Data-Logger)?
+		//Used to keep code reads out of the reverse-lookup sources without hardcoding
+		//game-specific addresses.
+		private static bool IsCodeSource(UInt32 rom)
+		{
+			if(rom == 0xFFFFFFFF || rom == 0 || rom >= 0x400000) {
+				return true;  //invalid - treat as "not a usable source"
+			}
+			// Nur eindeutig ungueltige Adressen filtern. Der CDL (IsRomCode) ist hier NICHT
+			// zuverlaessig: er markiert echte komprimierte Daten faelschlich als Code und
+			// verursacht leere Palette-Listen. Die zuverlaessige Ressourcen-Quelle liefert
+			// das native Script-Modul (/api/script/run, spiel-spezifisch), nicht die generische
+			// Runtime-Reverse-Suche.
+			return false;
+		}
+
 		private static string QueryString(string value, string defaultValue)
 		{
 			return string.IsNullOrEmpty(value) ? defaultValue : value;
@@ -1073,6 +1558,116 @@ namespace Mesen.LiveApi
 				SpriteRam = spriteRam;
 				Palette = palette;
 			}
+		}
+
+		/// <summary>
+		/// R3.2: reverse-search via the TRANSFER capture ring. Walks BACK from a target
+		/// (e.g. a VRAM tilemap word / CGRAM palette index / WRAM buffer) through the
+		/// recorded memory transfers to the ROM source. Generic - works for any game.
+		/// mem: 0=ROM 1=WRAM 2=SaveRAM 3=VRAM 4=CGRAM. addr: linear (VRAM word, CGRAM idx,
+		/// WRAM 0x00000-0x1FFFF). Returns the chain newest-first.
+		/// </summary>
+		public static JsonNode? GetTraceJson(string cpuType, string mem, string addr)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					if(!_liveTrackingInit) {
+						_liveTrackingInit = true;
+						DebugApi.SnesMapLoadLogSetEnabled(true);
+						DebugApi.SnesMapLoadLogSetAutoCapture(true);
+						DebugApi.SnesMapLoadLogSetLiveTracking(true);
+					}
+					byte memType = (byte)(int.TryParse(mem, out int mv) ? mv : 3);
+					UInt32 target = ParseUInt(addr);
+					const int maxE = 32;
+					DebugApi.TransferInterop[] entries = new DebugApi.TransferInterop[maxE];
+					UInt32 got = DebugApi.SnesMapLoadTrace(memType, target, entries, maxE);
+					DebugApi.TransferInterop peek = new DebugApi.TransferInterop();
+					DebugApi.SnesMapLoadTransferPeek(out peek);
+					JsonArray chain = new JsonArray();
+					for(int i = 0; i < (int)got; i++) {
+						DebugApi.TransferInterop e = entries[i];
+						chain.Add((JsonNode)new JsonObject() {
+							["step"] = i,
+							["via"] = e.via == 0 ? "dma" : "cpu",
+							["srcMem"] = e.srcMem,
+							["src"] = "0x" + e.srcAddr.ToString("X6"),
+							["dstMem"] = e.dstMem,
+							["dst"] = "0x" + e.dstAddr.ToString("X6"),
+							["len"] = e.len
+						});
+					}
+					return new JsonObject() {
+						["mem"] = memType,
+						["addr"] = "0x" + target.ToString("X6"),
+						["steps"] = got,
+						["transferCount"] = DebugApi.SnesMapLoadTransferCount(),
+						["peekSrc"] = "0x" + peek.srcAddr.ToString("X6"),
+						["peekDst"] = "0x" + peek.dstAddr.ToString("X6"),
+						["peekLen"] = peek.len,
+						["peekSrcMem"] = peek.srcMem,
+						["peekDstMem"] = peek.dstMem,
+						["chain"] = chain
+					};
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		/// <summary>
+		/// R3.2: diagnostics - show the NEWEST recorded transfers to a destination memory
+		/// type (3=VRAM, 4=CGRAM, 1=WRAM). Reveals which addresses the game is currently
+		/// writing, so the reverse-search targets can be verified.
+		/// </summary>
+		public static JsonNode? GetVramTransfersJson(string cpuType, string mem)
+		{
+			CpuType? cpu = ParseCpuType(cpuType);
+			if(cpu == null) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					byte memType = (byte)(int.TryParse(mem, out int mv) ? mv : 3);
+					UInt32 rangeStart = 0;
+					UInt32 rangeEnd = 0xFFFFFFFF;
+					string range = QueryString("range", "");
+					if(range != "" && range.Contains('-')) {
+						string[] parts = range.Split('-');
+						rangeStart = ParseUInt(parts[0].Trim());
+						rangeEnd = ParseUInt(parts[1].Trim());
+					}
+					const int maxR = 64;
+					UInt32[] srcs = new UInt32[maxR];
+					UInt32[] dsts = new UInt32[maxR];
+					byte[] vias = new byte[maxR];
+					UInt32 got;
+					if(range != "" && range.Contains('-')) {
+						got = DebugApi.SnesMapLoadTransfersToRange(memType, rangeStart, rangeEnd, srcs, dsts, vias, maxR);
+					} else {
+						got = DebugApi.SnesMapLoadTransfersToMem(memType, srcs, dsts, vias, maxR);
+					}
+					JsonArray arr = new JsonArray();
+					for(int i = 0; i < (int)got; i++) {
+						arr.Add((JsonNode)new JsonObject() {
+							["via"] = vias[i] == 0 ? "dma" : "cpu",
+							["src"] = "0x" + srcs[i].ToString("X6"),
+							["dst"] = "0x" + dsts[i].ToString("X6")
+						});
+					}
+					return new JsonObject() {
+						["mem"] = memType,
+						["count"] = got,
+						["transfers"] = arr
+					};
+				} catch {
+					return null;
+				}
+			});
 		}
 	}
 }

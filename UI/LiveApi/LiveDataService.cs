@@ -7,7 +7,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 
@@ -376,6 +378,17 @@ namespace Mesen.LiveApi
 					return null;
 				}
 			});
+		}
+
+		// NICHT-lockende Variante: wird nur innerhalb eines bestehenden RunExclusive aufgerufen
+		// (z.B. vom nativen Script-Modul) - sonst Deadlock (Semaphor ist nicht rekursiv).
+		private static byte[]? ReadMemoryRawNoLock(MemoryType type, UInt32 start, UInt32 length)
+		{
+			try {
+				return DebugApi.GetMemoryValues(type, start, start + Math.Max(length, 1) - 1);
+			} catch {
+				return null;
+			}
 		}
 
 		public static bool WriteMemory(string type, UInt32 start, string? hexData, byte[]? values)
@@ -2504,6 +2517,399 @@ namespace Mesen.LiveApi
 				}
 			}
 			return result;
+		}
+
+		public static void MapLoadRingClear()
+		{
+			RunExclusive(() => {
+				try {
+					DebugApi.SnesMapLoadLogSetEnabled(true);
+					DebugApi.SnesMapLoadLogSetAutoCapture(true);
+					DebugApi.SnesMapLoadLogSetLiveTracking(true);
+					DebugApi.SnesMapLoadRomReadRingClear();
+				} catch {
+				}
+			});
+		}
+
+		public static UInt32 MapLoadRingCount()
+		{
+			UInt32 result = 0;
+			RunExclusive(() => {
+				try {
+					DebugApi.SnesMapLoadLogSetEnabled(true);
+					DebugApi.SnesMapLoadLogSetAutoCapture(true);
+					DebugApi.SnesMapLoadLogSetLiveTracking(true);
+					result = DebugApi.SnesMapLoadRomReadRingCount();
+				} catch {
+				}
+			});
+			return result;
+		}
+
+		public static JsonObject MapLoadRingResize(string entries)
+		{
+			UInt32 size = 0;
+			if(UInt32.TryParse(entries, out UInt32 v) && v >= (1u << 16)) {
+				size = v;
+			}
+			return RunExclusive(() => {
+				try {
+					if(size == 0) {
+						size = DebugApi.SnesMapLoadRomReadRingSize();
+					} else {
+						DebugApi.SnesMapLoadLogSetEnabled(true);
+						DebugApi.SnesMapLoadLogSetAutoCapture(true);
+						DebugApi.SnesMapLoadLogSetLiveTracking(true);
+						DebugApi.SnesMapLoadRomReadRingResize(size);
+					}
+					return new JsonObject() {
+						["entries"] = size,
+						["bytes"] = size * 16u,
+						["actual"] = DebugApi.SnesMapLoadRomReadRingSize()
+					};
+				} catch {
+					return new JsonObject() { ["error"] = "resize failed" };
+				}
+			});
+		}
+
+		public static JsonNode? MapLoadVramMap(string startHex, string wordsHex)
+		{
+			return RunExclusive(() => {
+				try {
+					UInt32 start = ParseUIntHex(startHex);
+					UInt32 words = Math.Min(ParseUIntHex(wordsHex) == 0 ? 0x400u : ParseUIntHex(wordsHex), 0x2000u);
+					JsonArray arr = new JsonArray();
+					for(UInt32 w = 0; w < words; w++) {
+						UInt32 rom = DebugApi.SnesMapLoadVramRomWord(start + w);
+						arr.Add((JsonNode)new JsonObject() {
+							["vram"] = "0x" + (start + w).ToString("X4"),
+							["rom"] = rom == 0xFFFFFFFF ? "(leer)" : "0x" + rom.ToString("X6")
+						});
+					}
+					return new JsonObject() { ["start"] = "0x" + start.ToString("X4"), ["words"] = words, ["entries"] = arr };
+				} catch {
+					return null;
+				}
+			});
+		}
+
+		/// <summary>
+		/// R3.2: GENERISCHES natives Script-Modul (Table-Driven, AoT-sicher, KEIN JS/Reflection).
+		/// Ein EXTERNES Spiel-Script (JSON-Schema) beschreibt, wie Pointer-Tabellen und
+		/// Script-Kommandos im ROM interpretiert werden. Der Emulator fuehrt es nativ aus
+		/// und liefert die extrahierten Ressourcen als JSON. Kein spiel-spezifischer Code im
+		/// Emulator - das Schema kommt von aussen (Plugin-Datei / POST-Body).
+		///
+		/// Schema (JSON):
+		/// {
+		///   "mapIdWram": "0x047E",       // WRAM-Adresse der aktiven Map-ID (LE Word)
+		///   "pointerTable": "0x06959C",  // Pointer-Tabelle: Map-ID * 3 Bytes (lo,hi,bank)
+		///   "subTable": "0x06A28C",      // Sub-Script-Tabelle: Index * 3 Bytes
+		///   "hirom": true,               // HiROM Bus->File Mapping
+		///   "bankTransform": "b*2+0x1B", // ROM-Bank-Transformation
+		///   "commands": [                // Kommandos: Opcode -> Feld-Layout
+		///     { "op": "0x40", "name": "palette", "len": 7, "addrPos": 4, "bankPos": 6 },
+		///     { "op": "0x80", "name": "tiles",   "len": 9, "addrPos": 4, "bankPos": 6 },
+		///     { "op": "0x20", "name": "tilemap", "len": 8, "addrPos": 5, "bankPos": 7 },
+		///     { "op": "0x10", "name": "raw",     "len": 5, "layerPos": 1, "addrPos": 2 },
+		///     { "op": "0x02", "name": "spc",     "len": 5, "addrPos": 2, "bankPos": 4 },
+		///     { "op": "0x08FC", "name": "sub",   "len": 4, "subIdxPos": 2 },
+		///     { "op": "0x08FA", "name": "entity","len": 7, "typPos": 2, "idPos": 5 }
+		///   ]
+		/// }
+		/// </summary>
+		public static JsonObject? ExecuteNativeScript(string source)
+		{
+			if(string.IsNullOrWhiteSpace(source)) {
+				return null;
+			}
+			return RunExclusive(() => {
+				try {
+					JsonObject? schema;
+					try {
+						schema = JsonSerializer.Deserialize<JsonObject>(source, LiveApiSerializerContext.Default.JsonObject);
+					} catch {
+						return new JsonObject() { ["ok"] = false, ["error"] = "Script ist kein gueltiges JSON-Schema" };
+					}
+					if(schema == null) {
+						return new JsonObject() { ["ok"] = false, ["error"] = "leeres Schema" };
+					}
+					UInt32 mapIdWram = ReadSchemaAddr(schema, "mapIdWram", 0x047E);
+					UInt32 pointerTable = ReadSchemaAddr(schema, "pointerTable", 0x06959C);
+					UInt32 subTable = ReadSchemaAddr(schema, "subTable", 0x06A28C);
+					bool hirom = ReadSchemaBool(schema, "hirom", true);
+					string bankTransform = ReadSchemaString(schema, "bankTransform", "b*2+0x1B");
+
+					List<ScriptCmd> commands = new List<ScriptCmd>();
+					if(schema["commands"] is JsonArray cmdArr) {
+						foreach(JsonNode? cn in cmdArr) {
+							JsonObject? co = cn as JsonObject;
+							if(co == null) continue;
+							ScriptCmd cmd = new ScriptCmd();
+							cmd.Op = ReadSchemaAddr(co, "op", 0);
+							cmd.Name = ReadSchemaString(co, "name", "");
+							// len: Zahl (fest) ODER "min-max" (auto-erkennung durch Opcode-Validierung)
+							string lenStr = ReadSchemaString(co, "len", "");
+							if(lenStr.Contains('-')) {
+								string[] parts = lenStr.Split('-');
+								cmd.Len = int.TryParse(parts[0], out int lmin) ? lmin : 1;
+								cmd.MaxLen = int.TryParse(parts[1], out int lmax) ? lmax : lmin;
+							} else {
+								cmd.Len = (int)ReadSchemaAddr(co, "len", 1);
+								cmd.MaxLen = cmd.Len;
+							}
+							cmd.AddrPos = (int)ReadSchemaAddr(co, "addrPos", 0xFFFFFFFF);
+							cmd.BankPos = (int)ReadSchemaAddr(co, "bankPos", 0xFFFFFFFF);
+							cmd.LayerPos = (int)ReadSchemaAddr(co, "layerPos", 0xFFFFFFFF);
+							cmd.SubIdxPos = (int)ReadSchemaAddr(co, "subIdxPos", 0xFFFFFFFF);
+							cmd.TypPos = (int)ReadSchemaAddr(co, "typPos", 0xFFFFFFFF);
+							cmd.IdPos = (int)ReadSchemaAddr(co, "idPos", 0xFFFFFFFF);
+							commands.Add(cmd);
+						}
+					}
+
+					// ROM-Cache: ganze 4KB-Chunks laden statt Byte-fuer-Byte (schnell)
+					Dictionary<UInt32, byte[]> cache = new Dictionary<UInt32, byte[]>();
+
+					UInt32 mapId = ReadWram16(mapIdWram);
+					UInt32 scriptBase = ReadPointerCached(pointerTable + mapId * 3, hirom, cache);
+					JsonArray results = new JsonArray();
+					HashSet<UInt32> seen = new HashSet<UInt32>();
+					ScanScriptCached(scriptBase, hirom, bankTransform, commands, subTable, 0, results, seen, cache);
+
+					return new JsonObject() {
+						["ok"] = true,
+						["mapId"] = mapId,
+						["scriptBase"] = "0x" + scriptBase.ToString("X6"),
+						["resources"] = results
+					};
+				} catch(Exception ex) {
+					return new JsonObject() { ["ok"] = false, ["error"] = ex.Message };
+				}
+			});
+		}
+
+		private class ScriptCmd
+		{
+			public UInt32 Op;
+			public string Name = "";
+			public int Len = 1;
+			public int MaxLen = 1;
+			public int AddrPos = -1;
+			public int BankPos = -1;
+			public int LayerPos = -1;
+			public int SubIdxPos = -1;
+			public int TypPos = -1;
+			public int IdPos = -1;
+		}
+
+		private static UInt32 ReadSchemaAddr(JsonObject obj, string key, UInt32 def)
+		{
+			JsonNode? n = obj[key];
+			if(n == null) return def;
+			if(n is JsonValue v) {
+				try {
+					if(v.TryGetValue<UInt32>(out UInt32 ui)) return ui;
+					if(v.TryGetValue<string>(out string? s) && s != null) return ParseUIntHex(s);
+				} catch { }
+			}
+			return def;
+		}
+
+		private static bool ReadSchemaBool(JsonObject obj, string key, bool def)
+		{
+			JsonNode? n = obj[key];
+			if(n is JsonValue v && v.TryGetValue<bool>(out bool b)) return b;
+			return def;
+		}
+
+		private static string ReadSchemaString(JsonObject obj, string key, string def)
+		{
+			JsonNode? n = obj[key];
+			if(n is JsonValue v && v.TryGetValue<string>(out string? s) && s != null) return s;
+			return def;
+		}
+
+		private static UInt32 ReadWram16(UInt32 addr)
+		{
+			byte[]? d = ReadMemoryRawNoLock(MemoryType.SnesWorkRam, addr, 2);
+			if(d == null || d.Length < 2) return 0;
+			return (UInt32)(d[0] | (d[1] << 8));
+		}
+
+		private static UInt32 ReadPointerCached(UInt32 off, bool hirom, Dictionary<UInt32, byte[]> cache)
+		{
+			byte[]? d = ReadCached(cache, off, 3);
+			if(d == null || d.Length < 3) return 0xFFFFFFFF;
+			UInt32 lo = d[0], hi = d[1], bk = d[2];
+			UInt32 a16 = lo | (hi << 8);
+			if(hirom) {
+				return (bk >= 0x80 ? (bk - 0x80) * 0x10000 : bk * 0x10000) + a16;
+			}
+			return bk * 0x10000 + a16;
+		}
+
+		// Liest len Bytes ab addr, nutzt 4KB-Chunks aus dem Cache
+		private static byte[]? ReadCached(Dictionary<UInt32, byte[]> cache, UInt32 addr, int len)
+		{
+			if(len <= 0) return null;
+			byte[] result = new byte[len];
+			int got = 0;
+			while(got < len) {
+				UInt32 chunkAddr = addr + (UInt32)got;
+				UInt32 chunkBase = chunkAddr & ~0xFFFu;
+				if(!cache.TryGetValue(chunkBase, out byte[]? chunk)) {
+					chunk = ReadMemoryRawNoLock(MemoryType.SnesPrgRom, chunkBase, 0x1000);
+					if(chunk == null || chunk.Length == 0) return null;
+					cache[chunkBase] = chunk;
+				}
+				int off = (int)(chunkAddr - chunkBase);
+				int take = Math.Min(len - got, chunk.Length - off);
+				if(take <= 0) return null;
+				Array.Copy(chunk, off, result, got, take);
+				got += take;
+			}
+			return result;
+		}
+
+		private static UInt32 TransformBank(UInt32 bank, string transform)
+		{
+			UInt32 b = bank & 0xFF;
+			string t = transform.Trim();
+			if(t == "b*2+0x1B" || t == "b*2+27") return (UInt32)((b * 2 + 0x1B) & 0xFF) * 0x10000;
+			return b * 0x10000;
+		}
+
+		private static void ScanScriptCached(UInt32 scriptStart, bool hirom, string bankTransform, List<ScriptCmd> commands, UInt32 subTable, int depth, JsonArray results, HashSet<UInt32> seen, Dictionary<UInt32, byte[]> cache)
+		{
+			if(depth > 8 || scriptStart == 0xFFFFFFFF || seen.Contains(scriptStart)) return;
+			seen.Add(scriptStart);
+			// ganzes Script einmal laden
+			byte[]? data = ReadCached(cache, scriptStart, 0x4000);
+			if(data == null) return;
+			UInt32 pos = 0;
+			const UInt32 maxLen = 0x4000;
+			while(pos < maxLen) {
+				byte b = data[pos];
+				if(b == 0x08 && pos + 1 < maxLen) {
+					byte sub = data[pos + 1];
+					UInt32 combined = 0x0800u | sub;
+					ScriptCmd? subCmd = commands.FirstOrDefault(c => c.Op == combined);
+					if(subCmd != null) {
+						pos = HandleCmdCached(subCmd, data, pos, hirom, bankTransform, subTable, depth, results, seen, commands, cache);
+						continue;
+					}
+					UInt32 skip = sub switch {
+						0xFE => 4u,
+						0xFD => 6u,
+						0xF8 => 2u,
+						0xFF => 4u,
+						0xF9 => 4u,
+						_ => 2u
+					};
+					pos += skip;
+					continue;
+				}
+				ScriptCmd? cmd = commands.FirstOrDefault(c => c.Op == b && c.Op < 0x100u);
+				if(cmd != null) {
+					pos = HandleCmdCached(cmd, data, pos, hirom, bankTransform, subTable, depth, results, seen, commands, cache);
+					continue;
+				}
+				if(b == 0x00) {
+					if(pos + 2 < maxLen && data[pos + 1] == 0xFF && data[pos + 2] == 0xFF) break;
+					pos += 3;
+					continue;
+				}
+				if(b >= 0x01 && b <= 0x0F) { pos += (UInt32)(b + 1); continue; }
+				pos += 1;
+			}
+		}
+
+		private static UInt32 HandleCmdCached(ScriptCmd cmd, byte[] data, UInt32 pos, bool hirom, string bankTransform, UInt32 subTable, int depth, JsonArray results, HashSet<UInt32> seen, List<ScriptCmd> commands, Dictionary<UInt32, byte[]> cache)
+		{
+			// DATENGETRIEBENE Laengen-Erkennung: Wenn MaxLen > Len, probiere jede Laenge und
+			// waehle die, nach der der naechste Byte ein plausibler Opcode ist UND (wenn das
+			// Kommando eine ROM-Adresse traegt) die ROM-Adresse im ROM-Bereich liegt.
+			int bestLen = cmd.Len;
+			bool addrOk = false;
+			if(cmd.MaxLen > cmd.Len) {
+				for(int tryLen = cmd.Len; tryLen <= cmd.MaxLen; tryLen++) {
+					int next = (int)pos + tryLen;
+					if(next >= data.Length) break;
+					if(!IsValidOpcode(data[next])) continue;
+					// ROM-Adress-Validierung (falls vorhanden)
+					bool ok = true;
+					if(cmd.AddrPos >= 0 && cmd.BankPos >= 0 && cmd.AddrPos + 1 < tryLen && cmd.BankPos < tryLen) {
+						UInt32 addr = (UInt32)(data[pos + cmd.AddrPos] | (data[pos + cmd.AddrPos + 1] << 8));
+						UInt32 bank = data[pos + cmd.BankPos];
+						UInt32 rom = TransformBank(bank, bankTransform) + addr;
+						ok = IsValidRomAddr(rom);
+					}
+					if(ok) { bestLen = tryLen; addrOk = ok; break; }
+				}
+			} else {
+				// Feste Laenge: pruefe die ROM-Adresse; wenn ungueltig -> kein echtes Ressourcen-
+				// Kommando, nur den Laengen-Offset zurueckgeben (kein Eintrag).
+				addrOk = true;
+				if(cmd.AddrPos >= 0 && cmd.BankPos >= 0 && cmd.AddrPos + 1 < cmd.Len && cmd.BankPos < cmd.Len) {
+					UInt32 addr = (UInt32)(data[pos + cmd.AddrPos] | (data[pos + cmd.AddrPos + 1] << 8));
+					UInt32 bank = data[pos + cmd.BankPos];
+					UInt32 rom = TransformBank(bank, bankTransform) + addr;
+					addrOk = IsValidRomAddr(rom);
+				}
+			}
+			int cmdLen = Math.Max(bestLen, 1);
+			// Wenn die ROM-Adresse ungueltig ist, ist dieses Byte KEIN echtes Ressourcen-Kommando
+			// -> keinen Eintrag erzeugen, nur 1 Byte ueberspringen (Drift-Schutz).
+			if(!addrOk && cmd.AddrPos >= 0 && cmd.BankPos >= 0) {
+				return pos + 1;
+			}
+			JsonObject entry = new JsonObject() {
+				["type"] = cmd.Name,
+				["pos"] = "0x" + pos.ToString("X4")
+			};
+			if((int)pos + cmdLen <= data.Length) {
+				if(cmd.AddrPos >= 0 && cmd.AddrPos + 1 < cmdLen) {
+					UInt32 addr = (UInt32)(data[pos + cmd.AddrPos] | (data[pos + cmd.AddrPos + 1] << 8));
+					entry["addr"] = "0x" + addr.ToString("X4");
+					if(cmd.BankPos >= 0 && cmd.BankPos < cmdLen) {
+						UInt32 bank = data[pos + cmd.BankPos];
+						UInt32 rom = TransformBank(bank, bankTransform) + addr;
+						entry["rom"] = "0x" + rom.ToString("X6");
+					}
+				}
+				if(cmd.LayerPos >= 0 && cmd.LayerPos < cmdLen) entry["layer"] = data[pos + cmd.LayerPos];
+				if(cmd.SubIdxPos >= 0 && cmd.SubIdxPos < cmdLen) {
+					byte subIdx = data[pos + cmd.SubIdxPos];
+					entry["sub"] = subIdx;
+					UInt32 subBase = ReadPointerCached(subTable + (UInt32)subIdx * 3, hirom, cache);
+					if(subBase != 0xFFFFFFFF) {
+						ScanScriptCached(subBase, hirom, bankTransform, commands, subTable, depth + 1, results, seen, cache);
+					}
+				}
+				if(cmd.TypPos >= 0 && cmd.TypPos < cmdLen) entry["typ"] = data[pos + cmd.TypPos];
+				if(cmd.IdPos >= 0 && cmd.IdPos < cmdLen) entry["id"] = "0x" + data[pos + cmd.IdPos].ToString("X2");
+			}
+			results.Add((JsonNode)entry);
+			return pos + (UInt32)cmdLen;
+		}
+
+		// Datentreiber: ist der Byte ein plausibler Script-Opcode?
+		private static bool IsValidOpcode(byte b)
+		{
+			if(b == 0x08 || b == 0x40 || b == 0x80 || b == 0x20 || b == 0x10 || b == 0x02 || b == 0x00) return true;
+			if(b >= 0x01 && b <= 0x0F) return true;
+			return false;
+		}
+
+		// Datentreiber: passt die aufgeloeste ROM-Adresse in den ROM-Bereich?
+		// Ungueltige Adressen (>0x400000 bei 4MB-ROM oder Bank-Overflow) bedeuten:
+		// die Laenge war falsch -> diese Interpretation verwerfen.
+		private static bool IsValidRomAddr(UInt32 rom)
+		{
+			return rom > 0 && rom < 0x400000;
 		}
 	}
 }
