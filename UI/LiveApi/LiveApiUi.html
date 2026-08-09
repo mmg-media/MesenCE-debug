@@ -374,6 +374,26 @@ input[type=text],input[type=number],select{min-width:0;}
 				</select>
 				<label style="min-width:0;"><input type="checkbox" id="gfxOverlay" checked> <span data-i18n="chkScrollOverlay">Scroll-Overlay</span></label>
 			</div>
+			<div id="gfxMapSourcePanel" style="display:none; margin-bottom:8px; background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:6px;">
+				<div class="row" style="margin-bottom:4px;">
+					<b style="color:var(--text); font-size:11px;">Map-ROM-Quellen (Tilemap)</b>
+					<label style="min-width:0; margin-left:auto;"><input type="checkbox" id="gfxMapSourcesLive" checked> live</label>
+				</div>
+				<div id="gfxMapSourcesInfo" class="empty" style="font-size:11px; color:var(--dim);"></div>
+				<div id="gfxMapSourcesList" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
+				<div id="gfxMapTilesetInfo" class="empty" style="font-size:11px; color:var(--flash); margin-top:4px; display:none;"></div>
+				<div id="gfxMapTilesetList" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
+				<div id="gfxMapDiag" class="empty" style="font-size:10px; color:var(--dim); margin-top:4px; white-space:pre-wrap; max-height:120px; overflow:auto;"></div>
+			</div>
+			<div class="row" id="gfxSpritesOpts" style="display:none;">
+				<span class="empty" style="font-size:11px;">Sprites (OAM)</span>
+				<label style="min-width:0; margin-left:auto;"><input type="checkbox" id="gfxSpritesSourcesLive" checked> <span title="ROM-Quellen der Sprites dauerhaft verfolgen">Quellen live</span></label>
+			</div>
+			<div id="gfxSpriteSourcePanel" style="display:none; margin-bottom:8px; background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:6px;">
+				<b style="color:var(--text); font-size:11px;">Sprite-ROM-Quellen (Tile + Palette)</b>
+				<div id="gfxSpriteSourcesList" style="display:flex; flex-wrap:wrap; gap:4px; max-height:160px; overflow:auto; margin-top:4px;"></div>
+				<div id="gfxSpriteSourcesSummary" class="empty" style="font-size:11px; margin-top:4px; color:var(--dim);"></div>
+			</div>
 			<div class="row" id="gfxTilesOpts" style="display:none;">
 				<label data-i18n="lblFormat">Format</label>
 				<select id="gfxTilesFormat">
@@ -393,6 +413,14 @@ input[type=text],input[type=number],select{min-width:0;}
 				<label data-i18n="lblRows">Zeilen</label><input type="text" id="gfxTilesRows" value="16" class="w50">
 				<input type="hidden" id="gfxTilesPal" value="0">
 				<label data-i18n="lblStart">Start</label><input type="text" id="gfxTilesStart" value="0" class="w50">
+			</div>
+			<div id="gfxTilesSourcePanel" style="display:none; margin-bottom:8px; background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:6px;">
+				<div class="row" style="margin-bottom:4px;">
+					<b style="color:var(--text); font-size:11px;">Tileset-ROM-Quellen</b>
+					<label style="min-width:0; margin-left:auto;"><input type="checkbox" id="gfxTilesSourcesLive" checked> <span title="ROM-Quellen der Tiles dauerhaft verfolgen">live</span></label>
+				</div>
+				<div style="display:flex; flex-wrap:wrap; gap:4px; max-height:160px; overflow:auto;" id="gfxTilesSourcesList"></div>
+				<div id="gfxTilesSourcesSummary" class="empty" style="font-size:11px; margin-top:4px; color:var(--dim);"></div>
 			</div>
 			<div id="gfxPaletteRow" class="row" style="display:none; align-items:flex-start; flex-direction:column; gap:2px; margin-bottom:6px;">
 				<span class="empty" style="font-size:11px;" data-i18n="lblPalette">Paletten (Klick = auswählen):</span>
@@ -1232,6 +1260,9 @@ function setGfxView(view){
 	document.querySelectorAll("#gfxViewTabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
 	gfxSyncOptions();
 	refreshGfx();
+	if(view==="tiles") refreshTileSources();
+	if(view==="map") refreshMapSources();
+	if(view==="sprites") refreshSpriteSources();
 }
 
 function gfxUrl(){
@@ -1434,8 +1465,12 @@ function gfxSyncOptions(){
 	const view=gfxView;
 	$("gfxScreenOpts").style.display = view==="screen" ? "" : "none";
 	$("gfxMapOpts").style.display = view==="map" ? "" : "none";
+	$("gfxMapSourcePanel").style.display = view==="map" ? "" : "none";
+	$("gfxSpritesOpts").style.display = view==="sprites" ? "" : "none";
+	$("gfxSpriteSourcePanel").style.display = view==="sprites" ? "" : "none";
 	$("gfxTilesOpts").style.display = view==="tiles" ? "" : "none";
 	$("gfxPaletteRow").style.display = view==="tiles" ? "" : "none";
+	$("gfxTilesSourcePanel").style.display = view==="tiles" ? "" : "none";
 	$("gfxPython").textContent=gfxPythonSnippet();
 }
 
@@ -1718,6 +1753,167 @@ function renderPaletteSwatches(colors, cpp){
 function loadPaletteSwatches(){
 	refreshPalette();
 }
+
+let tileSourcesBusy=false;
+async function refreshTileSources(){
+	const panel=$("gfxTilesSourcePanel");
+	if(panel.style.display==="none" || !$("gfxTilesSourcesLive").checked) return;
+	if(tileSourcesBusy) return;
+	tileSourcesBusy=true;
+	try{
+		const fmt=$("gfxTilesFormat").value;
+		const mem=$("gfxTilesMem").value;
+		const cols=$("gfxTilesCols").value||16;
+		const rows=$("gfxTilesRows").value||16;
+		const start=$("gfxTilesStart").value||0;
+		const url="api/gfx/tilesources?mem="+encodeURIComponent(mem)+"&cols="+cols+"&rows="+rows+"&start="+encodeURIComponent(start)+"&format="+encodeURIComponent(fmt);
+		const d=await fetch(url).then(r=>r.json());
+		if(!d||!d.tiles){ $("gfxTilesSourcesSummary").textContent="(keine Daten)"; return; }
+		const list=$("gfxTilesSourcesList");
+		if(!list.childNodes.length){
+			(d.tiles||[]).forEach(t=>{
+				const chip=document.createElement("div");
+				chip.style.cssText="display:flex; flex-direction:column; gap:1px; background:var(--panel); border:1px solid var(--border); border-radius:3px; padding:3px 5px; font-size:10px;";
+				const name=document.createElement("span");
+				name.style.color="var(--dim)";
+				name.textContent="#"+t.tile+" "+t.vram;
+				const src=document.createElement("span");
+				src.style.color="var(--ok)";
+				src.textContent=(t.sources&&t.sources.length)?t.sources.join(" "):"-";
+				chip.appendChild(name); chip.appendChild(src);
+				chip.title=(t.hasMultipleSources?"⚡ animiert/mehrfach\n":"")+((t.sources&&t.sources.length)?t.sources.join(", "):"keine Quelle");
+				if(t.hasMultipleSources) src.style.color="var(--flash)";
+				list.appendChild(chip);
+			});
+		} else {
+			//update only the source text
+			(d.tiles||[]).forEach((t,i)=>{
+				const chip=list.childNodes[i];
+				if(chip){
+					chip.childNodes[1].textContent=(t.sources&&t.sources.length)?t.sources.join(" "):"-";
+					chip.childNodes[1].style.color=(t.hasMultipleSources?"var(--flash)":"var(--ok)");
+					chip.title=(t.hasMultipleSources?"⚡ animiert/mehrfach\n":"")+((t.sources&&t.sources.length)?t.sources.join(", "):"keine Quelle");
+				}
+			});
+		}
+		//summary: distinct ROM ranges across all tiles
+		const all=[]; (d.tiles||[]).forEach(t=>{ (t.sources||[]).forEach(s=>{ const m=s.match(/0x([0-9A-Fa-f]{6})/); if(m) all.push(parseInt(m[1],16)); }); });
+		const multi=(d.tiles||[]).filter(t=>t.hasMultipleSources).length;
+		if(all.length){
+			let mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
+			$("gfxTilesSourcesSummary").textContent=d.tileCount+" Tiles · ROM "+"0x"+mn.toString(16).toUpperCase().padStart(6,"0")+" - 0x"+mx.toString(16).toUpperCase().padStart(6,"0")+(multi?(" · "+multi+" mehrfach ⚡"):"");
+		} else {
+			$("gfxTilesSourcesSummary").textContent=d.tileCount+" Tiles · (keine Quellen - Kartenwechsel nötig)";
+		}
+	}catch(e){}
+	tileSourcesBusy=false;
+}
+$("gfxTilesSourcesLive").addEventListener("change",()=>{ if($("gfxTilesSourcesLive").checked) refreshTileSources(); });
+setInterval(()=>{ if($("gfxTilesSourcePanel").style.display!=="none") refreshTileSources(); },1000);
+
+let mapSourcesBusy=false;
+async function refreshMapSources(){
+	const panel=$("gfxMapSourcePanel");
+	if(panel.style.display==="none" || !$("gfxMapSourcesLive").checked) return;
+	if(mapSourcesBusy) return;
+	mapSourcesBusy=true;
+	try{
+		const layer=$("gfxMapLayer").value;
+		if(layer==="main"||layer==="sub"){ $("gfxMapSourcesInfo").textContent="(nur für BG1-4)"; mapSourcesBusy=false; return; }
+		const d=await fetch("api/gfx/mapsources?layer="+layer).then(r=>r.json());
+		if(!d){ $("gfxMapSourcesInfo").textContent="(keine Daten)"; mapSourcesBusy=false; return; }
+		$("gfxMapSourcesInfo").textContent=d.name+" · Tilemap VRAM "+d.tilemapAddress+" ("+d.mapWords+" Wörter)"+(d.largeTiles?" · LargeTiles":"")+(d.mode7?" · MODE-7":"");
+		const list=$("gfxMapSourcesList");
+		if(!list.childNodes.length){
+			(d.sources||[]).forEach(s=>{
+				const chip=document.createElement("span");
+				chip.style.cssText="background:var(--panel); border:1px solid var(--border); border-radius:3px; padding:2px 6px; font-size:11px; color:var(--ok);";
+				chip.textContent=s;
+				list.appendChild(chip);
+			});
+		} else {
+			(d.sources||[]).forEach((s,i)=>{
+				if(list.childNodes[i]) list.childNodes[i].textContent=s;
+			});
+		}
+		//Tileset-Quellen (Mode-7) + Diagnose
+		const tsInfo=$("gfxMapTilesetInfo"), tsList=$("gfxMapTilesetList"), diag=$("gfxMapDiag");
+		if(d.mode7){
+			tsInfo.style.display="";
+			tsInfo.textContent="Mode-7-Tileset (Chr "+d.chrAddress+", 8bpp):";
+			tsList.innerHTML="";
+			(d.tilesetSources||[]).forEach(s=>{
+				const chip=document.createElement("span");
+				chip.style.cssText="background:var(--panel); border:1px solid var(--border); border-radius:3px; padding:2px 6px; font-size:11px; color:var(--ok);";
+				chip.textContent=s;
+				tsList.appendChild(chip);
+			});
+			if(!(d.tilesetSources||[]).length) tsList.textContent="(keine Tileset-Quelle erfasst)";
+			//vrammap-Diagnose für Tilemap + Tileset
+			try{
+				const tp=await fetch("api/gfx/mapload/vrammap?start="+encodeURIComponent(d.tilemapAddress)+"&words=0x100").then(r=>r.json());
+				const ts=await fetch("api/gfx/mapload/vrammap?start="+encodeURIComponent(d.chrAddress)+"&words=0x100").then(r=>r.json());
+				const cnt=arr=>{ let n=0; (arr||[]).forEach(e=>{ if(e.rom!=="(leer)") n++; }); return n; };
+				diag.style.display="";
+				diag.textContent="VramRomWord belegt: Tilemap 0x6800="+cnt(tp.entries)+"/16 · Chr "+d.chrAddress+"="+cnt(ts.entries)+"/16";
+			}catch(e){ diag.style.display=""; diag.textContent="(vrammap-Diagnose fehlgeschlagen)"; }
+		} else {
+			tsInfo.style.display="none"; tsList.innerHTML=""; diag.style.display="none";
+		}
+	}catch(e){}
+	mapSourcesBusy=false;
+}
+
+let spriteSourcesBusy=false;
+async function refreshSpriteSources(){
+	const panel=$("gfxSpriteSourcePanel");
+	if(panel.style.display==="none" || !$("gfxSpritesSourcesLive").checked) return;
+	if(spriteSourcesBusy) return;
+	spriteSourcesBusy=true;
+	try{
+		const d=await fetch("api/gfx/spritesources").then(r=>r.json());
+		if(!d||!d.sprites){ $("gfxSpriteSourcesSummary").textContent="(keine Daten)"; spriteSourcesBusy=false; return; }
+		const list=$("gfxSpriteSourcesList");
+		if(!list.childNodes.length){
+			(d.sprites||[]).forEach(s=>{
+				const chip=document.createElement("div");
+				chip.style.cssText="display:flex; flex-direction:column; gap:1px; background:var(--panel); border:1px solid var(--border); border-radius:3px; padding:3px 5px; font-size:10px;";
+				const name=document.createElement("span");
+				name.style.color="var(--dim)";
+				name.textContent="#"+s.index+" ("+s.x+","+s.y+") T"+s.tileIndex;
+				const src=document.createElement("span");
+				src.style.color="var(--ok)";
+				src.textContent=(s.tileSource!=="-"?s.tileSource:"-")+" / P"+(s.paletteSource!=="-"?s.paletteSource:"-");
+				chip.appendChild(name); chip.appendChild(src);
+				chip.title="Sprite #"+s.index+"\nVRAM "+s.tileVram+" (Tile "+s.tileIndex+")\nTile-ROM: "+s.tileSource+"\nPalette-ROM: "+s.paletteSource;
+				list.appendChild(chip);
+			});
+		} else {
+			(d.sprites||[]).forEach((s,i)=>{
+				const chip=list.childNodes[i];
+				if(chip){
+					chip.childNodes[0].textContent="#"+s.index+" ("+s.x+","+s.y+") T"+s.tileIndex;
+					chip.childNodes[1].textContent=(s.tileSource!=="-"?s.tileSource:"-")+" / P"+(s.paletteSource!=="-"?s.paletteSource:"-");
+					chip.title="Sprite #"+s.index+"\nVRAM "+s.tileVram+" (Tile "+s.tileIndex+")\nTile-ROM: "+s.tileSource+"\nPalette-ROM: "+s.paletteSource;
+				}
+			});
+		}
+		//summary: distinct tile sources
+		const all=[]; (d.sprites||[]).forEach(s=>{ if(s.tileSource!=="-"){ const m=s.tileSource.match(/0x([0-9A-Fa-f]{6})/); if(m) all.push(parseInt(m[1],16)); } });
+		const withSrc=(d.sprites||[]).filter(s=>s.tileSource!=="-").length;
+		if(all.length){
+			let mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
+			$("gfxSpriteSourcesSummary").textContent=d.count+" Sprites · "+withSrc+" mit Quelle · Tile-ROM 0x"+mn.toString(16).toUpperCase().padStart(6,"0")+" - 0x"+mx.toString(16).toUpperCase().padStart(6,"0");
+		} else {
+			$("gfxSpriteSourcesSummary").textContent=d.count+" Sprites · (keine Quellen - Kartenwechsel nötig)";
+		}
+	}catch(e){}
+	spriteSourcesBusy=false;
+}
+$("gfxMapSourcesLive").addEventListener("change",()=>{ if($("gfxMapSourcesLive").checked) refreshMapSources(); });
+$("gfxSpritesSourcesLive").addEventListener("change",()=>{ if($("gfxSpritesSourcesLive").checked) refreshSpriteSources(); });
+setInterval(()=>{ if($("gfxMapSourcePanel").style.display!=="none") refreshMapSources(); },1000);
+setInterval(()=>{ if($("gfxSpriteSourcePanel").style.display!=="none") refreshSpriteSources(); },1000);
 
 function setGfxPalette(p){
 	$("gfxTilesPal").value=p;
