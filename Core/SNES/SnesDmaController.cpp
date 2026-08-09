@@ -173,13 +173,27 @@ void SnesDmaController::RunDma(DmaChannelConfig& channel)
 	{
 		uint32_t srcBusAddr = (channel.SrcBank << 16) | channel.SrcAddress;
 		AddressInfo srcInfo = _memoryManager->GetMemoryMappings()->GetAbsoluteAddress(srcBusAddr);
+		//R3.2: robust WRAM detection - the SNES WRAM banks $7E/$7F are sometimes reported
+		//as ROM by GetAbsoluteAddress (bus mirror confusion). Detect them directly from the
+		//bus address: bank $7E/$7F (or $7E:$0000-$7F:$FFFF mirrors) is the 128KB WRAM.
+		uint8_t srcBankLow = (uint8_t)(srcBusAddr >> 16);
+		bool bankIsWram = (srcBankLow == 0x7E || srcBankLow == 0x7F);
 		bool srcIsRom = srcInfo.Address >= 0 && srcInfo.Type == MemoryType::SnesPrgRom;
 		bool srcIsWram = srcInfo.Address >= 0 && (srcInfo.Type == MemoryType::SnesWorkRam || srcInfo.Type == MemoryType::SnesSaveRam);
+		if(bankIsWram) {
+			srcIsWram = true;
+			srcIsRom = false;
+		}
 		//Linear ROM file offset for the DMA source. GetAbsoluteAddress returns the exact
 		//linear address the cartridge maps this bus address to (HiROM/LoROM aware) - that
 		//is the true file offset. Only the linear address (not the bus address) is a valid
 		//ROM file offset.
 		uint32_t srcLinear = srcInfo.Address >= 0 ? (uint32_t)srcInfo.Address : srcBusAddr;
+		if(bankIsWram) {
+			//$7E/$7F WRAM: linear offset is 0x00000-0x1FFFF (128KB, two banks)
+			srcLinear = ((srcBankLow == 0x7F ? 0x10000 : 0) | (srcBusAddr & 0xFFFF)) & 0x1FFFF;
+		}
+		SnesMapLoadLog::DebugDmaResolved(srcBusAddr, srcLinear, srcIsRom, srcIsWram);
 
 		bool destIsVram = channel.DestAddress == 0x18 || channel.DestAddress == 0x19;
 		bool destIsCgram = channel.DestAddress == 0x22;
@@ -190,11 +204,12 @@ void SnesDmaController::RunDma(DmaChannelConfig& channel)
 			SnesMapLoadLog::AppendDmaSrc(_memoryManager->GetEmu()->GetFrameCount(), srcBusAddr, channel.DestAddress, _activeChannel & 0x07);
 			uint8_t targetType = destIsCgram ? 1 : 0;
 			uint32_t srcBankTag = srcIsWram ? 1 : 0;
+			uint32_t targetAddr = targetType == 0 ? trackerVram : _memoryManager->GetConsole()->GetPpu()->GetDebugCgAddress();
 			SnesMapLoadLog::AppendDma(
 				_memoryManager->GetEmu()->GetFrameCount(),
 				(int32_t)(_memoryManager->GetMasterClock() & 0x7FFFFFFF),
 				targetType,
-				targetType == 0 ? trackerVram : 0,
+				targetAddr,
 				srcBankTag,
 				srcLinear,
 				channel.TransferSize,
@@ -212,6 +227,15 @@ void SnesDmaController::RunDma(DmaChannelConfig& channel)
 			uint32_t wramAddr = _memoryManager->GetWramPosition();
 			if(wramAddr < 0x20000) {
 				SnesMapLoadLog::TrackWramDma(wramAddr, srcLinear, channel.TransferSize);
+			}
+		}
+
+		if(destIsWram && srcIsWram) {
+			//R3.2: DMA WRAM -> WRAM (decompression buffer copies). Record the transfer so
+			//the reverse-search chain can walk WRAM -> WRAM -> ROM through the ring.
+			uint32_t wramAddr = _memoryManager->GetWramPosition();
+			if(wramAddr < 0x20000 && srcLinear < 0x20000) {
+				SnesMapLoadLog::TrackWramDmaToWram(wramAddr, srcLinear, channel.TransferSize);
 			}
 		}
 	}

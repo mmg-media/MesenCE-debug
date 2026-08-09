@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "Debugger/BaseEventManager.h"
+#include <functional>
 
 // R2.1: Cumulative event history (ring buffer, only filled while logging is active)
 class SnesEventLog
@@ -246,6 +247,27 @@ public:
 	static uint32_t Head;
 	static uint32_t Count;
 	static bool Enabled;
+	//R3.2: code-data-logger callback - tells whether a ROM offset is CODE (executed) or
+	//DATA. Set by SnesDebugger; used to keep code reads out of the WRAM->ROM / target->
+	//ROM reverse-lookup tables. Returns true if addr is CODE, false if DATA/unknown.
+	static std::function<bool(uint32_t)> IsRomCode;
+	//R3.2: DMA source resolution diagnostics (last resolved values, for debugging the
+	//WRAM-vs-ROM classification of DMA sources).
+	static uint32_t DebugDmaBusAddr;
+	static uint32_t DebugDmaLinear;
+	static bool DebugDmaIsRom;
+	static bool DebugDmaIsWram;
+	static void DebugDmaResolved(uint32_t bus, uint32_t linear, bool isRom, bool isWram)
+	{
+		DebugDmaBusAddr = bus;
+		DebugDmaLinear = linear;
+		DebugDmaIsRom = isRom;
+		DebugDmaIsWram = isWram;
+	}
+	static uint32_t GetDebugDmaBus() { return DebugDmaBusAddr; }
+	static uint32_t GetDebugDmaLinear() { return DebugDmaLinear; }
+	static bool GetDebugDmaIsRom() { return DebugDmaIsRom; }
+	static bool GetDebugDmaIsWram() { return DebugDmaIsWram; }
 	static uint32_t LastRomRead;
 	static uint32_t LastWramRead;
 	static uint32_t LastVramFrame;
@@ -287,11 +309,12 @@ public:
 	//Record that targetAddr (VRAM word / CGRAM word) was filled with wordCount words
 	//starting at ROM offset romSource (which increments by 2 bytes per SNES color word).
 	//romSource is the EXACT linear ROM offset (already WRAM-resolved for WRAM sources).
-	static void TrackTargetRom(uint8_t targetType, uint32_t targetAddr, uint32_t romSource, uint32_t wordCount)
+	static void TrackTargetRom(uint8_t targetType, uint32_t targetAddr, uint32_t romSource, uint32_t wordCount, uint8_t srcMem = 0, uint8_t via = 0)
 	{
 		if(!Enabled && !LiveTracking) {
 			return;
 		}
+		uint8_t dstMem = targetType == 1 ? TransferMemCgram : TransferMemVram;
 		if(targetType == 1) {  //CGRAM
 			for(uint32_t i = 0; i < wordCount && targetAddr + i < 0x100; i++) {
 				CgramRomWord[targetAddr + i] = romSource + i * 2;
@@ -301,6 +324,11 @@ public:
 				VramRomWord[targetAddr + i] = romSource + i * 2;
 			}
 		}
+		//R3.2: transfer capture - src -> VRAM/CGRAM, len bytes (2 per word). The 'via'
+		//flag says whether this was a CPU copy or a DMA. Only the FIRST write to a target
+		//from a given transfer is the meaningful chain step; TrackTargetRom may be called
+		//twice for one DMA (here and via AppendDma) - the via parameter disambiguates.
+		AppendTransfer(0, srcMem, romSource, dstMem, targetAddr, wordCount * 2, via);
 	}
 
 	//R3.2: reverse lookup - the ROM offsets that filled a contiguous target range.
@@ -515,7 +543,9 @@ public:
 	//WRAM asynchronously, so a single LastRomRead is unreliable. This ring keeps the last
 	//N ROM reads with their frames; the WRAM->ROM resolution can then walk back to the
 	//reads that happened while a WRAM buffer was being filled.
-	static constexpr int RomReadRingSize = 8192;
+	//The ring is ALLOCATED DYNAMICALLY (not a static array) so it can be huge (multiple GB)
+	//without bloating the DLL image - this emulator is a debugging/decompiling tool where
+	//tracing every load since the start of the session is the whole point. Default 1GB.
 	struct RomReadRingEntry
 	{
 		uint64_t frame;
@@ -523,27 +553,79 @@ public:
 		uint8_t isDma;   //1 = read by DMA, 0 = read by CPU
 		uint8_t pad[3];
 	};  //16 bytes
-	static RomReadRingEntry RomReadRing[RomReadRingSize];
+	static constexpr int RomReadRingSize = 1 << 28;  //268,435,456 reads (4 GB) - a full day of tracing at ~17K reads/s ≈ 1.5B reads; resize via SetRomReadRingSize for longer sessions
+	static RomReadRingEntry* RomReadRing;  //allocated dynamically in EnsureRomReadRing
+	static uint32_t RomReadRingAllocated;  //actual allocation size (>= RomReadRingSize if resized)
 	static uint32_t RomReadRingHead;
 	static uint32_t RomReadRingCount;
-	static void AppendRomReadRing(uint64_t frame, uint32_t addr, bool isDma)
+	static void EnsureRomReadRing(uint32_t size)
+	{
+		if(RomReadRing && RomReadRingAllocated >= size) {
+			return;
+		}
+		RomReadRingEntry* n = new RomReadRingEntry[size];
+		if(RomReadRing) {
+			uint32_t keep = std::min<uint32_t>(RomReadRingCount, size);
+			//copy the most recent reads in order
+			uint32_t oldest = RomReadRingCount < RomReadRingAllocated ? 0 : RomReadRingHead;
+			for(uint32_t i = 0; i < keep; i++) {
+				n[i] = RomReadRing[(oldest + RomReadRingCount - keep + i) % RomReadRingAllocated];
+			}
+			delete[] RomReadRing;
+		}
+		RomReadRing = n;
+		RomReadRingAllocated = size;
+		RomReadRingHead = 0;
+		RomReadRingCount = 0;
+	}
+	//R3.2: resize the ring at runtime (e.g. from a debugger command / API). Preserves the
+	//most recent entries. Allocating several GB is supported - this tool is built for it.
+	static void SetRomReadRingSize(uint32_t size)
+	{
+		if(size < 1 << 16) {
+			size = 1 << 16;
+		}
+		EnsureRomReadRing(size);
+	}
+	static uint32_t GetRomReadRingSize() { return RomReadRingAllocated; }
+	//R3.2: the ring ALWAYS runs - it keeps the last N ROM reads with their frames,
+	//so the reverse-search can walk back to the reads that produced a target, no matter
+	//when they happened. The ring is sized for hours/days of tracing.
+	//len > 0 expands a single read into 'len' sequential byte-reads (used for DMA loads,
+	//which move a whole block at once - the ring must reflect the FULL source range, not
+	//just the start address, or the reverse-search misses the loaded block).
+	static void AppendRomReadRing(uint64_t frame, uint32_t addr, bool isDma, uint32_t len = 0)
 	{
 		if(addr >= 0x400000) {
 			return;
 		}
-		//R3.2: in auto-capture mode, only keep reads while a map-load burst is being
-		//detected (AutoCaptureBurstVram > 0) - so the ring holds exactly the load reads,
-		//not the endless object/animation reads of normal gameplay.
-		if(AutoCapture && AutoCaptureBurstVram == 0) {
+		EnsureRomReadRing(RomReadRingSize);
+		if(len <= 1) {
+			RomReadRingEntry& e = RomReadRing[RomReadRingHead];
+			e.frame = frame;
+			e.addr = addr;
+			e.isDma = isDma ? 1 : 0;
+			RomReadRingHead = (RomReadRingHead + 1) % RomReadRingAllocated;
+			if(RomReadRingCount < RomReadRingAllocated) {
+				RomReadRingCount++;
+			}
 			return;
 		}
-		RomReadRingEntry& e = RomReadRing[RomReadRingHead];
-		e.frame = frame;
-		e.addr = addr;
-		e.isDma = isDma ? 1 : 0;
-		RomReadRingHead = (RomReadRingHead + 1) % RomReadRingSize;
-		if(RomReadRingCount < RomReadRingSize) {
-			RomReadRingCount++;
+		//DMA block: log the whole contiguous range (cap at 128KB per DMA to keep the
+		//ring from being flooded by a single huge transfer)
+		uint32_t cap = std::min<uint32_t>(len, 0x20000);
+		for(uint32_t i = 0; i < cap; i++) {
+			if(addr + i >= 0x400000) {
+				break;
+			}
+			RomReadRingEntry& e = RomReadRing[RomReadRingHead];
+			e.frame = frame;
+			e.addr = addr + i;
+			e.isDma = isDma ? 1 : 0;
+			RomReadRingHead = (RomReadRingHead + 1) % RomReadRingAllocated;
+			if(RomReadRingCount < RomReadRingAllocated) {
+				RomReadRingCount++;
+			}
 		}
 	}
 
@@ -555,12 +637,12 @@ public:
 		if(RomReadRingCount == 0) {
 			return 0;
 		}
-		uint32_t oldest = RomReadRingCount < RomReadRingSize ? 0 : RomReadRingHead;
-		uint32_t n = std::min<uint32_t>(RomReadRingCount, RomReadRingSize);
+		uint32_t oldest = RomReadRingCount < RomReadRingAllocated ? 0 : RomReadRingHead;
+		uint32_t n = std::min<uint32_t>(RomReadRingCount, RomReadRingAllocated);
 		uint32_t results = 0;
 		uint32_t i = 0;
 		while(i < n && results < maxResults) {
-			RomReadRingEntry& e = RomReadRing[(oldest + i) % RomReadRingSize];
+			RomReadRingEntry& e = RomReadRing[(oldest + i) % RomReadRingAllocated];
 			if(e.frame < fromFrame || e.frame > toFrame || e.addr >= 0x400000) {
 				i++;
 				continue;
@@ -571,7 +653,7 @@ public:
 			uint32_t expected = e.addr + 1;
 			uint32_t j = i + 1;
 			while(j < n && results < maxResults) {
-				RomReadRingEntry& f = RomReadRing[(oldest + j) % RomReadRingSize];
+				RomReadRingEntry& f = RomReadRing[(oldest + j) % RomReadRingAllocated];
 				if(f.frame < fromFrame || f.frame > toFrame) {
 					break;  //out of window - stop the run
 				}
@@ -593,6 +675,432 @@ public:
 		return results;
 	}
 	static uint32_t GetRomReadRingCount() { return RomReadRingCount; }
+	static void ClearRomReadRing() { RomReadRingHead = 0; RomReadRingCount = 0; }
+
+	//R3.2: return the LARGEST contiguous ROM-read blocks from the ring (the decompression
+	//source reads). Scans a WINDOW of the most recent reads (frameWindow limits by FRAME
+	//so the map-load burst is found, not the whole session's biggest blocks). The scan is
+	//ORDER-INDEPENDENT: every read marks its byte addresses in a 512KB bitmap, then the
+	//largest contiguous marked ranges are returned. Robust against LZ control-byte jumps.
+	//frameWindow=0 disables the frame filter (whole ring).
+	static uint32_t GetLargestRomReads(uint32_t* outStart, uint32_t* outLen, uint32_t maxBlocks, uint32_t scanLimit, uint64_t frameWindow = 0)
+	{
+		if(RomReadRingCount == 0 || maxBlocks == 0 || !RomReadRing) {
+			return 0;
+		}
+		uint32_t oldest = RomReadRingCount < RomReadRingAllocated ? 0 : RomReadRingHead;
+		uint32_t n = std::min<uint32_t>(RomReadRingCount, RomReadRingAllocated);
+		uint32_t scan = std::min<uint32_t>(n, scanLimit);
+		//frame window: only reads newer than (newestFrame - frameWindow) are considered,
+		//so old intro/attract reads don't dominate the map source.
+		uint64_t newestFrame = 0;
+		if(frameWindow > 0) {
+			for(uint32_t i = 0; i < scan; i++) {
+				RomReadRingEntry& e = RomReadRing[(oldest + i) % RomReadRingAllocated];
+				if(e.frame > newestFrame) {
+					newestFrame = e.frame;
+				}
+			}
+		}
+		uint64_t minFrame = frameWindow > 0 && newestFrame > frameWindow ? newestFrame - frameWindow : 0;
+		//512KB bitmap (4MB ROM = 32M bits) - mark every byte the reads touched.
+		static uint8_t bitmap[0x400000 / 8];
+		memset(bitmap, 0, sizeof(bitmap));
+		uint32_t startIdx = oldest;  //scan the whole ring from the oldest entry
+		for(uint32_t i = 0; i < scan; i++) {
+			RomReadRingEntry& e = RomReadRing[(startIdx + i) % RomReadRingAllocated];
+			if(e.addr >= 0x400000) {
+				continue;
+			}
+			if(frameWindow > 0 && e.frame < minFrame) {
+				continue;  //outside the window - skip
+			}
+			bitmap[e.addr >> 3] |= (uint8_t)(1u << (e.addr & 7));
+			//most decompressor reads are 2 bytes (word) - mark the pair as one unit so a
+			//word-read forms a contiguous block with its neighbors
+			if(e.addr + 1 < 0x400000) {
+				bitmap[(e.addr + 1) >> 3] |= (uint8_t)(1u << ((e.addr + 1) & 7));
+			}
+		}
+		//find the largest contiguous marked runs
+		struct Run { uint32_t start; uint32_t len; };
+		Run runs[256];
+		uint32_t runCount = 0;
+		uint32_t a = 0;
+		while(a < 0x400000 && runCount < 256) {
+			if(bitmap[a >> 3] & (1u << (a & 7))) {
+				uint32_t s = a;
+				uint32_t len = 0;
+				while(a < 0x400000 && (bitmap[a >> 3] & (1u << (a & 7)))) {
+					len++;
+					a++;
+				}
+				runs[runCount].start = s;
+				runs[runCount].len = len;
+				runCount++;
+			}
+			a++;
+		}
+		//sort by length desc
+		for(uint32_t i = 1; i < runCount; i++) {
+			Run key = runs[i];
+			int32_t j = (int32_t)i - 1;
+			while(j >= 0 && runs[j].len < key.len) {
+				runs[j + 1] = runs[j];
+				j--;
+			}
+			runs[j + 1] = key;
+		}
+		uint32_t out = 0;
+		for(uint32_t i = 0; i < runCount && out < maxBlocks; i++) {
+			outStart[out] = runs[i].start;
+			outLen[out] = runs[i].len;
+			out++;
+		}
+		return out;
+	}
+
+	//R3.2: TRANSFER FANGSCHALTUNG (capture ring) - the generic reverse-search core.
+	//Every memory transfer the game performs is recorded here: ROM->WRAM, WRAM->WRAM
+	//(decompression), WRAM->VRAM/CGRAM, ROM->VRAM/CGRAM. Each entry has source + dest
+	//memory and addresses. This is a huge ring (millions/billions of entries) so the
+	//whole session history is traceable. Reverse-search then walks BACK from a target
+	//(e.g. a VRAM tilemap word) through the recorded transfers to the ROM source -
+	//deterministic, no guessing, no overwritten lookup tables.
+	//Memory type codes (must match C# DebugApi MemoryType): 0=SnesPrgRom, 1=SnesWorkRam,
+	//2=SnesSaveRam, 3=SnesVideoRam, 4=SnesCgram, 5=SnesOam, 6=SnesDsp.
+	static constexpr int TransferMemRom = 0;
+	static constexpr int TransferMemWram = 1;
+	static constexpr int TransferMemVram = 3;
+	static constexpr int TransferMemCgram = 4;
+	static constexpr int TransferViaDma = 0;
+	static constexpr int TransferViaCpu = 1;
+	struct TransferEntry
+	{
+		uint64_t frame;
+		uint8_t  dstMem;
+		uint8_t  srcMem;
+		uint8_t  via;   //0=DMA, 1=CPU
+		uint8_t  pad;
+		uint32_t srcAddr;  //linear: ROM offset / WRAM 0x00000-0x1FFFF / VRAM word / CGRAM word
+		uint32_t dstAddr;  //linear: same conventions
+		uint32_t len;      //bytes moved (VRAM/CGRAM in words for simplicity)
+	};  //24 bytes
+	static constexpr int TransferLogSize = 1 << 28;  //268M transfers (6.4GB) - huge ring for whole-session tracing
+	static TransferEntry* TransferLog;  //allocated dynamically
+	static uint32_t TransferLogAllocated;
+	static uint32_t TransferHead;
+	static uint32_t TransferCount;
+	static void EnsureTransferLog(uint32_t size)
+	{
+		if(TransferLog && TransferLogAllocated >= size) {
+			return;
+		}
+		TransferEntry* n = new TransferEntry[size];
+		if(TransferLog) {
+			uint32_t keep = std::min<uint32_t>(TransferCount, size);
+			uint32_t oldest = TransferCount < TransferLogAllocated ? 0 : TransferHead;
+			for(uint32_t i = 0; i < keep; i++) {
+				n[i] = TransferLog[(oldest + TransferCount - keep + i) % TransferLogAllocated];
+			}
+			delete[] TransferLog;
+		}
+		TransferLog = n;
+		TransferLogAllocated = size;
+		TransferHead = 0;
+		TransferCount = 0;
+	}
+	static void SetTransferLogSize(uint32_t size)
+	{
+		if(size < 1 << 16) {
+			size = 1 << 16;
+		}
+		EnsureTransferLog(size);
+	}
+	static uint32_t GetTransferLogSize() { return TransferLogAllocated; }
+	static uint32_t GetTransferLogCount() { return TransferCount; }
+	static uint32_t GetNewestTransferSrc()
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t idx = TransferCount < TransferLogAllocated ? TransferCount - 1 : (TransferHead == 0 ? TransferLogAllocated - 1 : TransferHead - 1);
+		return TransferLog[idx].srcAddr;
+	}
+	static uint32_t GetNewestTransferDst()
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t idx = TransferCount < TransferLogAllocated ? TransferCount - 1 : (TransferHead == 0 ? TransferLogAllocated - 1 : TransferHead - 1);
+		return TransferLog[idx].dstAddr;
+	}
+	static uint32_t GetNewestTransferLen()
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t idx = TransferCount < TransferLogAllocated ? TransferCount - 1 : (TransferHead == 0 ? TransferLogAllocated - 1 : TransferHead - 1);
+		return TransferLog[idx].len;
+	}
+	static uint8_t GetNewestTransferSrcMem()
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t idx = TransferCount < TransferLogAllocated ? TransferCount - 1 : (TransferHead == 0 ? TransferLogAllocated - 1 : TransferHead - 1);
+		return TransferLog[idx].srcMem;
+	}
+	static uint8_t GetNewestTransferDstMem()
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t idx = TransferCount < TransferLogAllocated ? TransferCount - 1 : (TransferHead == 0 ? TransferLogAllocated - 1 : TransferHead - 1);
+		return TransferLog[idx].dstMem;
+	}
+	static uint8_t GetNewestTransferVia()
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t idx = TransferCount < TransferLogAllocated ? TransferCount - 1 : (TransferHead == 0 ? TransferLogAllocated - 1 : TransferHead - 1);
+		return TransferLog[idx].via;
+	}
+	//R3.2: diagnostics - count recent transfers by destination memory type
+	static uint32_t CountTransfersToMem(uint8_t dstMem, uint32_t lastN)
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t n = std::min<uint32_t>(TransferCount, lastN);
+		uint32_t oldest = TransferCount < TransferLogAllocated ? 0 : TransferHead;
+		uint32_t count = 0;
+		for(uint32_t i = 0; i < n; i++) {
+			TransferEntry& e = TransferLog[(oldest + i) % TransferLogAllocated];
+			if(e.dstMem == dstMem) {
+				count++;
+			}
+		}
+		return count;
+	}
+	//R3.2: diagnostics - list the newest transfers to a destination memory type + range
+	static uint32_t GetTransfersToMemRange(uint8_t dstMem, uint32_t dstStart, uint32_t dstEnd, uint32_t* outSrc, uint32_t* outDst, uint8_t* outVia, uint32_t maxResults)
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t n = std::min<uint32_t>(TransferCount, TransferLogAllocated);
+		uint32_t oldest = TransferCount < TransferLogAllocated ? 0 : TransferHead;
+		uint32_t results = 0;
+		for(uint32_t i = 0; i < n && results < maxResults; i++) {
+			uint32_t idx = (oldest + n - 1 - i) % TransferLogAllocated;  //newest first
+			TransferEntry& e = TransferLog[idx];
+			if(e.dstMem == dstMem && e.dstAddr >= dstStart && e.dstAddr < dstEnd) {
+				outSrc[results] = e.srcAddr;
+				outDst[results] = e.dstAddr;
+				outVia[results] = e.via;
+				results++;
+			}
+		}
+		return results;
+	}
+	//R3.2: diagnostics - list the newest transfers to a destination memory type
+	static uint32_t GetTransfersToMem(uint8_t dstMem, uint32_t* outSrc, uint32_t* outDst, uint8_t* outVia, uint32_t maxResults)
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t n = std::min<uint32_t>(TransferCount, TransferLogAllocated);
+		uint32_t oldest = TransferCount < TransferLogAllocated ? 0 : TransferHead;
+		uint32_t results = 0;
+		for(uint32_t i = 0; i < n && results < maxResults; i++) {
+			uint32_t idx = (oldest + n - 1 - i) % TransferLogAllocated;  //newest first
+			TransferEntry& e = TransferLog[idx];
+			if(e.dstMem == dstMem) {
+				outSrc[results] = e.srcAddr;
+				outDst[results] = e.dstAddr;
+				outVia[results] = e.via;
+				results++;
+			}
+		}
+		return results;
+	}
+	static void ClearTransferLog() { TransferHead = 0; TransferCount = 0; }
+	static void AppendTransfer(uint64_t frame, uint8_t srcMem, uint32_t srcAddr, uint8_t dstMem, uint32_t dstAddr, uint32_t len, uint8_t via)
+	{
+		if(len == 0 || (srcMem == TransferMemRom && srcAddr >= 0x400000)) {
+			return;
+		}
+		//R3.2: only record GRAPHICS-RELEVANT data flow. Per-frame object-state writes to
+		//low WRAM (< 0x10000) are not graphics data - logging them floods the ring so the
+		//real palette/tilemap loads get pushed out. Relevant: VRAM/CGRAM targets, ROM->WRAM
+		//(decompression writes ANY WRAM area, including low buffers like 0x4040), WRAM
+		//buffer loads (0x10000+). Pure WRAM->WRAM / CPU object-state at low WRAM is skipped.
+		if(dstMem == TransferMemVram || dstMem == TransferMemCgram) {
+			//always relevant
+		} else if(dstMem == TransferMemWram) {
+			if(srcMem == TransferMemRom) {
+				//ROM->WRAM: decompression / load - always a real data flow (any WRAM area)
+			} else {
+				//WRAM->WRAM or other: keep only buffer-range writes (0x10000+) or larger copies
+				bool bufferArea = dstAddr >= 0x10000;
+				bool bigLoad = len >= 8;
+				if(!bufferArea && !bigLoad) {
+					return;  //low-WRAM single-byte object state
+				}
+			}
+		} else {
+			return;  //other target types not relevant for graphics tracing
+		}
+		EnsureTransferLog(TransferLogSize);
+		TransferEntry& e = TransferLog[TransferHead];
+		e.frame = frame;
+		e.srcMem = srcMem;
+		e.srcAddr = srcAddr;
+		e.dstMem = dstMem;
+		e.dstAddr = dstAddr;
+		e.len = len;
+		e.via = via;
+		TransferHead = (TransferHead + 1) % TransferLogAllocated;
+		if(TransferCount < TransferLogAllocated) {
+			TransferCount++;
+		}
+	}
+
+	//R3.2: reverse-search - walk BACK from a target through recorded transfers to ROM.
+	//Starting at (dstMem, dstAddr), find the NEWEST transfer that wrote that address,
+	//then continue from its source until a ROM source is reached. Returns the full chain.
+	//outChain: array of TransferInterop. maxSteps limits chain length.
+	static constexpr int TraceMaxSteps = 32;
+	static uint32_t TraceBack(uint8_t dstMem, uint32_t dstAddr, uint32_t* outSrcMem, uint32_t* outSrcAddr, uint32_t maxSteps)
+	{
+		if(TransferCount == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t steps = 0;
+		uint32_t curMem = dstMem;
+		uint32_t curAddr = dstAddr;
+		for(uint32_t s = 0; s < maxSteps; s++) {
+			//scan the ring BACKWARDS (newest first) for the last write that covered curAddr
+			uint32_t n = std::min<uint32_t>(TransferCount, TransferLogAllocated);
+			uint32_t oldest = TransferCount < TransferLogAllocated ? 0 : TransferHead;
+			uint32_t i = n;
+			bool found = false;
+			uint32_t bestSrcMem = 0xFF, bestSrcAddr = 0, bestLen = 0;
+			uint32_t bestOffset = 0;
+			while(i > 0) {
+				i--;
+				TransferEntry& e = TransferLog[(oldest + i) % TransferLogAllocated];
+				if(e.dstMem != curMem) {
+					continue;
+				}
+				uint32_t dstEnd = e.dstAddr + e.len;
+				if(curAddr >= e.dstAddr && curAddr < dstEnd) {
+					//source address of the exact byte
+					bestOffset = curAddr - e.dstAddr;
+					bestSrcMem = e.srcMem;
+					bestSrcAddr = e.srcAddr + bestOffset;
+					bestLen = e.len;
+					found = true;
+					break;
+				}
+			}
+			if(!found) {
+				break;  //no recorded transfer - chain ends
+			}
+			outSrcMem[s] = bestSrcMem;
+			outSrcAddr[s] = bestSrcAddr;
+			steps++;
+			if(bestSrcMem == TransferMemRom) {
+				break;  //reached ROM - done
+			}
+			if(bestSrcMem == TransferMemWram) {
+				curMem = TransferMemWram;
+				curAddr = bestSrcAddr & 0x1FFFF;
+				continue;
+			}
+			if(bestSrcMem == TransferMemVram) {
+				curMem = TransferMemVram;
+				curAddr = bestSrcAddr & 0x7FFF;
+				continue;
+			}
+			if(bestSrcMem == TransferMemCgram) {
+				curMem = TransferMemCgram;
+				curAddr = bestSrcAddr & 0xFF;
+				continue;
+			}
+			break;  //other source type - can't chain further
+		}
+		return steps;
+	}
+	struct TransferInterop
+	{
+		uint32_t srcAddr;
+		uint32_t dstAddr;
+		uint32_t len;
+		uint8_t  srcMem;
+		uint8_t  dstMem;
+		uint8_t  via;
+		uint8_t  pad;
+	};  //16 bytes
+	static_assert(sizeof(TransferInterop) == 16, "TransferInterop must be 16 bytes");
+	//trace the full chain back from a target and return the entries (most recent first)
+	static uint32_t GetTrace(uint8_t dstMem, uint32_t dstAddr, TransferInterop* outEntries, uint32_t maxEntries)
+	{
+		if(maxEntries == 0 || !TransferLog) {
+			return 0;
+		}
+		uint32_t n = std::min<uint32_t>(TransferCount, TransferLogAllocated);
+		uint32_t oldest = TransferCount < TransferLogAllocated ? 0 : TransferHead;
+		uint32_t entries = 0;
+		uint32_t curMem = dstMem;
+		uint32_t curAddr = dstAddr;
+		for(uint32_t s = 0; s < TraceMaxSteps; s++) {
+			uint32_t i = n;
+			bool found = false;
+			while(i > 0) {
+				i--;
+				TransferEntry& e = TransferLog[(oldest + i) % TransferLogAllocated];
+				if(e.dstMem != curMem) {
+					continue;
+				}
+				if(curAddr >= e.dstAddr && curAddr < e.dstAddr + e.len) {
+					uint32_t off = curAddr - e.dstAddr;
+					TransferInterop& o = outEntries[entries];
+					o.srcAddr = e.srcAddr + off;
+					o.dstAddr = curAddr;
+					o.len = e.len;
+					o.srcMem = e.srcMem;
+					o.dstMem = e.dstMem;
+					o.via = e.via;
+					o.pad = 0;
+					entries++;
+					if(e.srcMem == TransferMemRom || entries >= maxEntries) {
+						return entries;
+					}
+					if(e.srcMem == TransferMemWram) {
+						curMem = TransferMemWram;
+						curAddr = (e.srcAddr + off) & 0x1FFFF;
+					} else if(e.srcMem == TransferMemVram) {
+						curMem = TransferMemVram;
+						curAddr = (e.srcAddr + off) & 0x7FFF;
+					} else if(e.srcMem == TransferMemCgram) {
+						curMem = TransferMemCgram;
+						curAddr = (e.srcAddr + off) & 0xFF;
+					} else {
+						return entries;
+					}
+					found = true;
+					break;
+				}
+			}
+			if(!found) {
+				break;
+			}
+		}
+		return entries;
+	}
 
 	//R3.2: THE reverse-search core - for a WRAM->VRAM/CGRAM DMA at 'frame', find the
 	//largest contiguous ROM block read within [frame-WindowFrames, frame]. A decompression
@@ -606,13 +1114,13 @@ public:
 		if(RomReadRingCount == 0) {
 			return 0xFFFFFFFF;
 		}
-		uint32_t oldest = RomReadRingCount < RomReadRingSize ? 0 : RomReadRingHead;
-		uint32_t n = std::min<uint32_t>(RomReadRingCount, RomReadRingSize);
+		uint32_t oldest = RomReadRingCount < RomReadRingAllocated ? 0 : RomReadRingHead;
+		uint32_t n = std::min<uint32_t>(RomReadRingCount, RomReadRingAllocated);
 		uint32_t bestStart = 0xFFFFFFFF;
 		uint32_t bestLen = 0;
 		uint32_t i = 0;
 		while(i < n) {
-			RomReadRingEntry& e = RomReadRing[(oldest + i) % RomReadRingSize];
+			RomReadRingEntry& e = RomReadRing[(oldest + i) % RomReadRingAllocated];
 			if(e.addr >= 0x400000) {
 				i++;
 				continue;
@@ -630,7 +1138,7 @@ public:
 			uint32_t expected = e.addr + 1;
 			uint32_t j = i + 1;
 			while(j < n) {
-				RomReadRingEntry& f = RomReadRing[(oldest + j) % RomReadRingSize];
+				RomReadRingEntry& f = RomReadRing[(oldest + j) % RomReadRingAllocated];
 				if(f.addr >= 0x400000) {
 					break;
 				}
@@ -666,23 +1174,32 @@ public:
 		}
 		//R3.2: stability voting - a fade writes a different source every frame; a real
 		//load writes the same source repeatedly. Only displace the current source after
-		//enough conflicting writes (VoteReset) have been seen.
+		//enough conflicting writes (VoteReset) have been seen. This stabilizes the
+		//WramRomByte LOOKUP TABLE (used by the palette/map viewers). The TRANSFER capture
+		//ring below records EVERY write regardless of the vote - the reverse-search needs
+		//all steps, even repeated loads of the same buffer.
 		if(WramRomByte[wramAddr] != romRead) {
 			if(WramRomVote[wramAddr] > 0) {
 				WramRomVote[wramAddr]--;
-				return;  //keep the stable source, ignore this conflicting fade write
+			} else {
+				//vote exhausted - accept the new source (a real map change)
+				WramRomByte[wramAddr] = romRead;
+				WramRomVote[wramAddr] = VoteReset;
+				AppendWramWrite(0, wramAddr, romRead, (uint8_t)MemoryType::SnesPrgRom);
 			}
-			//vote exhausted - accept the new source (a real map change)
 		} else {
 			if(WramRomVote[wramAddr] < VoteReset) {
 				WramRomVote[wramAddr]++;
 			}
-			return;  //already correct - nothing to change
 		}
-		//Exact: this WRAM byte was copied from ROM address romRead.
-		WramRomByte[wramAddr] = romRead;
-		WramRomVote[wramAddr] = VoteReset;
-		AppendWramWrite(0, wramAddr, romRead, (uint8_t)MemoryType::SnesPrgRom);
+		//R3.2: transfer capture - ROM -> WRAM, 1 byte. Recorded on EVERY write so the
+		//reverse-search always has the newest step for this WRAM address. Use the STABLE
+		//(voted) source from WramRomByte - the raw LastRomRead can be a code address
+		//(fade/loop noise) which would poison the reverse-search chain.
+		uint32_t stableSrc = WramRomByte[wramAddr];
+		if(stableSrc != 0xFFFFFFFF) {
+			AppendTransfer(0, TransferMemRom, stableSrc, TransferMemWram, wramAddr, 1, TransferViaCpu);
+		}
 	}
 
 	//R3.2: WRAM->WRAM copy chain - a decompressor reads a compressed WRAM buffer and writes
@@ -697,21 +1214,23 @@ public:
 		}
 		uint32_t srcRom = WramRomByte[srcWramAddr];
 		if(srcRom != 0xFFFFFFFF) {
-			//R3.2: same stability voting as TrackWramWrite (fades lose, loads win)
+			//R3.2: same stability voting as TrackWramWrite (fades lose, loads win). The
+			//vote stabilizes WramRomByte; the TRANSFER capture records every write.
 			if(WramRomByte[wramAddr] != srcRom) {
 				if(WramRomVote[wramAddr] > 0) {
 					WramRomVote[wramAddr]--;
-					return;
+				} else {
+					WramRomByte[wramAddr] = srcRom;
+					WramRomVote[wramAddr] = VoteReset;
+					AppendWramWrite(0, wramAddr, srcRom, (uint8_t)MemoryType::SnesPrgRom);
 				}
 			} else {
 				if(WramRomVote[wramAddr] < VoteReset) {
 					WramRomVote[wramAddr]++;
 				}
-				return;
 			}
-			WramRomByte[wramAddr] = srcRom;
-			WramRomVote[wramAddr] = VoteReset;
-			AppendWramWrite(0, wramAddr, srcRom, (uint8_t)MemoryType::SnesPrgRom);
+			//R3.2: transfer capture - WRAM -> WRAM (decompression step), EVERY write
+			AppendTransfer(0, TransferMemWram, srcWramAddr, TransferMemWram, wramAddr, 1, TransferViaCpu);
 		}
 	}
 
@@ -730,6 +1249,19 @@ public:
 			return 0xFFFFFFFF;
 		}
 		return WramRomByte[wramAddr];
+	}
+
+	//R3.2: does this WRAM address have a resolvable ROM origin (a real data source)?
+	//Used to prefer the WRAM->WRAM chain over a stale ROM read during decompression.
+	//Only ROM data offsets >= 0x40000 are real data sources (map/tiles/palettes live there);
+	//WRAM addresses and code areas (< 0x40000) are not valid ROM origins.
+	static bool WramHasSource(uint32_t wramAddr)
+	{
+		if(wramAddr >= 0x20000) {
+			return false;
+		}
+		uint32_t src = WramRomByte[wramAddr];
+		return src != 0xFFFFFFFF && src >= 0x40000 && src < 0x400000;
 	}
 
 	//R3.2: DMA ROM->WRAM - the ROM source address writes TransferSize bytes starting
@@ -758,6 +1290,40 @@ public:
 			WramRomByte[a] = src;
 			WramRomVote[a] = VoteReset;
 		}
+		//R3.2: transfer capture - ROM -> WRAM via DMA, full range
+		AppendTransfer(0, TransferMemRom, romSource, TransferMemWram, wramAddr, length, TransferViaDma);
+	}
+
+	//R3.2: DMA WRAM->WRAM - a DMA copies a WRAM buffer to another WRAM buffer (decompression
+	//output staging). Propagate the source buffer's ROM origin through the WramRomByte chain
+	//and record the transfer so the reverse-search can walk WRAM -> WRAM -> ROM.
+	static void TrackWramDmaToWram(uint32_t dstWramAddr, uint32_t srcWramAddr, uint32_t length)
+	{
+		if(dstWramAddr >= 0x20000 || srcWramAddr >= 0x20000 || length == 0) {
+			return;
+		}
+		uint32_t end = std::min<uint32_t>(0x20000, dstWramAddr + length);
+		for(uint32_t a = dstWramAddr; a < end; a++) {
+			uint32_t src = WramRomByte[srcWramAddr + (a - dstWramAddr)];
+			if(src == 0xFFFFFFFF) {
+				continue;
+			}
+			if(WramRomByte[a] != src) {
+				if(WramRomVote[a] > 0) {
+					WramRomVote[a]--;
+					continue;
+				}
+			} else {
+				if(WramRomVote[a] < VoteReset) {
+					WramRomVote[a]++;
+				}
+				continue;
+			}
+			WramRomByte[a] = src;
+			WramRomVote[a] = VoteReset;
+		}
+		//R3.2: transfer capture - WRAM -> WRAM via DMA, full range
+		AppendTransfer(0, TransferMemWram, srcWramAddr, TransferMemWram, dstWramAddr, length, TransferViaDma);
 	}
 
 	static void SetEnabled(bool enabled)
@@ -877,10 +1443,16 @@ public:
 	//Remember the last ROM/WRAM address the CPU read, so a following VRAM/CGRAM
 	//write can be attributed to the data source. Also coalesces sequential ROM reads
 	//into contiguous blocks (the real ROM address ranges of the loaded data).
-	static void TrackRead(MemoryType memType, uint32_t addr24, uint64_t frame = 0)
+	static void TrackRead(MemoryType memType, uint32_t addr24, uint64_t frame = 0, bool isCode = false)
 	{
 		if(memType == MemoryType::SnesPrgRom) {
-			LastRomRead = addr24;
+			//R3.2: only data reads become a WRAM->ROM source. Code reads (CDL says this
+			//address is code) must NOT set LastRomRead - otherwise the palette/tile buffer
+			//writes get attributed to a code address and the reverse-search chain is wrong.
+			bool code = isCode || (IsRomCode && IsRomCode(addr24));
+			if(!code) {
+				LastRomRead = addr24;
+			}
 			if(Enabled) {
 				AppendRomReadRing(frame, addr24, false);  //R3.2: timestamped read for reverse search
 				MarkRomRead(addr24);
@@ -1061,10 +1633,16 @@ public:
 		e.pc = PendingPc;
 
 		//R3.2: reverse lookup - CPU copy loops also fill the target->ROM table.
-		if(PendingSourceMem == (uint8_t)MemoryType::SnesPrgRom && PendingSourceAddr - len < 0x400000) {
+		//For direct ROM sources the source is already the ROM offset. For WRAM sources
+		//(decompression) we store the WRAM address; the report / palette & map viewers
+		//resolve it through the WramRomByte chain to the real ROM source. This is how the
+		//mode-7 tilemap (decompressed via WRAM) gets a resolvable source.
+		if((PendingSourceMem == (uint8_t)MemoryType::SnesPrgRom || PendingSourceMem == (uint8_t)MemoryType::SnesWorkRam || PendingSourceMem == (uint8_t)MemoryType::SnesSaveRam)
+			&& PendingSourceAddr - len < 0x400000) {
 			uint32_t wordCount = len / 2;
 			if(wordCount > 0) {
-				TrackTargetRom(PendingTargetType, PendingTargetAddr - len, PendingSourceAddr - len, wordCount);
+				uint8_t srcMem = PendingSourceMem == (uint8_t)MemoryType::SnesPrgRom ? TransferMemRom : (PendingSourceMem == (uint8_t)MemoryType::SnesWorkRam ? TransferMemWram : 0);
+				TrackTargetRom(PendingTargetType, PendingTargetAddr - len, PendingSourceAddr - len, wordCount, srcMem, TransferViaCpu);
 			}
 		}
 
@@ -1106,10 +1684,11 @@ public:
 		if(!Enabled && !LiveTracking) {
 			return;
 		}
-		//R3.2: timestamped ROM read for reverse search of the load source (only while a
-		//burst is active in auto-capture mode, so the ring holds exactly the load reads).
+		//R3.2: timestamped ROM read for reverse search of the load source. For DMA loads
+		//the FULL source range is logged (not just the start), so the reverse-search sees
+		//the entire loaded block in the ring.
 		if(srcBank == 0 && sourceAddr24 < 0x400000) {
-			AppendRomReadRing(frame, sourceAddr24, true);
+			AppendRomReadRing(frame, sourceAddr24, true, length);
 		}
 		if(targetType == 0) {
 			LastVramFrame = frame;
@@ -1139,7 +1718,8 @@ public:
 		if(sourceAddr24 < 0x400000) {
 			uint32_t wordCount = length / 2;
 			if(wordCount > 0) {
-				TrackTargetRom(targetType, targetAddr, sourceAddr24, wordCount);
+				uint8_t srcMem = sourceResolved ? TransferMemWram : TransferMemRom;
+				TrackTargetRom(targetType, targetAddr, sourceAddr24, wordCount, srcMem, TransferViaDma);
 			}
 		}
 

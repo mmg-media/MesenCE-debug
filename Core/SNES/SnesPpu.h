@@ -242,6 +242,7 @@ public:
 	uint16_t GetNmiScanline();
 	uint16_t GetVblankStart();
 	uint16_t GetDebugVramAddress();
+	uint8_t GetDebugCgAddress();
 
 	SnesPpuState GetState();
 	SnesPpuState& GetStateRef();

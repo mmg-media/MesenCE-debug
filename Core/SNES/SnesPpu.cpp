@@ -1823,6 +1823,11 @@ uint16_t SnesPpu::GetDebugVramAddress()
 	return GetVramAddress();
 }
 
+uint8_t SnesPpu::GetDebugCgAddress()
+{
+	return _state.CgramAddress & 0xFF;
+}
+
 uint16_t SnesPpu::GetVramAddress()
 {
 	uint16_t addr = _state.VramAddress;

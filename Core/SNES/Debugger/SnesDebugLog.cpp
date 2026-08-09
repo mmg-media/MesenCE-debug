@@ -19,6 +19,11 @@ SnesMapLoadLog::Entry SnesMapLoadLog::Log[SnesMapLoadLog::LogSize] = {};
 uint32_t SnesMapLoadLog::Head = 0;
 uint32_t SnesMapLoadLog::Count = 0;
 bool SnesMapLoadLog::Enabled = false;
+std::function<bool(uint32_t)> SnesMapLoadLog::IsRomCode;
+uint32_t SnesMapLoadLog::DebugDmaBusAddr = 0;
+uint32_t SnesMapLoadLog::DebugDmaLinear = 0;
+bool SnesMapLoadLog::DebugDmaIsRom = false;
+bool SnesMapLoadLog::DebugDmaIsWram = false;
 uint32_t SnesMapLoadLog::LastRomRead = 0xFFFFFFFF;
 uint32_t SnesMapLoadLog::LastWramRead = 0xFFFFFFFF;
 uint32_t SnesMapLoadLog::LastVramFrame = 0;
@@ -50,9 +55,14 @@ uint32_t SnesMapLoadLog::WramWriteCount = 0;
 uint32_t SnesMapLoadLog::VramRomWord[0x8000] = {};
 uint32_t SnesMapLoadLog::CgramRomWord[0x100] = {};
 int8_t SnesMapLoadLog::WramRomVote[0x20000] = {};
-SnesMapLoadLog::RomReadRingEntry SnesMapLoadLog::RomReadRing[SnesMapLoadLog::RomReadRingSize] = {};
+SnesMapLoadLog::RomReadRingEntry* SnesMapLoadLog::RomReadRing = nullptr;
+uint32_t SnesMapLoadLog::RomReadRingAllocated = 0;
 uint32_t SnesMapLoadLog::RomReadRingHead = 0;
 uint32_t SnesMapLoadLog::RomReadRingCount = 0;
+SnesMapLoadLog::TransferEntry* SnesMapLoadLog::TransferLog = nullptr;
+uint32_t SnesMapLoadLog::TransferLogAllocated = 0;
+uint32_t SnesMapLoadLog::TransferHead = 0;
+uint32_t SnesMapLoadLog::TransferCount = 0;
 uint8_t SnesMapLoadLog::PendingTargetType = 0;
 uint32_t SnesMapLoadLog::PendingTargetAddr = 0;
 uint32_t SnesMapLoadLog::PendingSourceAddr = 0;
@@ -414,6 +424,7 @@ void SnesTracker::AppendInterrupt(uint8_t type, uint32_t frame, int32_t cycle, u
 	}
 	Append(type, frame, cycle, pc, 0, 0, 0, 0);
 }
+
 
 
 

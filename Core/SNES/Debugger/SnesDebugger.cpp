@@ -74,6 +74,11 @@ SnesDebugger::SnesDebugger(Debugger* debugger, CpuType cpuType) : IDebugger(debu
 
 		_cdlFile = _codeDataLogger->GetCdlFilePath(_console->GetCartridge()->GetGameboy() ? "SgbFirmware.cdl" : _emu->GetRomInfo().RomFile.GetFileName());
 		_codeDataLogger->LoadCdlFile(_cdlFile, _settings->GetDebugConfig().AutoResetCdl);
+		//R3.2: expose the code/data knowledge to the reverse-search - code reads must not
+		//become WRAM->ROM data sources (they would poison the palette/map lookup tables).
+		SnesMapLoadLog::IsRomCode = [this](uint32_t addr) -> bool {
+			return _cdl && _cdl->IsCode(addr);
+		};
 	} else {
 		_cdl = (SnesCodeDataLogger*)_debugger->GetCdlManager()->GetCodeDataLogger(MemoryType::SnesPrgRom);
 	}
@@ -237,7 +242,17 @@ void SnesDebugger::ProcessRead(uint32_t addr, uint8_t value, MemoryOperationType
 		//last read is the executing code itself, not the copied data source. addressInfo.Address
 		//is the LINEAR address (ROM file offset / WRAM offset), not the SNES bus address.
 		if(type == MemoryOperationType::Read && addressInfo.Address >= 0) {
-			SnesMapLoadLog::TrackRead(addressInfo.Type, (uint32_t)addressInfo.Address, _memoryManager->GetEmu()->GetFrameCount());
+			//R3.2: only treat as a data source if the CDL says this ROM address is DATA,
+			//not code. Reads from code areas (tables inside routines) would otherwise
+			//pollute LastRomRead with code addresses, breaking the WRAM->ROM resolution.
+			//The CDL is loaded from the .cdl file + filled as code executes, so it knows
+			//the code areas reliably. Code reads still go to the ROM-read ring (they are
+			//real reads), they just never become a WRAM->ROM data source.
+			bool isCode = false;
+			if(addressInfo.Type == MemoryType::SnesPrgRom && _cdl) {
+				isCode = _cdl->IsCode((uint32_t)addressInfo.Address);
+			}
+			SnesMapLoadLog::TrackRead(addressInfo.Type, (uint32_t)addressInfo.Address, _memoryManager->GetEmu()->GetFrameCount(), isCode);
 		}
 	}
 
