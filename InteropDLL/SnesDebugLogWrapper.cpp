@@ -204,6 +204,89 @@ extern "C" {
 		return SnesMapLoadLog::GetRomReadRingCount();
 	}
 
+	DllExport void __stdcall snes_map_load_rom_read_ring_resize(uint32_t size)
+	{
+		SnesMapLoadLog::SetRomReadRingSize(size);
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_rom_read_ring_size()
+	{
+		return SnesMapLoadLog::GetRomReadRingSize();
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_transfer_count()
+	{
+		return SnesMapLoadLog::GetTransferLogCount();
+	}
+
+	DllExport bool __stdcall snes_map_load_is_rom_code(uint32_t addr)
+	{
+		if(SnesMapLoadLog::IsRomCode) {
+			return SnesMapLoadLog::IsRomCode(addr);
+		}
+		return false;
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_dma_debug_bus() { return SnesMapLoadLog::GetDebugDmaBus(); }
+	DllExport uint32_t __stdcall snes_map_load_dma_debug_linear() { return SnesMapLoadLog::GetDebugDmaLinear(); }
+	DllExport bool __stdcall snes_map_load_dma_debug_isrom() { return SnesMapLoadLog::GetDebugDmaIsRom(); }
+	DllExport bool __stdcall snes_map_load_dma_debug_iswram() { return SnesMapLoadLog::GetDebugDmaIsWram(); }
+
+	DllExport void __stdcall snes_map_load_transfer_peek(SnesMapLoadLog::TransferInterop* outEntry)
+	{
+		outEntry->srcAddr = 0xDEADBEEF;
+		outEntry->dstAddr = 0xCAFEBABE;
+		outEntry->len = 0xFFFFFFFF;
+		outEntry->srcMem = 0x11;
+		outEntry->dstMem = 0x22;
+		outEntry->via = 0x33;
+		outEntry->pad = 0;
+		if(SnesMapLoadLog::GetTransferLogCount() == 0) {
+			return;
+		}
+		outEntry->srcAddr = SnesMapLoadLog::GetNewestTransferSrc();
+		outEntry->dstAddr = SnesMapLoadLog::GetNewestTransferDst();
+		outEntry->len = SnesMapLoadLog::GetNewestTransferLen();
+		outEntry->srcMem = SnesMapLoadLog::GetNewestTransferSrcMem();
+		outEntry->dstMem = SnesMapLoadLog::GetNewestTransferDstMem();
+		outEntry->via = SnesMapLoadLog::GetNewestTransferVia();
+	}
+
+	DllExport void __stdcall snes_map_load_transfer_resize(uint32_t size)
+	{
+		SnesMapLoadLog::SetTransferLogSize(size);
+	}
+
+	DllExport void __stdcall snes_map_load_transfer_clear()
+	{
+		SnesMapLoadLog::ClearTransferLog();
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_transfers_to_mem(uint8_t dstMem, uint32_t* outSrc, uint32_t* outDst, uint8_t* outVia, uint32_t maxResults)
+	{
+		return SnesMapLoadLog::GetTransfersToMem(dstMem, outSrc, outDst, outVia, maxResults);
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_transfers_to_range(uint8_t dstMem, uint32_t dstStart, uint32_t dstEnd, uint32_t* outSrc, uint32_t* outDst, uint8_t* outVia, uint32_t maxResults)
+	{
+		return SnesMapLoadLog::GetTransfersToMemRange(dstMem, dstStart, dstEnd, outSrc, outDst, outVia, maxResults);
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_trace(uint8_t dstMem, uint32_t dstAddr, SnesMapLoadLog::TransferInterop* outEntries, uint32_t maxEntries)
+	{
+		return SnesMapLoadLog::GetTrace(dstMem, dstAddr, outEntries, maxEntries);
+	}
+
+	DllExport void __stdcall snes_map_load_rom_read_ring_clear()
+	{
+		SnesMapLoadLog::ClearRomReadRing();
+	}
+
+	DllExport uint32_t __stdcall snes_map_load_rom_read_ring_largest(uint32_t* outStart, uint32_t* outLen, uint32_t maxBlocks, uint32_t scanLimit, uint64_t frameWindow)
+	{
+		return SnesMapLoadLog::GetLargestRomReads(outStart, outLen, maxBlocks, scanLimit, frameWindow);
+	}
+
 	DllExport uint32_t __stdcall snes_map_load_rom_reads_in_frames(uint64_t fromFrame, uint64_t toFrame, uint32_t* outStart, uint32_t* outLen, uint32_t maxResults)
 	{
 		return SnesMapLoadLog::GetRomReadsInFrames(fromFrame, toFrame, outStart, outLen, maxResults);
@@ -263,4 +346,5 @@ extern "C" {
 	{
 		return SnesMapLoadLog::GetRomTargetBlocks(outStart, outLength, maxBlocks, gapBytes);
 	}
+
 }

@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Mesen.Config;
 using Mesen.Debugger;
 using Mesen.Utilities;
@@ -491,6 +491,19 @@ namespace Mesen.Interop
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
+		public struct TransferInterop
+		{
+			public UInt32 srcAddr;
+			public UInt32 dstAddr;
+			public UInt32 len;
+			public byte srcMem;
+			public byte dstMem;
+			public byte via;
+			public byte pad;
+		}
+
+
+		[StructLayout(LayoutKind.Sequential)]
 		public struct InteropRomReadBlock
 		{
 			public UInt64 frame;
@@ -562,6 +575,22 @@ namespace Mesen.Interop
 		[DllImport(DllPath, EntryPoint = "snes_map_load_vram_rom_word")] public static extern UInt32 SnesMapLoadVramRomWord(UInt32 wordAddr);
 		[DllImport(DllPath, EntryPoint = "snes_map_load_cgram_rom_word")] public static extern UInt32 SnesMapLoadCgramRomWord(UInt32 wordIdx);
 		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_read_ring_count")] public static extern UInt32 SnesMapLoadRomReadRingCount();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_read_ring_resize")] public static extern void SnesMapLoadRomReadRingResize(UInt32 size);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_read_ring_size")] public static extern UInt32 SnesMapLoadRomReadRingSize();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_transfer_count")] public static extern UInt32 SnesMapLoadTransferCount();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_is_rom_code")] public static extern bool SnesMapLoadIsRomCode(UInt32 addr);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_debug_bus")] public static extern UInt32 SnesMapLoadDmaDebugBus();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_debug_linear")] public static extern UInt32 SnesMapLoadDmaDebugLinear();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_debug_isrom")] public static extern bool SnesMapLoadDmaDebugIsRom();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_debug_iswram")] public static extern bool SnesMapLoadDmaDebugIsWram();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_transfer_peek")] public static extern void SnesMapLoadTransferPeek(out TransferInterop entry);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_transfer_resize")] public static extern void SnesMapLoadTransferResize(UInt32 size);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_transfer_clear")] public static extern void SnesMapLoadTransferClear();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_transfers_to_mem")] public static extern UInt32 SnesMapLoadTransfersToMem(byte dstMem, UInt32[] outSrc, UInt32[] outDst, byte[] outVia, UInt32 maxResults);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_transfers_to_range")] public static extern UInt32 SnesMapLoadTransfersToRange(byte dstMem, UInt32 dstStart, UInt32 dstEnd, UInt32[] outSrc, UInt32[] outDst, byte[] outVia, UInt32 maxResults);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_trace")] public static extern UInt32 SnesMapLoadTrace(byte dstMem, UInt32 dstAddr, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)] TransferInterop[] outEntries, UInt32 maxEntries);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_read_ring_clear")] public static extern void SnesMapLoadRomReadRingClear();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_read_ring_largest")] public static extern UInt32 SnesMapLoadRomReadRingLargest(UInt32[] outStart, UInt32[] outLen, UInt32 maxBlocks, UInt32 scanLimit, UInt64 frameWindow);
 		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_reads_in_frames")] public static extern UInt32 SnesMapLoadRomReadsInFrames(UInt64 fromFrame, UInt64 toFrame, UInt32[] outStart, UInt32[] outLen, UInt32 maxResults);
 		[DllImport(DllPath, EntryPoint = "snes_map_load_log_get_count")] public static extern UInt32 SnesMapLoadLogGetCount();
 		[DllImport(DllPath, EntryPoint = "snes_get_map_load_log")] public static extern UInt32 SnesGetMapLoadLog([Out] InteropMapLoadEntry[] entries, UInt32 start, UInt32 count);
