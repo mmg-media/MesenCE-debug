@@ -131,7 +131,6 @@ namespace Mesen.Windows
 				cheat.Value = tb.Text;
 				TrainerService.ApplyToggleNow(cheat);
 			};
-			row.Children.Add(setBtn);
 
 			return row;
 		}
