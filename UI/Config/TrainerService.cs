@@ -163,7 +163,8 @@ namespace Mesen.Config
 			}
 		}
 
-		// Dezimalwert als BCD-Bytes packen: z.B. "58" (size=1) -> 0x58, "123" (size=2) -> 0x01 0x23
+		// Dezimalwert als BCD-Bytes packen (LITTLE-endian, niedrigstwertige Ziffern zuerst):
+		// z.B. "58" (size=1) -> 0x58, "1234" (size=2) -> 0x34 0x12, "99" -> 0x99
 		public static byte[]? ParseBcdValue(string? text, int size)
 		{
 			if(string.IsNullOrWhiteSpace(text)) {
@@ -177,7 +178,7 @@ namespace Mesen.Config
 				// BCD-Eingabe wird als Dezimalzahl interpretiert (max 10^size Stellen)
 				ulong value = Convert.ToUInt64(t, 10);
 				byte[] result = new byte[size];
-				for(int i = size - 1; i >= 0; i--) {
+				for(int i = 0; i < size; i++) {
 					byte low = (byte)(value % 10);
 					value /= 10;
 					byte high = (byte)(value % 10);
