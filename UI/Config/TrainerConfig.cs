@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Mesen.Interop;
 using Mesen.Utilities;
-
 namespace Mesen.Config
 {
 	/// <summary>
@@ -30,7 +29,11 @@ namespace Mesen.Config
 			try {
 				string path = Path.Combine(TrainerFolder, gameId + ".json");
 				if(File.Exists(path)) {
-					TrainerConfig? cfg = JsonSerializer.Deserialize<TrainerConfig>(File.ReadAllText(path), MesenSerializerContext.Default.TrainerConfig);
+					// case-insensitiv parsen (camelCase wie in der Doku, aber auch PascalCase erlaubt)
+					JsonSerializerOptions opts = new JsonSerializerOptions(MesenSerializerContext.Default.Options) {
+						PropertyNameCaseInsensitive = true
+					};
+					TrainerConfig? cfg = JsonSerializer.Deserialize<TrainerConfig>(File.ReadAllText(path), opts);
 					if(cfg != null && cfg.GameId == gameId) {
 						return cfg;
 					}
