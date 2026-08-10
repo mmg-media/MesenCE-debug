@@ -150,11 +150,43 @@ namespace Mesen.Config
 			try {
 				UInt32 addr = ParseAddress(cheat.RamAddress);
 				int size = Math.Max(1, Math.Min(cheat.Size, 8));
-				byte[]? value = ParseValue(cheat.Value, size);
+				byte[]? value;
+				if(cheat.Encoding == "bcd") {
+					value = ParseBcdValue(cheat.Value, size);
+				} else {
+					value = ParseValue(cheat.Value, size);
+				}
 				if(value != null && addr < 0x20000) {
 					DebugApi.SetMemoryValues(MemoryType.SnesWorkRam, addr, value, size);
 				}
 			} catch {
+			}
+		}
+
+		// Dezimalwert als BCD-Bytes packen: z.B. "58" (size=1) -> 0x58, "123" (size=2) -> 0x01 0x23
+		public static byte[]? ParseBcdValue(string? text, int size)
+		{
+			if(string.IsNullOrWhiteSpace(text)) {
+				return null;
+			}
+			try {
+				string t = text.Trim();
+				if(t.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) {
+					t = t.Substring(2);
+				}
+				// BCD-Eingabe wird als Dezimalzahl interpretiert (max 10^size Stellen)
+				ulong value = Convert.ToUInt64(t, 10);
+				byte[] result = new byte[size];
+				for(int i = size - 1; i >= 0; i--) {
+					byte low = (byte)(value % 10);
+					value /= 10;
+					byte high = (byte)(value % 10);
+					value /= 10;
+					result[i] = (byte)((high << 4) | low);
+				}
+				return result;
+			} catch {
+				return null;
 			}
 		}
 

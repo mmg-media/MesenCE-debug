@@ -61,6 +61,11 @@ namespace Mesen.Config
 		public int Size { get; set; } = 2;
 		public string? Value { get; set; }        // fixierter Wert (hex oder dezimal)
 
+		// optional: "bcd" = Wert als BCD speichern (jede Dezimalziffer = 1 Nibble).
+		// z.B. Eingabe "58" -> Byte 0x58 (statt roh 0x3A). Fuer Spiele, die Geld
+		// als BCD ablegen (Terranigma: 0x0694).
+		public string? Encoding { get; set; }
+
 		// fuer type=ar: der AR-Code
 		public string? Code { get; set; }
 
