@@ -25,6 +25,7 @@ namespace Mesen.LiveApi
 		public string Format { get; set; } = "";
 		public string ConsoleType { get; set; } = "";
 		public string Sha1 { get; set; } = "";
+		public string GameCode { get; set; } = "";
 		public string[] CpuTypes { get; set; } = Array.Empty<string>();
 	}
 

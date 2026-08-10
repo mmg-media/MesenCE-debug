@@ -27,7 +27,8 @@ namespace Mesen.Windows
 			_statusText = this.GetControl<TextBlock>("statusText");
 			_cheatList = this.GetControl<ItemsControl>("cheatList");
 
-			_gameId = EmuApi.GetRomHash(HashType.Sha1);
+			// Interne ROM-ID (SNES-Produkt-Code, z.B. "AQTD") - stabil ueber Versionen
+			_gameId = EmuApi.GetRomGameCode();
 			_config = TrainerConfig.Load(_gameId);
 
 			if(_config == null) {

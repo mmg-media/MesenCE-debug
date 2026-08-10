@@ -71,6 +71,21 @@ namespace Mesen.Interop
 			return new RomInfo(info);
 		}
 
+		//R3.2: interne ROM-ID (SNES-Produkt-Code aus dem Header, z.B. "AQTD" fuer Terranigma).
+		//Stabil ueber ROM-Versionen/Regionen - als Trainer-Game-ID zuverlaessiger als SHA1.
+		[DllImport(DllPath, EntryPoint = "GetRomGameCode")]
+		private static extern void GetRomGameCodeWrapper(IntPtr outCode, Int32 maxLength);
+		public static string GetRomGameCode()
+		{
+			IntPtr ptr = Marshal.AllocHGlobal(32);
+			try {
+				EmuApi.GetRomGameCodeWrapper(ptr, 32);
+				return Marshal.PtrToStringUTF8(ptr) ?? "";
+			} finally {
+				Marshal.FreeHGlobal(ptr);
+			}
+		}
+
 		[DllImport(DllPath)] public static extern void LoadRecentGame([MarshalAs(UnmanagedType.LPUTF8Str)] string filepath, [MarshalAs(UnmanagedType.I1)] bool resetGame);
 
 		[DllImport(DllPath)] public static extern void AddKnownGameFolder([MarshalAs(UnmanagedType.LPUTF8Str)] string folder);

@@ -341,6 +341,10 @@ namespace Mesen.LiveApi
 						result.Sha1 = EmuApi.GetRomHash(HashType.Sha1);
 					} catch {
 					}
+					try {
+						result.GameCode = EmuApi.GetRomGameCode();
+					} catch {
+					}
 					return result;
 				} catch {
 					return null;

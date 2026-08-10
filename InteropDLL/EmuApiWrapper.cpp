@@ -1,5 +1,7 @@
 #include "Common.h"
 #include "Core/Shared/Emulator.h"
+#include "Core/SNES/SnesConsole.h"
+#include "Core/SNES/BaseCartridge.h"
 #include "Core/Shared/EmuSettings.h"
 #include "Core/Shared/Video/VideoDecoder.h"
 #include "Core/Shared/Video/VideoRenderer.h"
@@ -154,7 +156,6 @@ extern "C"
 	DllExport void __stdcall GetRomInfo(InteropRomInfo& info)
 	{
 		RomInfo romInfo = _emu->GetRomInfo();
-
 		string romPath = romInfo.RomFile;
 		string patchPath = romInfo.PatchFile;
 
@@ -171,6 +172,32 @@ extern "C"
 		info.CpuTypeCount = std::min<uint32_t>((uint32_t)cpuTypes.size(), 5);
 		for(size_t i = 0; i < 5 && i < cpuTypes.size(); i++) {
 			info.CpuTypes[i] = cpuTypes[i];
+		}
+	}
+
+	//R3.2: interne ROM-ID (Produkt-Code aus dem SNES-Header, z.B. "AQTD" fuer Terranigma).
+	//Stabil ueber ROM-Versionen/Regionen - als Trainer-Game-ID zuverlaessiger als SHA1.
+	DllExport void __stdcall GetRomGameCode(char* outCode, int32_t maxLength)
+	{
+		string code = "";
+		// Interne ROM-ID direkt aus dem SNES-Header lesen (0xFFB0: "01" + 4-Byte-Produkt-Code,
+		// z.B. "AQTD" fuer Terranigma). Stabil ueber ROM-Versionen/Regionen.
+		uint8_t* rom = (uint8_t*)_emu->GetMemory(MemoryType::SnesPrgRom).Memory;
+		if(rom) {
+			uint32_t romSize = (uint32_t)_emu->GetMemory(MemoryType::SnesPrgRom).Size;
+			if(romSize >= 0xFFB6) {
+				// Produkt-Code bei 0xFFB2-0xFFB5 (4 ASCII-Zeichen)
+				for(int i = 0; i < 4; i++) {
+					char c = (char)rom[0xFFB2 + i];
+					if(c >= 0x20 && c <= 0x7E) {
+						code += c;
+					}
+				}
+			}
+		}
+		if(outCode && maxLength > 0) {
+			memset(outCode, 0, (size_t)maxLength);
+			memcpy(outCode, code.c_str(), std::min<size_t>(code.size(), (size_t)maxLength - 1));
 		}
 	}
 

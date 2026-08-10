@@ -16,7 +16,10 @@ namespace Mesen.Config
 	/// </summary>
 	public class TrainerConfig
 	{
-		public string? GameId { get; set; }        // SHA1 der Ziel-ROM
+		// Interne ROM-ID (SNES-Produkt-Code aus dem Header, z.B. "AQTD" fuer Terranigma).
+		// Stabil ueber ROM-Versionen/Regionen - zuverlaessiger als SHA1 (die sich mit jeder
+		// ROM-Version/Region/Patch aendert).
+		public string? GameId { get; set; }
 		public string? GameName { get; set; }      // optional, nur Anzeige
 		public List<TrainerCheat> Cheats { get; set; } = new List<TrainerCheat>();
 
