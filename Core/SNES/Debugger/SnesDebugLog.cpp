@@ -19,6 +19,7 @@ SnesMapLoadLog::Entry SnesMapLoadLog::Log[SnesMapLoadLog::LogSize] = {};
 uint32_t SnesMapLoadLog::Head = 0;
 uint32_t SnesMapLoadLog::Count = 0;
 bool SnesMapLoadLog::Enabled = false;
+bool SnesMapLoadLog::TracingEnabled = false;
 std::function<bool(uint32_t)> SnesMapLoadLog::IsRomCode;
 uint32_t SnesMapLoadLog::DebugDmaBusAddr = 0;
 uint32_t SnesMapLoadLog::DebugDmaLinear = 0;

@@ -249,6 +249,7 @@ namespace Mesen.LiveApi
 						DebugApi.SnesMapLoadLogSetEnabled(true);
 						DebugApi.SnesMapLoadLogSetAutoCapture(true);
 						DebugApi.SnesMapLoadLogSetLiveTracking(true);
+						DebugApi.SnesMapLoadSetTracing(true);  //R3.2: Debug-Endpoint aktiviert die Tracing-Logik
 					}
 					DebugPaletteInfo paletteInfo = DebugApi.GetPaletteInfo(cpu.Value);
 					UInt32[] rgb = paletteInfo.GetRgbPalette();
@@ -1061,6 +1062,7 @@ namespace Mesen.LiveApi
 						DebugApi.SnesMapLoadLogSetEnabled(true);
 						DebugApi.SnesMapLoadLogSetAutoCapture(true);
 						DebugApi.SnesMapLoadLogSetLiveTracking(true);
+						DebugApi.SnesMapLoadSetTracing(true);  //R3.2: Debug-Endpoint aktiviert die Tracing-Logik
 					}
 					SnesPpuState state = DebugApi.GetPpuState<SnesPpuState>(cpu.Value);
 					int layerIdx = int.TryParse(layer, out int li) ? li : 0;
@@ -1272,6 +1274,7 @@ namespace Mesen.LiveApi
 						DebugApi.SnesMapLoadLogSetEnabled(true);
 						DebugApi.SnesMapLoadLogSetAutoCapture(true);
 						DebugApi.SnesMapLoadLogSetLiveTracking(true);
+						DebugApi.SnesMapLoadSetTracing(true);  //R3.2: Debug-Endpoint aktiviert die Tracing-Logik
 					}
 					SnesPpuState state = DebugApi.GetPpuState<SnesPpuState>(cpu.Value);
 					int layerIdx = int.TryParse(layer, out int li) ? li : 0;
@@ -1580,6 +1583,7 @@ namespace Mesen.LiveApi
 						DebugApi.SnesMapLoadLogSetEnabled(true);
 						DebugApi.SnesMapLoadLogSetAutoCapture(true);
 						DebugApi.SnesMapLoadLogSetLiveTracking(true);
+						DebugApi.SnesMapLoadSetTracing(true);  //R3.2: Debug-Endpoint aktiviert die Tracing-Logik
 					}
 					byte memType = (byte)(int.TryParse(mem, out int mv) ? mv : 3);
 					UInt32 target = ParseUInt(addr);

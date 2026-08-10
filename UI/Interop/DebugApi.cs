@@ -578,6 +578,8 @@ namespace Mesen.Interop
 		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_read_ring_resize")] public static extern void SnesMapLoadRomReadRingResize(UInt32 size);
 		[DllImport(DllPath, EntryPoint = "snes_map_load_rom_read_ring_size")] public static extern UInt32 SnesMapLoadRomReadRingSize();
 		[DllImport(DllPath, EntryPoint = "snes_map_load_transfer_count")] public static extern UInt32 SnesMapLoadTransferCount();
+		[DllImport(DllPath, EntryPoint = "snes_map_load_set_tracing")] public static extern void SnesMapLoadSetTracing(bool enabled);
+		[DllImport(DllPath, EntryPoint = "snes_map_load_is_tracing")] public static extern bool SnesMapLoadIsTracing();
 		[DllImport(DllPath, EntryPoint = "snes_map_load_is_rom_code")] public static extern bool SnesMapLoadIsRomCode(UInt32 addr);
 		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_debug_bus")] public static extern UInt32 SnesMapLoadDmaDebugBus();
 		[DllImport(DllPath, EntryPoint = "snes_map_load_dma_debug_linear")] public static extern UInt32 SnesMapLoadDmaDebugLinear();

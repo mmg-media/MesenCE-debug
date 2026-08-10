@@ -247,6 +247,14 @@ public:
 	static uint32_t Head;
 	static uint32_t Count;
 	static bool Enabled;
+	//R3.2: MASTER-SCHALTER fuer die gesamte Reverse-Search-Tracing-Logik (ROM-Read-Ring,
+	//Transfer-Log, WramRomByte, Bitmaps). Standardmaessig AUS, damit der Emulator OHNE
+	//Debug-Tools normal performant laeuft (kein Per-Frame-Overhead). Wird nur eingeschaltet,
+	//wenn die Debug-Funktionen tatsaechlich genutzt werden. So reicht EINE Mesen-Build
+	//fuer beide Zwecke (normaler Emulator + Debugging).
+	static bool TracingEnabled;
+	static void SetTracingEnabled(bool enabled) { TracingEnabled = enabled; if(enabled) { Enabled = true; } }
+	static bool IsTracingEnabled() { return TracingEnabled; }
 	//R3.2: code-data-logger callback - tells whether a ROM offset is CODE (executed) or
 	//DATA. Set by SnesDebugger; used to keep code reads out of the WRAM->ROM / target->
 	//ROM reverse-lookup tables. Returns true if addr is CODE, false if DATA/unknown.
@@ -311,7 +319,7 @@ public:
 	//romSource is the EXACT linear ROM offset (already WRAM-resolved for WRAM sources).
 	static void TrackTargetRom(uint8_t targetType, uint32_t targetAddr, uint32_t romSource, uint32_t wordCount, uint8_t srcMem = 0, uint8_t via = 0)
 	{
-		if(!Enabled && !LiveTracking) {
+		if(!TracingEnabled || (!Enabled && !LiveTracking)) {
 			return;
 		}
 		uint8_t dstMem = targetType == 1 ? TransferMemCgram : TransferMemVram;
@@ -596,6 +604,10 @@ public:
 	//just the start address, or the reverse-search misses the loaded block).
 	static void AppendRomReadRing(uint64_t frame, uint32_t addr, bool isDma, uint32_t len = 0)
 	{
+		//R3.2: nur wenn Tracing aktiv ist - sonst kein Per-Frame-Overhead (normaler Emulator)
+		if(!TracingEnabled) {
+			return;
+		}
 		if(addr >= 0x400000) {
 			return;
 		}
@@ -929,6 +941,10 @@ public:
 	static void ClearTransferLog() { TransferHead = 0; TransferCount = 0; }
 	static void AppendTransfer(uint64_t frame, uint8_t srcMem, uint32_t srcAddr, uint8_t dstMem, uint32_t dstAddr, uint32_t len, uint8_t via)
 	{
+		//R3.2: nur wenn Tracing aktiv ist - sonst kein Per-Frame-Overhead (normaler Emulator)
+		if(!TracingEnabled) {
+			return;
+		}
 		if(len == 0 || (srcMem == TransferMemRom && srcAddr >= 0x400000)) {
 			return;
 		}
@@ -1169,6 +1185,9 @@ public:
 
 	static void TrackWramWrite(uint32_t wramAddr, uint32_t romRead)
 	{
+		if(!TracingEnabled) {
+			return;
+		}
 		if(wramAddr >= 0x20000 || romRead == 0xFFFFFFFF) {
 			return;
 		}
@@ -1209,6 +1228,9 @@ public:
 	//how 0x33EA4B (compressed ROM) -> WRAM 0x10000 -> WRAM 0x10600 -> CGRAM resolves.
 	static void TrackWramWriteFromWram(uint32_t wramAddr, uint32_t srcWramAddr)
 	{
+		if(!TracingEnabled) {
+			return;
+		}
 		if(wramAddr >= 0x20000 || srcWramAddr >= 0x20000) {
 			return;
 		}
@@ -1269,6 +1291,9 @@ public:
 	//later DMA from that WRAM to VRAM/CGRAM can be resolved to the real ROM address.
 	static void TrackWramDma(uint32_t wramAddr, uint32_t romSource, uint32_t length)
 	{
+		if(!TracingEnabled) {
+			return;
+		}
 		if(wramAddr >= 0x20000 || length == 0) {
 			return;
 		}
@@ -1299,6 +1324,9 @@ public:
 	//and record the transfer so the reverse-search can walk WRAM -> WRAM -> ROM.
 	static void TrackWramDmaToWram(uint32_t dstWramAddr, uint32_t srcWramAddr, uint32_t length)
 	{
+		if(!TracingEnabled) {
+			return;
+		}
 		if(dstWramAddr >= 0x20000 || srcWramAddr >= 0x20000 || length == 0) {
 			return;
 		}

@@ -121,6 +121,9 @@ extern "C" {
 
 	DllExport void __stdcall snes_map_load_log_set_live_tracking(bool enabled)
 	{
+		//R3.2: LiveTracking allein aktiviert NICHT den Tracing-Master-Schalter - das machen
+		//explizit die Debug-Endpoints (mapdiag/trace/palettes?live), damit Tracing sauber
+		//wieder abgeschaltet werden kann (normaler Emulator-Betrieb ohne PC-Last).
 		SnesMapLoadLog::SetLiveTracking(enabled);
 	}
 
@@ -217,6 +220,18 @@ extern "C" {
 	DllExport uint32_t __stdcall snes_map_load_transfer_count()
 	{
 		return SnesMapLoadLog::GetTransferLogCount();
+	}
+
+	//R3.2: MASTER-SCHALTER fuer die gesamte Reverse-Search-Tracing-Logik. Standardmaessig
+	//AUS, damit der Emulator ohne Debug-Tools normal performant laeuft.
+	DllExport void __stdcall snes_map_load_set_tracing(bool enabled)
+	{
+		SnesMapLoadLog::SetTracingEnabled(enabled);
+	}
+
+	DllExport bool __stdcall snes_map_load_is_tracing()
+	{
+		return SnesMapLoadLog::IsTracingEnabled();
 	}
 
 	DllExport bool __stdcall snes_map_load_is_rom_code(uint32_t addr)

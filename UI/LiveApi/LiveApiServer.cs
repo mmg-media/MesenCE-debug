@@ -484,6 +484,20 @@ namespace Mesen.LiveApi
 							result = new JsonObject() { ["ok"] = false, ["error"] = "POST body = JSON-Schema" };
 						}
 						break;
+					case "/api/gfx/mapload/tracing":
+						//R3.2: MASTER-Schalter der Reverse-Search-Tracing-Logik ein/aus.
+						//Standardmaessig AUS (normaler Emulator, keine PC-Last). Ein aufruf
+						//eines Debug-Endpoints (mapdiag/trace/palettes?live) schaltet es ein.
+						//GET /api/gfx/mapload/tracing?enabled=0|1
+						if(Query(context, "enabled", "") != "") {
+							bool en = Query(context, "enabled", "1") == "1";
+							DebugApi.SnesMapLoadSetTracing(en);
+							if(en) {
+								DebugApi.SnesMapLoadLogSetLiveTracking(true);
+							}
+						}
+						result = new JsonObject() { ["tracing"] = DebugApi.SnesMapLoadIsTracing() };
+						break;
 					case "/api/spc":
 						await WriteSpc(context, SpcService.ExportSpc(Query(context, "song", ""), Query(context, "game", ""), Query(context, "artist", "")));
 						return;
@@ -1035,6 +1049,7 @@ namespace Mesen.LiveApi
 				"GET  /api/gfx/trace?mem=3&addr=0x3800  (Transfer-Fangschaltung: Rückwärts-Suche Ziel->ROM, mem 0=ROM 1=WRAM 3=VRAM 4=CGRAM)",
 				"GET  /api/gfx/transfers?mem=3&range=0x10000-0x10800  (neueste aufgezeichnete Transfers, Diagnose)",
 				"GET  /api/gfx/mapload/ringcount | POST /api/gfx/mapload/ringclear | GET /api/gfx/mapload/ringsize?entries=N  (ROM-Read-Ring: Zähler/Löschen/Größe)",
+				"GET  /api/gfx/mapload/tracing?enabled=0|1  (MASTER-Schalter der Reverse-Search-Tracing-Logik - AUS fuer normalen Emulator-Betrieb)",
 				"GET  /api/spc?song=&game=&artist=  (.spc Snapshot, octet-stream)",
 				"GET  /api/spc/wav?seconds=30  (WAV-Aufnahme des laufenden Audio)",
 				"POST /api/spc/record  | GET /api/spc/record/status | POST /api/spc/record/stop | GET /api/spc/record/file",
