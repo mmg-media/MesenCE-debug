@@ -743,6 +743,13 @@ namespace Mesen.ViewModels
 						ApplicationHelper.GetOrCreateUniqueWindow(wnd, () => new CheatListWindow());
 					}
 				},
+				new MainMenuAction() {
+					ActionType = ActionType.Trainer,
+					IsEnabled = () => IsGameRunning,
+					OnClick = () => {
+						ApplicationHelper.GetOrCreateUniqueWindow(wnd, () => new TrainerWindow());
+					}
+				},
 
 				new MainMenuAction() {
 					ActionType = ActionType.HistoryViewer,

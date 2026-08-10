@@ -1,0 +1,152 @@
+using Avalonia.Threading;
+using Mesen.Interop;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Mesen.Config
+{
+	/// <summary>
+	/// R3.2: TRAINER-Service - wendet aktive Trainer-Cheats an. Fuer type=toggle wird
+	/// der RAM-Wert per Frame-Timer dauerhaft fixiert (WriteMemory), fuer type=ar werden
+	/// Action-Replay-Codes ueber den nativen CheatManager angewendet. Ram-Felder werden
+	/// manuell geschrieben + live angezeigt.
+	/// </summary>
+	public static class TrainerService
+	{
+		private static DispatcherTimer? _timer;
+		private static readonly object _lock = new object();
+
+		private static bool _active = false;
+		public static bool Active { get { return _active; } }
+
+		// aktive Toggles: TrainerCheat -> zuletzt gesetzter Wert (fuer Aenderungs-Erkennung)
+		private static Dictionary<string, TrainerCheat> _activeToggles = new Dictionary<string, TrainerCheat>();
+		private static List<string> _appliedArCodes = new List<string>();
+
+		public static event Action? Changed;
+
+		public static void Start()
+		{
+			if(_active) {
+				return;
+			}
+			_active = true;
+			_activeToggles.Clear();
+			_appliedArCodes.Clear();
+			_timer = new DispatcherTimer();
+			_timer.Interval = TimeSpan.FromMilliseconds(16);  // ~60fps
+			_timer.Tick += (s, e) => ApplyToggles();
+			_timer.Start();
+			Changed?.Invoke();
+		}
+
+		public static void Stop()
+		{
+			if(!_active) {
+				return;
+			}
+			_active = false;
+			_timer?.Stop();
+			_timer = null;
+			_activeToggles.Clear();
+			ApplyArCodes(Enumerable.Empty<string>());
+			Changed?.Invoke();
+		}
+
+		public static void SetToggle(string cheatId, TrainerCheat cheat, bool enabled)
+		{
+			lock(_lock) {
+				if(enabled) {
+					_activeToggles[cheatId] = cheat;
+				} else {
+					_activeToggles.Remove(cheatId);
+				}
+			}
+		}
+
+		// Ein Toggle direkt einmalig anwenden (z.B. beim Aktivieren sofort den Wert setzen)
+		public static void ApplyToggleNow(TrainerCheat cheat)
+		{
+			WriteCheatValue(cheat);
+		}
+
+		public static bool IsToggleActive(string cheatId)
+		{
+			lock(_lock) {
+				return _activeToggles.ContainsKey(cheatId);
+			}
+		}
+
+		private static void ApplyToggles()
+		{
+			lock(_lock) {
+				foreach(TrainerCheat cheat in _activeToggles.Values) {
+					WriteCheatValue(cheat);
+				}
+			}
+		}
+
+		private static void WriteCheatValue(TrainerCheat cheat)
+		{
+			try {
+				UInt32 addr = ParseAddress(cheat.RamAddress);
+				int size = Math.Max(1, Math.Min(cheat.Size, 8));
+				byte[]? value = ParseValue(cheat.Value, size);
+				if(value != null && addr < 0x20000) {
+					DebugApi.SetMemoryValues(MemoryType.SnesWorkRam, addr, value, size);
+				}
+			} catch {
+			}
+		}
+
+		// AR-Codes anwenden (die aktiven Toggles + Ram-Felder bleiben, nur AR-Codes werden gesetzt)
+		private static void ApplyArCodes(IEnumerable<string> codes)
+		{
+			_appliedArCodes = codes.ToList();
+			List<InteropCheatCode> encoded = new List<InteropCheatCode>();
+			foreach(string code in _appliedArCodes) {
+				encoded.Add(new InteropCheatCode(CheatType.SnesProActionReplay, code));
+			}
+			EmuApi.SetCheats(encoded.ToArray(), (UInt32)encoded.Count);
+		}
+
+		public static UInt32 ParseAddress(string? hexOrDec)
+		{
+			if(string.IsNullOrWhiteSpace(hexOrDec)) {
+				return 0;
+			}
+			hexOrDec = hexOrDec.Trim();
+			try {
+				if(hexOrDec.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) {
+					return Convert.ToUInt32(hexOrDec.Substring(2), 16);
+				}
+				return Convert.ToUInt32(hexOrDec, 16);
+			} catch {
+				return 0;
+			}
+		}
+
+		public static byte[]? ParseValue(string? text, int size)
+		{
+			if(string.IsNullOrWhiteSpace(text)) {
+				return null;
+			}
+			try {
+				string t = text.Trim();
+				if(t.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) {
+					t = t.Substring(2);
+				}
+				ulong v = Convert.ToUInt64(t, 16);
+				byte[] result = new byte[size];
+				for(int i = 0; i < size; i++) {
+					result[i] = (byte)((v >> (8 * i)) & 0xFF);
+				}
+				return result;
+			} catch {
+				return null;
+			}
+		}
+	}
+}

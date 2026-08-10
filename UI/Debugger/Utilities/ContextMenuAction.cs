@@ -577,6 +577,7 @@ namespace Mesen.Debugger.Utilities
 
 		[IconFile("CheatCode")]
 		Cheats,
+		Trainer,
 		[IconFile("HistoryViewer")]
 		HistoryViewer,
 		[IconFile("Movie")]

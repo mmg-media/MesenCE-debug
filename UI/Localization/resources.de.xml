@@ -2024,6 +2024,7 @@ Plugin.register({
       <Value ID="AccessCounters">Zugriffszähler</Value>
       <Value ID="SaveStates">Speicherstände</Value>
       <Value ID="Cheats">Cheats</Value>
+			<Value ID="Trainer">Trainer</Value>
       <Value ID="Others">Andere</Value>
       <Value ID="Cdl">Code-/Datenlog</Value>
     </Enum>
@@ -2403,6 +2404,7 @@ Plugin.register({
       <Value ID="NormalSpeed">Normal (100%)</Value>
       <Value ID="Stop">Stoppen</Value>
       <Value ID="Cheats">Cheats</Value>
+			<Value ID="Trainer">Trainer</Value>
       <Value ID="ShowControllers">Controller anzeigen</Value>
       <Value ID="EditTile">Kachel bearbeiten</Value>
       <Value ID="Fullscreen">Vollbild</Value>

@@ -1,0 +1,28 @@
+<Window
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:l="using:Mesen.Localization"
+	mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="500"
+	x:Class="Mesen.Windows.TrainerWindow"
+	Width="420" Height="520"
+	Title="Trainer"
+	Name="root"
+>
+	<DockPanel>
+		<DockPanel DockPanel.Dock="Bottom" Margin="8" >
+			<StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Left">
+				<TextBlock Text="Trainer" FontWeight="Bold" VerticalAlignment="Center" />
+			</StackPanel>
+			<Button DockPanel.Dock="Right" HorizontalContentAlignment="Center" MinWidth="80" Click="Close_OnClick" Content="Schließen" />
+		</DockPanel>
+
+		<ScrollViewer>
+			<StackPanel Margin="8" Spacing="4">
+				<TextBlock x:Name="statusText" TextWrapping="Wrap" FontSize="12" />
+				<ItemsControl x:Name="cheatList" />
+			</StackPanel>
+		</ScrollViewer>
+	</DockPanel>
+</Window>
