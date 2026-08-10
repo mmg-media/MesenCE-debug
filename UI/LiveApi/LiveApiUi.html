@@ -337,6 +337,7 @@ input[type=text],input[type=number],select{min-width:0;}
 					<button data-view="sprites" data-i18n="gfxViewSprites">Sprites</button>
 					<button data-view="tiles" data-i18n="gfxViewTiles">Tileset</button>
 				</div>
+				<label style="min-width:0; margin-left:6px;" title="Reverse-Search-Tracing ein/aus - AUS = normaler Emulator-Betrieb ohne PC-Last"><input type="checkbox" id="gfxTracingToggle"> <span style="font-size:11px;">Tracing</span></label>
 			</div>
 			<div class="row">
 				<label data-i18n="lblBg">Hintergrund</label>
@@ -1912,6 +1913,19 @@ async function refreshSpriteSources(){
 }
 $("gfxMapSourcesLive").addEventListener("change",()=>{ if($("gfxMapSourcesLive").checked) refreshMapSources(); });
 $("gfxSpritesSourcesLive").addEventListener("change",()=>{ if($("gfxSpritesSourcesLive").checked) refreshSpriteSources(); });
+//R3.2: Tracing-Master-Schalter - AUS fuer normalen Emulator-Betrieb (keine PC-Last)
+(async()=>{
+	try {
+		const st=await fetch("api/gfx/mapload/tracing").then(r=>r.json());
+		$("gfxTracingToggle").checked=!!st.tracing;
+	} catch(e){}
+})();
+$("gfxTracingToggle").addEventListener("change",async()=>{
+	try {
+		const on=$("gfxTracingToggle").checked;
+		await fetch("api/gfx/mapload/tracing?enabled="+(on?1:0));
+	} catch(e){}
+});
 setInterval(()=>{ if($("gfxMapSourcePanel").style.display!=="none") refreshMapSources(); },1000);
 setInterval(()=>{ if($("gfxSpriteSourcePanel").style.display!=="none") refreshSpriteSources(); },1000);
 
