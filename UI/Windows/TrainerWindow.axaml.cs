@@ -52,7 +52,7 @@ namespace Mesen.Windows
 
 			foreach(TrainerCheat cheat in _config.Cheats) {
 				string? type = cheat.Type?.ToLowerInvariant();
-				if(type == "toggle") {
+				if(type == "toggle" || type == "rompatch") {
 					panel.Children.Add(BuildToggle(cheat));
 				} else if(type == "ram") {
 					panel.Children.Add(BuildRamField(cheat));

@@ -49,7 +49,8 @@ namespace Mesen.Config
 
 		public string? Name { get; set; }
 		// type: toggle (An/Aus-Schalter, RAM-Wert dauerhaft fixieren),
-		//       ram (RAM-Feld, manuell setzbar), ar (Action-Replay-Code)
+		//       ram (RAM-Feld, manuell setzbar), ar (Action-Replay-Code),
+		//       romPatch (ROM-Schwellen patchen - fuer An/Aus wie z.B. Kollision)
 		public string? Type { get; set; }
 
 		// fuer type=toggle / type=ram: RAM-Adresse + Wert
@@ -60,7 +61,18 @@ namespace Mesen.Config
 		// fuer type=ar: der AR-Code
 		public string? Code { get; set; }
 
+		// fuer type=romPatch: Liste der ROM-Patches (Datei-Offsets)
+		public List<RomPatch>? Patches { get; set; }
+
 		// optional: nur zum Anzeigen (z.B. aktueller Wert wird live gelesen)
 		public string? Label { get; set; }
+	}
+
+	/// <summary>Ein einzelner ROM-Patch: Address = Datei-Offset, Original/Patch = Hex-Bytes.</summary>
+	public class RomPatch
+	{
+		public string? Address { get; set; }   // Datei-Offset, z.B. "0xC478"
+		public string? Original { get; set; }  // Original-Bytes, z.B. "C9 A0 00"
+		public string? Patch { get; set; }     // gepatchte Bytes, z.B. "C9 FF 00"
 	}
 }

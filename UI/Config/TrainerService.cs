@@ -50,6 +50,12 @@ namespace Mesen.Config
 			_active = false;
 			_timer?.Stop();
 			_timer = null;
+			// ROM-Patches zuruecksetzen (Original-Bytes wiederherstellen) bevor Toggles geloescht werden
+			foreach(TrainerCheat cheat in _activeToggles.Values) {
+				if(cheat.Type?.ToLowerInvariant() == "rompatch") {
+					ApplyRomPatches(cheat, false);
+				}
+			}
 			_activeToggles.Clear();
 			ApplyArCodes(Enumerable.Empty<string>());
 			Changed?.Invoke();
@@ -60,8 +66,10 @@ namespace Mesen.Config
 			lock(_lock) {
 				if(enabled) {
 					_activeToggles[cheatId] = cheat;
+					ApplyCheatNow(cheat, true);
 				} else {
 					_activeToggles.Remove(cheatId);
+					ApplyCheatNow(cheat, false);
 				}
 			}
 		}
@@ -69,7 +77,7 @@ namespace Mesen.Config
 		// Ein Toggle direkt einmalig anwenden (z.B. beim Aktivieren sofort den Wert setzen)
 		public static void ApplyToggleNow(TrainerCheat cheat)
 		{
-			WriteCheatValue(cheat);
+			ApplyCheatNow(cheat, true);
 		}
 
 		public static bool IsToggleActive(string cheatId)
@@ -83,8 +91,57 @@ namespace Mesen.Config
 		{
 			lock(_lock) {
 				foreach(TrainerCheat cheat in _activeToggles.Values) {
-					WriteCheatValue(cheat);
+					ApplyCheatNow(cheat, true);
 				}
+			}
+		}
+
+		private static void ApplyCheatNow(TrainerCheat cheat, bool enabled)
+		{
+			if(cheat.Type?.ToLowerInvariant() == "rompatch") {
+				ApplyRomPatches(cheat, enabled);
+			} else {
+				WriteCheatValue(cheat);
+			}
+		}
+
+		// ROM-Patches anwenden (enabled=true) oder Original-Bytes wiederherstellen (enabled=false).
+		// Adressen sind Datei-Offsets; geschrieben wird in SnesPrgRom (= ROM des Emulators).
+		private static void ApplyRomPatches(TrainerCheat cheat, bool apply)
+		{
+			if(cheat.Patches == null) {
+				return;
+			}
+			try {
+				foreach(RomPatch patch in cheat.Patches) {
+					UInt32 addr = ParseAddress(patch.Address);
+					byte[]? bytes = ParseHexBytes(apply ? patch.Patch : patch.Original);
+					if(bytes != null && bytes.Length > 0) {
+						DebugApi.SetMemoryValues(MemoryType.SnesPrgRom, addr, bytes, bytes.Length);
+					}
+				}
+			} catch {
+			}
+		}
+
+		// Hex-Bytes parsen: "C9 A0 00" (Leerzeichen-getrennt) oder "C9A000"
+		public static byte[]? ParseHexBytes(string? text)
+		{
+			if(string.IsNullOrWhiteSpace(text)) {
+				return null;
+			}
+			try {
+				string t = text.Trim().Replace(" ", "").Replace("\t", "").Replace("-", "");
+				if(t.Length % 2 != 0) {
+					return null;
+				}
+				byte[] result = new byte[t.Length / 2];
+				for(int i = 0; i < result.Length; i++) {
+					result[i] = Convert.ToByte(t.Substring(i * 2, 2), 16);
+				}
+				return result;
+			} catch {
+				return null;
 			}
 		}
 
