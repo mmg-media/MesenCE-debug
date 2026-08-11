@@ -323,6 +323,35 @@ Plugin.register({
       <Control ID="mapLoadReadRange">gelesener Bereich:</Control>
       <Control ID="mode7Inactive">Mode7 (bgMode={bgMode}) - nicht aktiv</Control>
       <Control ID="mapLoadVerifyEmpty">(leer - Adressen im Format 0x... eingeben, kommagetrennt)</Control>
+      <Control ID="tabCheatSearch">Cheat-Search</Control>
+      <Control ID="csTitle">Cheat-Search (RAM-Suche)</Control>
+      <Control ID="csSize">Größe</Control>
+      <Control ID="csFormat">Format</Control>
+      <Control ID="csInit">Suchen starten</Control>
+      <Control ID="csCompare">Vergleich</Control>
+      <Control ID="csOperator">Operator</Control>
+      <Control ID="csSlot">Slot</Control>
+      <Control ID="csValue">Wert</Control>
+      <Control ID="csFilter">Filter anwenden</Control>
+      <Control ID="csSnap">Snapshot sichern (Slot)</Control>
+      <Control ID="csSnapDel">Slot löschen</Control>
+      <Control ID="csReset">Suche zurücksetzen</Control>
+      <Control ID="csWriteAddr">Adresse</Control>
+      <Control ID="csWriteVal">Wert</Control>
+      <Control ID="csWrite">Wert schreiben</Control>
+      <Control ID="csLoading">Suchen starten …</Control>
+      <Control ID="csCurVal">aktuell</Control>
+      <Control ID="csBaseVal">Basis</Control>
+      <Control ID="csCmpPrev">vorheriger Stand</Control>
+      <Control ID="csCmpSlot">gespeicherter Slot</Control>
+      <Control ID="csCmpValue">fester Wert</Control>
+      <Control ID="csOpEq">= (gleich)</Control>
+      <Control ID="csOpNe">≠ (geändert)</Control>
+      <Control ID="csOpLt">&lt; (kleiner)</Control>
+      <Control ID="csOpLte">≤</Control>
+      <Control ID="csOpGt">&gt; (größer)</Control>
+      <Control ID="csOpGte">≥</Control>
+      <Control ID="csHint">Ablauf: "Suchen starten" → ggf. Snapshot sichern → im Spiel Wert ändern → Filter anwenden. Snapshots überleben Emulator-Neustarts (cheatsearch/snap_N.bin).</Control>
     </Form>
     <Form ID="ConfigWindow">
       <Control ID="tabNes">NES</Control>

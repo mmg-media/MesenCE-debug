@@ -1991,6 +1991,35 @@ Plugin.register({
 			<Control ID="mapLoadReadRange">read range:</Control>
 			<Control ID="mode7Inactive">Mode7 (bgMode={bgMode}) - not active</Control>
 			<Control ID="mapLoadVerifyEmpty">(empty - enter addresses as 0x..., comma-separated)</Control>
+			<Control ID="tabCheatSearch">Cheat-Search</Control>
+			<Control ID="csTitle">Cheat-Search (RAM search)</Control>
+			<Control ID="csSize">Size</Control>
+			<Control ID="csFormat">Format</Control>
+			<Control ID="csInit">Start search</Control>
+			<Control ID="csCompare">Compare</Control>
+			<Control ID="csOperator">Operator</Control>
+			<Control ID="csSlot">Slot</Control>
+			<Control ID="csValue">Value</Control>
+			<Control ID="csFilter">Apply filter</Control>
+			<Control ID="csSnap">Save snapshot (slot)</Control>
+			<Control ID="csSnapDel">Delete slot</Control>
+			<Control ID="csReset">Reset search</Control>
+			<Control ID="csWriteAddr">Address</Control>
+			<Control ID="csWriteVal">Value</Control>
+			<Control ID="csWrite">Write value</Control>
+			<Control ID="csLoading">Start search to begin…</Control>
+			<Control ID="csCurVal">current</Control>
+			<Control ID="csBaseVal">base</Control>
+			<Control ID="csCmpPrev">previous state</Control>
+			<Control ID="csCmpSlot">saved slot</Control>
+			<Control ID="csCmpValue">fixed value</Control>
+			<Control ID="csOpEq">= (equal)</Control>
+			<Control ID="csOpNe">≠ (changed)</Control>
+			<Control ID="csOpLt">&lt; (less)</Control>
+			<Control ID="csOpLte">≤</Control>
+			<Control ID="csOpGt">&gt; (greater)</Control>
+			<Control ID="csOpGte">≥</Control>
+			<Control ID="csHint">Flow: "Start search" → optionally save a snapshot → change the value in-game → apply a filter. Snapshots survive emulator restarts (cheatsearch/snap_N.bin).</Control>
 		</Form>
 	</Forms>
 	<Messages>

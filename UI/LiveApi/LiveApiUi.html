@@ -227,6 +227,7 @@ input[type=text],input[type=number],select{min-width:0;}
 			<button data-tab="tracker" data-i18n="tabTracker">Tracker</button>
 			<button data-tab="callstack" data-i18n="tabCallstack">Callstack</button>
 			<button data-tab="gfx" data-i18n="tabGfx">Gfx / Karte</button>
+			<button data-tab="cheatsearch" data-i18n="tabCheatSearch">Cheat-Search</button>
 			<button data-tab="spc" data-i18n="tabSpc">Sound / SPC</button>
 			<button data-tab="plugins" data-i18n="tabPlugins">Scripts</button>
 		</div>
@@ -325,6 +326,50 @@ input[type=text],input[type=number],select{min-width:0;}
 			</div>
 			<div class="row" style="color:var(--dim);font-size:11px;" data-i18n="trkHint">Sobald die Region gelesen/geschrieben wird, startet der Tracker und loggt jeden Befehl, WRAM-Write, VRAM-Zugriff, DMA und Interrupt bis zum Stop (Ring + Datei in LiveApiExports).</div>
 			<div class="log" id="trkView" style="height:320px;overflow:auto;"><span class="empty" data-i18n="trkLoading">Tracker starten …</span></div>
+		</div>
+
+		<div class="panel tabpanel" id="tab-cheatsearch">
+			<h2 data-i18n="csTitle">Cheat-Search (RAM-Suche)</h2>
+			<div class="row">
+				<label data-i18n="lblMem">Mem</label><select id="csMem" class="w110"><option value="SnesWorkRam" selected>SNESWorkRam</option><option value="SnesRegister">SNESRegister</option><option value="SnesVideoRam">SNESVideoRam</option><option value="SnesSaveRam">SNESSaveRam</option><option value="SnesPrgRom">SNESPrgRom</option></select>
+				<label data-i18n="csSize">Größe</label><select id="csSize" class="w70"><option value="1">1 Byte</option><option value="2" selected>2 Bytes</option><option value="4">4 Bytes</option></select>
+				<label data-i18n="csFormat">Format</label><select id="csFormat" class="w90"><option value="hex" selected>hex</option><option value="unsigned">unsigned</option><option value="signed">signed</option></select>
+				<button class="primary" id="btnCsInit" data-i18n="csInit">Suchen starten</button>
+			</div>
+			<div class="row" style="color:var(--dim);font-size:11px;" data-i18n="csHint">
+				Ablauf: "Suchen starten" → ggf. Snapshot sichern → im Spiel Wert ändern → Filter anwenden. Snapshots überleben Emulator-Neustarts (cheatsearch/snap_N.bin).
+			</div>
+			<div class="row">
+				<label data-i18n="csCompare">Vergleich</label><select id="csCompare" class="w150">
+					<option value="previousSnapshot" data-i18n="csCmpPrev">vorheriger Stand</option>
+					<option value="specificSnapshot" data-i18n="csCmpSlot">gespeicherter Slot</option>
+					<option value="specificValue" data-i18n="csCmpValue">fester Wert</option>
+				</select>
+				<label data-i18n="csOperator">Operator</label><select id="csOp" class="w110">
+					<option value="equal" data-i18n="csOpEq">= (gleich)</option>
+					<option value="notEqual" data-i18n="csOpNe">≠ (geändert)</option>
+					<option value="lessThan" data-i18n="csOpLt">&lt; (kleiner)</option>
+					<option value="lessThanOrEqual" data-i18n="csOpLte">≤</option>
+					<option value="greaterThan" data-i18n="csOpGt">&gt; (größer)</option>
+					<option value="greaterThanOrEqual" data-i18n="csOpGte">≥</option>
+				</select>
+				<label data-i18n="csSlot">Slot</label><select id="csSlot" class="w60" disabled><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select>
+				<label data-i18n="csValue">Wert</label><input type="text" id="csValue" value="0" class="w90" disabled>
+				<button class="primary" id="btnCsFilter" data-i18n="csFilter">Filter anwenden</button>
+			</div>
+			<div class="row">
+				<button id="btnCsSnap" data-i18n="csSnap">Snapshot sichern (Slot)</button>
+				<button id="btnCsSnapDel" data-i18n="csSnapDel">Slot löschen</button>
+				<button id="btnCsReset" data-i18n="csReset">Suche zurücksetzen</button>
+				<button id="btnCsRefresh" data-i18n="btnRefresh">Refresh</button>
+				<span style="color:var(--dim);font-size:11px;" id="csState">–</span>
+			</div>
+			<div class="row">
+				<label data-i18n="csWriteAddr">Adresse</label><input type="text" id="csWriteAddr" value="0x0000" class="w90">
+				<label data-i18n="csWriteVal">Wert</label><input type="text" id="csWriteVal" value="0" class="w90">
+				<button id="btnCsWrite" data-i18n="csWrite">Wert schreiben</button>
+			</div>
+			<div class="log" id="csView" style="height:340px;overflow:auto;"><span class="empty" data-i18n="csLoading">Suchen starten …</span></div>
 		</div>
 
 		<div class="panel tabpanel" id="tab-gfx">
@@ -1002,6 +1047,75 @@ async function refreshBreakpoints(){
 }
 
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ---- Cheat-Search ---- */
+async function apiJson(path, opts){
+	try{
+		const r=await fetch(path, opts||{});
+		if(!r.ok) return null;
+		return await r.json();
+	}catch(e){ return null; }
+}
+function csSnapStatus(){
+	const slot=$("csCompare").value;
+	$("csSlot").disabled=slot!=="specificSnapshot";
+	$("csValue").disabled=slot!=="specificValue";
+}
+async function csInit(){
+	const body={memType:$("csMem").value,valueSize:parseInt($("csSize").value,10),format:$("csFormat").value};
+	const st=await apiJson("api/cheatsearch/init",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+	$("csState").textContent=st?`${st.memType} · ${st.valueSize}B · ${st.format} · Kandidaten: ${st.candidateCount} / ${st.totalAddresses}`:"Fehler";
+	refreshCheatSearch();
+}
+async function csApplyFilter(){
+	const body={compareTo:$("csCompare").value,operator:$("csOp").value,snapshotSlot:parseInt($("csSlot").value,10)};
+	if(body.compareTo==="specificValue"){
+		const v=parseInt($("csValue").value,10);
+		if(isNaN(v)){ $("csView").innerHTML=`<span class="empty">Ungültiger Wert</span>`; return; }
+		body.value=v;
+	}
+	const r=await apiJson("api/cheatsearch/filter",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+	if(r){ $("csState").textContent="Kandidaten nach Filter: "+r.count; }
+	refreshCheatSearch();
+}
+async function csSnap(){
+	const r=await apiJson("api/cheatsearch/snapshot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slot:parseInt($("csSlot").value,10)})});
+	if(r) refreshCheatSearch();
+}
+async function csSnapDel(){
+	await apiJson("api/cheatsearch/snapshot/delete?slot="+parseInt($("csSlot").value,10));
+	refreshCheatSearch();
+}
+async function csReset(){
+	await apiJson("api/cheatsearch/reset",{method:"POST"});
+	$("csState").textContent="–";
+	refreshCheatSearch();
+}
+async function csWrite(){
+	const addr=parseInt($("csWriteAddr").value,16)||0;
+	const val=parseInt($("csWriteVal").value,10)||0;
+	await apiJson("api/cheatsearch/write",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({address:addr,value:val})});
+	refreshCheatSearch();
+}
+async function refreshCheatSearch(){
+	try{
+		const st=await apiJson("api/cheatsearch/state");
+		if(st){
+			const slots=(st.snapshots||[]).filter(s=>s.hasData).map(s=>`${s.slot}(f${s.frame})`).join(",")||"–";
+			$("csState").textContent=`${st.memType} · ${st.valueSize}B · Kandidaten: ${st.candidateCount} / ${st.totalAddresses} · Slots: ${slots}`;
+			$("csWriteAddr").placeholder="$"+fmtHex(Math.min(0xFFFF,st.totalAddresses||0xFFFF),4);
+		}
+		const d=await apiJson("api/cheatsearch/results?count=300");
+		if(!d) return;
+		let h=`<table class='tbl'><tr><th>${t("tblAddr")}</th><th>${t("csCurVal")}</th><th>${t("csBaseVal")}</th><th>hex</th></tr>`;
+		if(!d.length){ h+=`<tr><td colspan="4" style="color:var(--dim);">${t("noEntries")}</td></tr>`; }
+		for(const e of d){
+			const addrStr="$"+fmtHex(e.address,6);
+			h+=`<tr><td>${addrStr}</td><td>${e.value}</td><td>${e.baseValue}</td><td>${e.hexValue||""}</td></tr>`;
+		}
+		$("csView").innerHTML=h;
+	}catch(e){}
+}
 
 /* ---- Plugin-System (WebUI) ---- */
 let pluginList=[], activePlugin=null, plFileBase="";
@@ -2017,6 +2131,15 @@ function bindControls(){
 	});
 	$("btnTrkStop").addEventListener("click",async()=>{ await fetch("api/tracker/stop",{method:"POST"}); refreshTracker(); });
 	$("btnTrkRefresh").addEventListener("click",()=>refreshTracker());
+	$("btnCsInit").addEventListener("click",csInit);
+	$("btnCsFilter").addEventListener("click",csApplyFilter);
+	$("btnCsSnap").addEventListener("click",csSnap);
+	$("btnCsSnapDel").addEventListener("click",csSnapDel);
+	$("btnCsReset").addEventListener("click",csReset);
+	$("btnCsWrite").addEventListener("click",csWrite);
+	$("btnCsRefresh").addEventListener("click",refreshCheatSearch);
+	$("csCompare").addEventListener("change",csSnapStatus);
+	csSnapStatus();
 	document.querySelectorAll(".ipad[data-key]").forEach(btn=>{
 		const key=btn.dataset.key;
 		const press=(p)=>{ fetch("/api/input",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:key,pressed:p})}); };
@@ -2040,6 +2163,7 @@ function bindTabs(){
 	if(activeTab==="events") { refreshEvents(); refreshDma(); refreshDmaLog(); refreshEvHist(); refreshVramLog(); refreshWramLog(); }
 	if(activeTab==="callstack") refreshCallstack();
 	if(activeTab==="tracker") refreshTracker();
+	if(activeTab==="cheatsearch") refreshCheatSearch();
 			if(activeTab==="gfx") refreshGfx();
 			if(activeTab==="spc") refreshSpc();
 			if(activeTab==="plugins") plRefresh();
