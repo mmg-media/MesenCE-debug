@@ -240,4 +240,56 @@ namespace Mesen.LiveApi
 		public int Code { get; set; }
 		public string Message { get; set; } = "";
 	}
+
+	// ============ Cheat-Search (Cheat-Engine-artige RAM-Suche) ============
+
+	public class LiveApiCheatSearchInitRequest
+	{
+		public string MemType { get; set; } = "SnesWorkRam";
+		public int ValueSize { get; set; } = 2;   // 1, 2 oder 4 Bytes
+		public string Format { get; set; } = "hex"; // hex | unsigned | signed
+	}
+
+	public class LiveApiCheatSearchFilterRequest
+	{
+		// Vergleichsbasis:
+		//   "previousSnapshot" = letzter gefilterter Stand (nach jedem Filter aktualisiert)
+		//   "specificSnapshot" = ein gespeicherter Slot (snapshotSlot 0-9)
+		//   "specificValue"    = fester Wert (value)
+		public string CompareTo { get; set; } = "previousSnapshot";
+		public string Operator { get; set; } = "equal"; // equal|notEqual|lessThan|lessThanOrEqual|greaterThan|greaterThanOrEqual
+		public Int64 Value { get; set; }
+		public int SnapshotSlot { get; set; }
+	}
+
+	public class LiveApiCheatSearchSnapshotRequest
+	{
+		public int Slot { get; set; }
+	}
+
+	public class LiveApiCheatSearchSnapshotInfo
+	{
+		public int Slot { get; set; }
+		public UInt64 Frame { get; set; }
+		public int Size { get; set; }
+		public bool HasData { get; set; }
+	}
+
+	public class LiveApiCheatSearchResult
+	{
+		public UInt32 Address { get; set; }
+		public Int64 Value { get; set; }       // aktueller Wert (letzter Filter-Stand)
+		public Int64 BaseValue { get; set; }   // Basiswert (Vergleichswert des letzten Filters)
+		public string HexValue { get; set; } = "";
+	}
+
+	public class LiveApiCheatSearchState
+	{
+		public string MemType { get; set; } = "";
+		public int ValueSize { get; set; }
+		public string Format { get; set; } = "";
+		public int CandidateCount { get; set; }
+		public int TotalAddresses { get; set; }
+		public LiveApiCheatSearchSnapshotInfo[] Snapshots { get; set; } = Array.Empty<LiveApiCheatSearchSnapshotInfo>();
+	}
 }

@@ -134,6 +134,67 @@ namespace Mesen.LiveApi
 					case "/api/memSize":
 						result = SerializeJson(new JsonObject() { ["size"] = LiveDataService.GetMemorySize(Query(context, "type", "SnesWorkRam")) });
 						break;
+					case "/api/cheatsearch/init":
+						if(method == "POST") {
+							LiveApiCheatSearchInitRequest? initReq = await ReadJsonBody<LiveApiCheatSearchInitRequest>(context, LiveApiSerializerContext.Default.LiveApiCheatSearchInitRequest);
+							result = initReq != null
+								? JsonSerializer.SerializeToNode(CheatSearchService.InitSearch(initReq), LiveApiSerializerContext.Default.LiveApiCheatSearchState)
+								: SerializeJson(new JsonObject() { ["ok"] = false });
+						} else {
+							status = 405;
+						}
+						break;
+					case "/api/cheatsearch/filter":
+						if(method == "POST") {
+							LiveApiCheatSearchFilterRequest? filterReq = await ReadJsonBody<LiveApiCheatSearchFilterRequest>(context, LiveApiSerializerContext.Default.LiveApiCheatSearchFilterRequest);
+							result = filterReq != null
+								? SerializeJson(new JsonObject() { ["count"] = CheatSearchService.ApplyFilter(filterReq) })
+								: SerializeJson(new JsonObject() { ["ok"] = false });
+						} else {
+							status = 405;
+						}
+						break;
+					case "/api/cheatsearch/snapshot":
+						if(method == "POST") {
+							LiveApiCheatSearchSnapshotRequest? snapReq = await ReadJsonBody<LiveApiCheatSearchSnapshotRequest>(context, LiveApiSerializerContext.Default.LiveApiCheatSearchSnapshotRequest);
+							result = snapReq != null
+								? SerializeJson(new JsonObject() { ["ok"] = CheatSearchService.SaveSnapshot(snapReq.Slot) })
+								: SerializeJson(new JsonObject() { ["ok"] = false });
+						} else {
+							status = 405;
+						}
+						break;
+					case "/api/cheatsearch/snapshot/delete":
+						result = SerializeJson(new JsonObject() { ["ok"] = CheatSearchService.DeleteSnapshot((int)ParseUInt(Query(context, "slot", "0"))) });
+						break;
+					case "/api/cheatsearch/snapshots":
+						result = JsonSerializer.SerializeToNode(CheatSearchService.GetState().Snapshots, LiveApiSerializerContext.Default.LiveApiCheatSearchSnapshotInfoArray);
+						break;
+					case "/api/cheatsearch/results":
+						result = JsonSerializer.SerializeToNode(CheatSearchService.GetResults((int)ParseUInt(Query(context, "count", "100")), (int)ParseUInt(Query(context, "start", "0"))), LiveApiSerializerContext.Default.LiveApiCheatSearchResultArray);
+						break;
+					case "/api/cheatsearch/state":
+						result = JsonSerializer.SerializeToNode(CheatSearchService.GetState(), LiveApiSerializerContext.Default.LiveApiCheatSearchState);
+						break;
+					case "/api/cheatsearch/reset":
+						CheatSearchService.ResetSearch();
+						result = SerializeJson(new JsonObject() { ["ok"] = true });
+						break;
+					case "/api/cheatsearch/write":
+						if(method == "POST") {
+							JsonObject? writeBody = await ReadJsonBody<JsonObject>(context, LiveApiSerializerContext.Default.JsonObject);
+							if(writeBody != null) {
+								UInt32 wAddr = writeBody["address"]?.GetValue<UInt32>() ?? 0;
+								Int64 wValue = writeBody["value"]?.GetValue<Int64>() ?? 0;
+								UInt32 wSize = writeBody["size"]?.GetValue<UInt32>() ?? 0;
+								result = SerializeJson(new JsonObject() { ["ok"] = CheatSearchService.WriteValue(wAddr, wValue, (int)wSize) });
+							} else {
+								result = SerializeJson(new JsonObject() { ["ok"] = false });
+							}
+						} else {
+							status = 405;
+						}
+						break;
 					case "/api/memory":
 						if(method == "POST") {
 							LiveApiMemoryWriteRequest? request = await ReadJsonBody<LiveApiMemoryWriteRequest>(context, LiveApiSerializerContext.Default.LiveApiMemoryWriteRequest);
@@ -1050,6 +1111,11 @@ namespace Mesen.LiveApi
 				"GET  /api/gfx/transfers?mem=3&range=0x10000-0x10800  (neueste aufgezeichnete Transfers, Diagnose)",
 				"GET  /api/gfx/mapload/ringcount | POST /api/gfx/mapload/ringclear | GET /api/gfx/mapload/ringsize?entries=N  (ROM-Read-Ring: Zähler/Löschen/Größe)",
 				"GET  /api/gfx/mapload/tracing?enabled=0|1  (MASTER-Schalter der Reverse-Search-Tracing-Logik - AUS fuer normalen Emulator-Betrieb)",
+				"POST /api/cheatsearch/init {memType,valueSize,format}  (Cheat-Search starten, Basis-Snapshot nehmen)",
+				"POST /api/cheatsearch/filter {compareTo:previousSnapshot|specificSnapshot|specificValue,operator:equal|notEqual|lessThan|lessThanOrEqual|greaterThan|greaterThanOrEqual,value,snapshotSlot}",
+				"POST /api/cheatsearch/snapshot {slot:0-9}  (aktuellen Zustand persistieren als HomeFolder/cheatsearch/snap_N.bin) | GET /api/cheatsearch/snapshots",
+				"GET  /api/cheatsearch/results?count=100&start=0  (Treffer: Adresse + aktueller Wert + Basiswert) | GET /api/cheatsearch/state",
+				"POST /api/cheatsearch/write {address,value,size}  (Wert an Treffer-Adresse schreiben) | GET /api/cheatsearch/snapshot/delete?slot=N | POST /api/cheatsearch/reset",
 				"GET  /api/spc?song=&game=&artist=  (.spc Snapshot, octet-stream)",
 				"GET  /api/spc/wav?seconds=30  (WAV-Aufnahme des laufenden Audio)",
 				"POST /api/spc/record  | GET /api/spc/record/status | POST /api/spc/record/stop | GET /api/spc/record/file",
