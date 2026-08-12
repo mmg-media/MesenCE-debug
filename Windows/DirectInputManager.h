@@ -22,6 +22,7 @@ private:
 	Emulator* _emu;
 	bool _needToUpdate = false;
 	bool _requestUpdate = false;
+	uint64_t _lastDevicePoll = 0;
 	static LPDIRECTINPUT8 _directInput;
 	static vector<DirectInputData> _joysticks;
 	static vector<DirectInputData> _joysticksToAdd;

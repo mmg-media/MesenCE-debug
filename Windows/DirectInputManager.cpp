@@ -300,6 +300,17 @@ int DirectInputManager::EnumObjectsCallback(const DIDEVICEOBJECTINSTANCE* pdidoi
 
 void DirectInputManager::RefreshState()
 {
+	//Periodically look for newly connected DirectInput controllers (e.g. Bluetooth/USB pads
+	//that are turned on after the emulator has started). UpdateDeviceList is cheap when there
+	//are no new devices (EnumDevices + GUID comparison only); the expensive initialization
+	//(CreateDevice + 100ms sleep) only runs when a genuinely new device is found - the same
+	//code path as the input mapping window, so this cannot cause freezes in practice.
+	uint64_t now = GetTickCount64();
+	if(now - _lastDevicePoll >= 5000) {
+		_lastDevicePoll = now;
+		UpdateDeviceList();
+	}
+
 	if(_needToUpdate) {
 		vector<DirectInputData> joysticks;
 		//Keep exisiting joysticks, if they still work, otherwise remove them from the list
