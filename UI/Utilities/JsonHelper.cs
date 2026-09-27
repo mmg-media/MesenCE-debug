@@ -37,6 +37,7 @@ namespace Mesen.Utilities
 [JsonSerializable(typeof(CheatCodes))]
 [JsonSerializable(typeof(TrainerConfig))]
 [JsonSerializable(typeof(GameConfig))]
+[JsonSerializable(typeof(ShaderConfig))]
 [JsonSerializable(typeof(DebugWorkspace))]
 [JsonSerializable(typeof(UpdateInfo))]
 [JsonSourceGenerationOptions(
